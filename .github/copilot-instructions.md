@@ -55,6 +55,15 @@ canManageSeasons(role)    // admin only
 - Amounts are in DKK — use `formatAmount()` from `src/lib/utils.ts`
 - Relative timestamps — use `formatRelativeTime()` from `src/lib/utils.ts`
 
+## Shipping Rule — Versioning & Changelog
+
+ALWAYS bump the app version and update the changelog when shipping a feature or fix. Never ship without both being updated:
+
+1. `package.json` — bump the version (semver: patch for fixes, minor for features)
+2. `docs/PATCH_NOTES.md` — add a new entry with version, date, and bullet points
+
+In-app display of patch notes is deferred — to be designed and implemented later.
+
 ## Build & Dev
 
 ```bash
