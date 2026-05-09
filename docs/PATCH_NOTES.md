@@ -4,6 +4,24 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.2.0 — 2026-05-09
+
+**Firebase-integration (scaffolding)**
+
+- Installeret Firebase SDK (`firebase ^10.14.1`)
+- Tilføjet `.env.local` med `VITE_`-prefixede konfigurationsvariabler
+- Oprettet `src/lib/firebase.ts` — initialiserer Firebase app, eksporterer `db` og `auth`
+- Oprettet `src/lib/auth.ts` — Google Sign-In, sign-out og auth state listener
+- Oprettet `src/lib/firestore/converters.ts` — fuldt typede Firestore-konvertere for alle domæneentiteter (Timestamp ↔ ISO 8601)
+- Oprettet `src/lib/firestore/refs.ts` — typede collection- og document-referencer
+- Oprettet `src/lib/firestore/activityLog.ts` — `logActivity` hjælpefunktion
+- Oprettet `src/lib/firestore/teams.ts`, `members.ts`, `seasons.ts`, `fineRules.ts`, `fines.ts`, `payments.ts` — dataadgangslag med atomare batch-skrivninger og ActivityLog-indgange for alle mutationer
+- Oprettet `src/lib/firestore/index.ts` — re-eksporterer hele det offentlige API
+- Oprettet `firestore.rules` — sikkerhedsregler der afspejler `src/lib/permissions.ts` præcist
+- Membership-dokumenter bruger `userId` som Firestore-dokument-ID (muliggør `get()`-baseret rolleopslag i security rules)
+
+---
+
 ## v0.1.0 — 2026-05-09
 
 **Indledende projektstruktur**

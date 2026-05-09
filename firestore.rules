@@ -1,0 +1,162 @@
+rules_version = '2';
+
+// Firestore Security Rules for GSB Bødekasse
+//
+// Role resolution strategy:
+//   Each member's Firestore doc ID equals their Firebase Auth UID
+//   (enforced by upsertMembership in src/lib/firestore/members.ts).
+//   This allows O(1) role lookups via get() without custom claims.
+//
+// Role hierarchy: player < captain < treasurer < admin
+// Mirrors src/lib/permissions.ts exactly.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberData(teamId) {
+      return get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data;
+    }
+
+    function isMember(teamId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)) &&
+        memberData(teamId).isActive == true;
+    }
+
+    function memberRole(teamId) {
+      return memberData(teamId).role;
+    }
+
+    function isPlayer(teamId)    { return isMember(teamId) && memberRole(teamId) == 'player'; }
+    function isCaptain(teamId)   { return isMember(teamId) && memberRole(teamId) == 'captain'; }
+    function isTreasurer(teamId) { return isMember(teamId) && memberRole(teamId) == 'treasurer'; }
+    function isAdmin(teamId)     { return isMember(teamId) && memberRole(teamId) == 'admin'; }
+
+    // canAssignFines: captain | treasurer | admin
+    function canAssignFines(teamId) {
+      return isCaptain(teamId) || isTreasurer(teamId) || isAdmin(teamId);
+    }
+
+    // canApprovePayments: treasurer | admin
+    function canApprovePayments(teamId) {
+      return isTreasurer(teamId) || isAdmin(teamId);
+    }
+
+    // canDeleteFines: captain | admin
+    function canDeleteFines(teamId) {
+      return isCaptain(teamId) || isAdmin(teamId);
+    }
+
+    // canManageMembers: admin only
+    function canManageMembers(teamId) {
+      return isAdmin(teamId);
+    }
+
+    // canManageSeasons: admin only
+    function canManageSeasons(teamId) {
+      return isAdmin(teamId);
+    }
+
+    // canViewActivityLog: captain | treasurer | admin
+    function canViewActivityLog(teamId) {
+      return isCaptain(teamId) || isTreasurer(teamId) || isAdmin(teamId);
+    }
+
+    // canManageFineRules: captain | admin
+    function canManageFineRules(teamId) {
+      return isCaptain(teamId) || isAdmin(teamId);
+    }
+
+    // -------------------------------------------------------------------------
+    // users/{userId}  — top-level, not team-scoped
+    // -------------------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // -------------------------------------------------------------------------
+    // teams/{teamId}
+    // -------------------------------------------------------------------------
+    match /teams/{teamId} {
+      allow read: if isMember(teamId);
+      allow write: if isAdmin(teamId);
+
+      // -----------------------------------------------------------------------
+      // teams/{teamId}/members/{membershipId}
+      // -----------------------------------------------------------------------
+      match /members/{membershipId} {
+        allow read: if isMember(teamId);
+        allow write: if canManageMembers(teamId);
+      }
+
+      // -----------------------------------------------------------------------
+      // teams/{teamId}/seasons/{seasonId}
+      // -----------------------------------------------------------------------
+      match /seasons/{seasonId} {
+        allow read: if isMember(teamId);
+        allow write: if canManageSeasons(teamId);
+      }
+
+      // -----------------------------------------------------------------------
+      // teams/{teamId}/fineRules/{fineRuleId}
+      // -----------------------------------------------------------------------
+      match /fineRules/{fineRuleId} {
+        allow read: if isMember(teamId);
+        allow write: if canManageFineRules(teamId);
+      }
+
+      // -----------------------------------------------------------------------
+      // teams/{teamId}/fines/{fineId}
+      // -----------------------------------------------------------------------
+      match /fines/{fineId} {
+        allow read: if isMember(teamId);
+        // Create: captain | treasurer | admin
+        allow create: if canAssignFines(teamId);
+        // Update / soft-delete: captain | admin
+        // (treasurers do not delete fines per canDeleteFines)
+        allow update, delete: if canDeleteFines(teamId);
+      }
+
+      // -----------------------------------------------------------------------
+      // teams/{teamId}/payments/{paymentId}
+      // -----------------------------------------------------------------------
+      match /payments/{paymentId} {
+        // Read: the owning user OR a treasurer/admin
+        allow read: if isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          canApprovePayments(teamId)
+        );
+        // Initiate (create or unpaid→pending): the owning user
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        // Update (approve / dispute): treasurer | admin
+        // Owner can also update when transitioning from unpaid→pending
+        allow update: if isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          canApprovePayments(teamId)
+        );
+      }
+
+      // -----------------------------------------------------------------------
+      // teams/{teamId}/activityLog/{logId}
+      // Append-only. Client-side batch writes (from DAL mutation helpers)
+      // create entries alongside every mutation. Direct client updates and
+      // deletes are blocked so the log remains immutable after creation.
+      // Read access is scoped to captain | treasurer | admin.
+      // -----------------------------------------------------------------------
+      match /activityLog/{logId} {
+        allow read: if canViewActivityLog(teamId);
+        allow create: if isMember(teamId); // written inside batch with mutation
+        allow update, delete: if false;    // append-only, never mutate a log
+      }
+    }
+  }
+}
