@@ -60,7 +60,7 @@ canManageSeasons(role)    // admin only
 ALWAYS bump the app version and update the changelog when shipping a feature or fix. Never ship without both being updated:
 
 1. `package.json` — bump the version (semver: patch for fixes, minor for features)
-2. `docs/PATCH_NOTES.md` — add a new entry with version, date, and bullet points
+2. `docs/PATCH_NOTES.md` — add a new entry with version, date, and bullet points (in Danish)
 
 In-app display of patch notes is deferred — to be designed and implemented later.
 

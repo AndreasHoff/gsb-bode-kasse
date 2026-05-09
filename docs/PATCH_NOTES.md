@@ -1,22 +1,21 @@
-# Patch Notes — GSB Bødekasse
+# Patchnoter — GSB Bødekasse
 
-Developer-facing changelog. Update this file and bump `package.json` version as part of every ship.  
-The in-app `RELEASES` array in `src/features/patch-notes/PatchNotes.tsx` must also be updated.
+Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.json` som del af ethvert ship.
 
 ---
 
 ## v0.1.0 — 2026-05-09
 
-**Initial scaffold**
+**Indledende projektstruktur**
 
-- Vite 5 + React + TypeScript + TailwindCSS v4 project structure
-- Domain types (`src/types/domain.ts`) — all core entities defined
-- Permission helpers (`src/lib/permissions.ts`) — role-based access functions
-- Utility functions (`src/lib/utils.ts`) — MobilePay deep-link, DKK formatter, relative timestamps
-- App shell with mobile-first bottom tab navigation (4 tabs)
-- Feature placeholder components for all 4 screens
-- Feature specs F001–F007 covering all planned functionality
-- Domain entity spec and flow diagrams
-- GitHub Copilot agents: spec-writer, feature-implementer, review, firebase-scaffolder
-- GitHub Copilot instructions: domain-types, feature-development, spec-writing
-- In-app patch notes system (this file + version badge in app header)
+- Vite 5 + React + TypeScript + TailwindCSS v4 projektopsætning
+- Domænetyper (`src/types/domain.ts`) — alle centrale entiteter defineret
+- Tilladelseshjælpere (`src/lib/permissions.ts`) — rollebaserede adgangsfunktioner
+- Hjælpefunktioner (`src/lib/utils.ts`) — MobilePay deep-link, DKK-formattering, relative tidsstempler
+- App-skal med mobil-first bundnavigation (4 faner)
+- Placeholder-komponenter for alle 4 skærme
+- Feature-specifikationer F001–F007 for al planlagt funktionalitet
+- Domæneentitetspec og flowdiagrammer
+- GitHub Copilot-agenter: spec-writer, feature-implementer, review, firebase-scaffolder
+- GitHub Copilot-instruktioner: domain-types, feature-development, spec-writing
+- Patchnote-proces oprettet (denne fil)
