@@ -73,6 +73,33 @@ docs/
 
 ---
 
+## Development Readiness (Scaffolding Phase)
+
+You can start building now.
+
+Current documentation already covers:
+- Core domain entities and non-negotiable business rules (`docs/specs/domain/entities.md`)
+- Core user/system flows (`docs/specs/flows/flows.md`)
+- Initial feature-level specs F001–F007 (`docs/specs/features/`)
+
+Before implementing each new feature, still add/confirm:
+- A dedicated F00N feature spec with flow, edge cases, and acceptance criteria
+- Any missing role/permission constraints
+- Any backend data/index/security rule implications
+
+Use this checklist to decide if a feature is ready for implementation:
+- [ ] User pain/problem is explicit
+- [ ] Goal and actors are explicit
+- [ ] Preconditions and flow are concrete
+- [ ] Edge cases include empty state, permission failure, network failure, duplicate actions
+- [ ] Acceptance criteria are testable
+- [ ] Firestore entity updates are mapped (`docs/specs/domain/entities.md`)
+- [ ] ActivityLog mutation impact is defined
+
+For backend data modeling during scaffolding, treat the current domain model as **v1 baseline** and evolve it feature-by-feature (instead of attempting full upfront modeling).
+
+---
+
 ## Roles & Permissions
 
 | Action                | Player | Captain | Treasurer | Admin |

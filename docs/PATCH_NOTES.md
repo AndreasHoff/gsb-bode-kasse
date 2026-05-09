@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.2.1 — 2026-05-09
+
+**Scaffolding-klarhed for næste udviklingsskridt**
+
+- Tilføjet sektion i `README.md` med tydeligt svar på “kan vi bygge nu?”
+- Dokumenteret hvad der allerede er på plads (domæne, flows, F001–F007)
+- Tilføjet konkret readiness-checkliste for nye features (spec, edge cases, acceptance criteria, datamodel- og ActivityLog-afklaring)
+- Dokumenteret anbefaling for backend-datamodel i scaffolding-fasen: brug nuværende model som v1-baseline og udvid feature-for-feature
+
+---
+
 ## v0.2.0 — 2026-05-09
 
 **Firebase-integration (scaffolding)**
