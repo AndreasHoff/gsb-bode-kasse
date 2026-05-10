@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.4.0 — 2026-05-10
+
+**CI/CD: automatisk deploy til GitHub Pages**
+
+- Tilføjet GitHub Actions workflow (`.github/workflows/deploy.yml`) der bygger og deployer appen til GitHub Pages ved hvert push til `main`
+- Opdateret `vite.config.ts` med `base: '/gsb-bode-kasse/'` så alle asset-stier er korrekte under GitHub Pages URL-strukturen
+- Firebase-konfigurationsvariabler overføres sikkert via GitHub Actions Secrets under byggeprocessen
+- Appen er nu tilgængelig på `https://andreashoff.github.io/gsb-bode-kasse/`
+
+---
+
 ## v0.3.2 — 2026-05-10
 
 **UI-forbedring: globale semantiske stilklasser**
