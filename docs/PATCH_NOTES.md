@@ -4,6 +4,56 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.3.2 — 2026-05-10
+
+**UI-forbedring: globale semantiske stilklasser**
+
+- Tilføjet globale UI-klasser i `src/index.css` for app-shell, sider, kort, formularfelter, knapper og bundnavigation
+- Refaktoreret `src/App.tsx` til at bruge de nye semantiske stilklasser i stedet for spredte farve-utility-klasser
+- Refaktoreret `src/features/auth/WelcomeAuth.tsx` til fælles styling for segmentknapper, felter og primære/sekundære handlinger
+- Opdateret placeholder-skærme i `overview`, `personal`, `activity` og `fines` til at bruge fælles titel-, subtitle- og empty-state-klasser
+- Gør fremtidige feature-skærme hurtigere at bygge med konsistent mobil-first styling og knapadfærd
+
+---
+
+## v0.3.1 — 2026-05-10
+
+**UI-forbedring: fælles farveskema og læsbare knapper**
+
+- Erstattet Vite-standard CSS med et fælles farvesystem via CSS-variabler i `src/index.css`
+- Fjernet globale sort-på-sort knapstile og indført tilgængelige standard-knapper med tydelig kontrast
+- Opdateret app-shell (`src/App.tsx`) til den nye palette for header, bundnavigation og status-skærme
+- Justeret placeholder-skærme i `overview`, `personal` og `activity` til konsistente tekst- og overfladefarver
+- Tilføjet mere harmonisk baggrund med subtile gradientflader til mobiloplevelsen
+
+---
+
+## v0.3.0 — 2026-05-10
+
+**F008: Velkomstside + register/login for holdmedlemmer**
+
+- Tilføjet ny feature-spec: `docs/specs/features/F008-member-welcome-auth.md`
+- Tilføjet mobil-first velkomstskærm med login/registrering i `src/features/auth/WelcomeAuth.tsx`
+- Implementeret e-mail/adgangskode-login og registrering i `src/lib/auth.ts`
+- Beholdt Google-login som alternativ login-metode
+- Tilføjet Firestore-hjælper til automatisk oprettelse af brugerprofil (`users/{uid}`)
+- Tilføjet opslag af aktive medlemskaber for bruger via collection group query
+- Opdateret `src/App.tsx` med auth-gate, no-membership-tilstand og logout
+- Forstærket app-shell med maks bredde på 430px i auth- og hovedflow
+
+---
+
+## v0.2.1 — 2026-05-10
+
+**Instruktionsopdatering: mobil-first krav gjort eksplicit**
+
+- Opdateret `.github/copilot-instructions.md` med et eksplicit krav om mobil-first UI
+- Fastlagt krav om design og verifikation ved maks viewport-bredde på 430px
+- Tilføjet regel om at primært app-indhold skal forblive begrænset til mobilbredde på større skærme, medmindre en feature-spec siger andet
+- Opdateret `.github/instructions/feature-development.instructions.md` med en dedikeret sektion for mobil-first implementering
+
+---
+
 ## v0.2.0 — 2026-05-09
 
 **Firebase-integration (scaffolding)**

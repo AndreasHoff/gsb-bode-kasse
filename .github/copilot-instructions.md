@@ -51,6 +51,9 @@ canManageSeasons(role)    // admin only
 - Each feature folder contains only files for that feature
 - No shared state libraries yet — start with React state, evaluate when needed
 - TailwindCSS v4: use `@import "tailwindcss"` in CSS, no config file needed
+- Mobile-first is mandatory for all UI work
+- Design and verify all screens at a maximum viewport width of 430px
+- On larger screens, keep primary app content constrained to mobile width unless a spec explicitly requires otherwise
 - Danish UI copy — the app is in Danish (`bøde`, `sæson`, `godkend`, etc.)
 - Amounts are in DKK — use `formatAmount()` from `src/lib/utils.ts`
 - Relative timestamps — use `formatRelativeTime()` from `src/lib/utils.ts`

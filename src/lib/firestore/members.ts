@@ -1,6 +1,15 @@
-import { getDoc, getDocs, doc, writeBatch } from "firebase/firestore";
+import {
+  getDoc,
+  getDocs,
+  doc,
+  writeBatch,
+  collectionGroup,
+  query,
+  where,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { membersCol, memberDoc, activityLogCol } from "./refs";
+import { membershipConverter } from "./converters";
 import type { Membership, ActivityLog } from "../../types/domain";
 
 export async function getMemberships(teamId: string): Promise<Membership[]> {
@@ -14,6 +23,22 @@ export async function getMembership(
 ): Promise<Membership | null> {
   const snap = await getDoc(memberDoc(teamId, membershipId));
   return snap.exists() ? snap.data() : null;
+}
+
+export async function getActiveMembershipsForUser(
+  userId: string,
+): Promise<Membership[]> {
+  const membersGroup = collectionGroup(db, "members").withConverter(
+    membershipConverter,
+  );
+  const activeMembershipsQuery = query(
+    membersGroup,
+    where("userId", "==", userId),
+    where("isActive", "==", true),
+  );
+
+  const snap = await getDocs(activeMembershipsQuery);
+  return snap.docs.map((d) => d.data());
 }
 
 /**

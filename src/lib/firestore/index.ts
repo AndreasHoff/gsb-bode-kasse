@@ -6,7 +6,14 @@ export { logActivity } from "./activityLog";
 
 export { getTeam, createTeam, getTeams } from "./teams";
 
-export { getMemberships, getMembership, upsertMembership } from "./members";
+export { getUserProfile, ensureUserProfile } from "./users";
+
+export {
+  getMemberships,
+  getMembership,
+  getActiveMembershipsForUser,
+  upsertMembership,
+} from "./members";
 
 export {
   getSeasons,

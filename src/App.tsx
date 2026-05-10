@@ -1,17 +1,216 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { User as FirebaseUser } from "firebase/auth";
 import TeamOverview from "./features/overview/TeamOverview";
 import PersonalOverview from "./features/personal/PersonalOverview";
 import AssignFine from "./features/fines/AssignFine";
 import ActivityLog from "./features/activity/ActivityLog";
+import WelcomeAuth from "./features/auth/WelcomeAuth";
+import {
+  onAuthChange,
+  registerWithEmail,
+  signInWithEmail,
+  signInWithGoogle,
+  signOut,
+} from "./lib/auth";
+import {
+  ensureUserProfile,
+  getActiveMembershipsForUser,
+  getTeam,
+} from "./lib/firestore";
 import "./index.css";
 
 type Tab = "overview" | "personal" | "assign" | "activity";
+type AppStatus = "checking" | "signed-out" | "ready" | "no-membership";
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [status, setStatus] = useState<AppStatus>("checking");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [teamName, setTeamName] = useState("");
+
+  const isAuthLoading = status === "checking" || isSubmittingAuth;
+
+  useEffect(() => {
+    let isAlive = true;
+
+    const unsubscribe = onAuthChange((user) => {
+      void syncUserSession(user);
+    });
+
+    async function syncUserSession(user: FirebaseUser | null): Promise<void> {
+      if (!isAlive) {
+        return;
+      }
+
+      setAuthError(null);
+
+      if (!user) {
+        setStatus("signed-out");
+        setDisplayName("");
+        setTeamName("");
+        return;
+      }
+
+      setStatus("checking");
+
+      try {
+        await ensureUserProfile({
+          id: user.uid,
+          name: user.displayName?.trim() || user.email || "Spiller",
+          email: user.email || "ukendt@bruger.local",
+          avatarUrl: user.photoURL || undefined,
+        });
+
+        const memberships = await getActiveMembershipsForUser(user.uid);
+
+        if (memberships.length === 0) {
+          setDisplayName(user.displayName?.trim() || user.email || "Spiller");
+          setTeamName("");
+          setStatus("no-membership");
+          return;
+        }
+
+        const primaryMembership = memberships[0];
+        const team = await getTeam(primaryMembership.teamId);
+
+        setDisplayName(user.displayName?.trim() || user.email || "Spiller");
+        setTeamName(team?.name || "Mit hold");
+        setStatus("ready");
+      } catch (error) {
+        setAuthError(toFriendlyErrorMessage(error));
+        setStatus("signed-out");
+      }
+    }
+
+    return () => {
+      isAlive = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const headerTitle = useMemo(() => {
+    if (teamName.trim().length > 0) {
+      return teamName;
+    }
+
+    return "GSB Bødekasse";
+  }, [teamName]);
+
+  async function handleLoginWithEmail(
+    email: string,
+    password: string,
+  ): Promise<void> {
+    setIsSubmittingAuth(true);
+    setAuthError(null);
+
+    try {
+      await signInWithEmail(email, password);
+    } catch (error) {
+      setAuthError(toFriendlyErrorMessage(error));
+    } finally {
+      setIsSubmittingAuth(false);
+    }
+  }
+
+  async function handleRegisterWithEmail(
+    name: string,
+    email: string,
+    password: string,
+  ): Promise<void> {
+    setIsSubmittingAuth(true);
+    setAuthError(null);
+
+    try {
+      await registerWithEmail(name, email, password);
+    } catch (error) {
+      setAuthError(toFriendlyErrorMessage(error));
+    } finally {
+      setIsSubmittingAuth(false);
+    }
+  }
+
+  async function handleGoogleLogin(): Promise<void> {
+    setIsSubmittingAuth(true);
+    setAuthError(null);
+
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      setAuthError(toFriendlyErrorMessage(error));
+    } finally {
+      setIsSubmittingAuth(false);
+    }
+  }
+
+  async function handleSignOut(): Promise<void> {
+    await signOut();
+  }
+
+  if (status === "signed-out") {
+    return (
+      <WelcomeAuth
+        isLoading={isAuthLoading}
+        errorMessage={authError}
+        onLogin={handleLoginWithEmail}
+        onRegister={handleRegisterWithEmail}
+        onGoogleLogin={handleGoogleLogin}
+      />
+    );
+  }
+
+  if (status === "checking") {
+    return (
+      <div className="app-screen app-screen--center">
+        <p className="status-note">Henter konto...</p>
+      </div>
+    );
+  }
+
+  if (status === "no-membership") {
+    return (
+      <div className="app-screen">
+        <h1 className="app-title">Hej {displayName}</h1>
+        <p className="app-subtitle mt-3">
+          Din konto er oprettet, men du har endnu ikke et aktivt holdmedlemskab.
+        </p>
+        <p className="app-subtitle mt-2">
+          Kontakt en admin i dit hold for at blive tilføjet.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            void handleSignOut();
+          }}
+          className="btn-primary mt-6 w-full"
+        >
+          Log ud
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col max-w-md mx-auto">
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="app-title app-title--compact">{headerTitle}</p>
+            <p className="app-subtitle text-xs">{displayName}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void handleSignOut();
+            }}
+            className="btn-secondary px-3 py-1.5 text-xs"
+          >
+            Log ud
+          </button>
+        </div>
+      </header>
+
       {/* Page content */}
       <main className="flex-1 overflow-y-auto pb-20">
         {activeTab === "overview" && <TeamOverview />}
@@ -21,7 +220,7 @@ function App() {
       </main>
 
       {/* Bottom navigation */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex">
+      <nav className="app-nav">
         <NavButton label="Hold" emoji="🏆" active={activeTab === "overview"} onClick={() => setActiveTab("overview")} />
         <NavButton label="Mine" emoji="👤" active={activeTab === "personal"} onClick={() => setActiveTab("personal")} />
         <NavButton label="Giv bøde" emoji="🎯" active={activeTab === "assign"} onClick={() => setActiveTab("assign")} />
@@ -45,8 +244,8 @@ function NavButton({
   return (
     <button
       onClick={onClick}
-      className={`flex-1 flex flex-col items-center justify-center py-2 text-xs gap-0.5 transition-colors ${
-        active ? "text-indigo-600 font-semibold" : "text-gray-400"
+      className={`app-nav__button ${
+        active ? "app-nav__button--active" : ""
       }`}
     >
       <span className="text-xl">{emoji}</span>
@@ -56,3 +255,27 @@ function NavButton({
 }
 
 export default App;
+
+function toFriendlyErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "Der opstod en ukendt fejl. Prøv igen.";
+  }
+
+  if (error.message.includes("auth/invalid-credential")) {
+    return "Forkert e-mail eller adgangskode.";
+  }
+
+  if (error.message.includes("auth/email-already-in-use")) {
+    return "E-mailen er allerede i brug.";
+  }
+
+  if (error.message.includes("auth/weak-password")) {
+    return "Adgangskoden er for svag. Brug mindst 6 tegn.";
+  }
+
+  if (error.message.includes("auth/popup-closed-by-user")) {
+    return "Loginvinduet blev lukket før login blev gennemført.";
+  }
+
+  return "Noget gik galt under login. Prøv igen.";
+}

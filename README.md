@@ -70,6 +70,7 @@ docs/
 | F005 | Personal Debt Overview   | Spec complete |
 | F006 | Delete / Undo Fine       | Spec complete |
 | F007 | Activity Log             | Spec complete |
+| F008 | Member Welcome & Auth    | Spec complete |
 
 ---
 

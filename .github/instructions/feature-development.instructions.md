@@ -24,6 +24,14 @@ src/features/<feature-name>/
 
 No barrel `index.ts` files unless there are 3+ exports.
 
+## Mobile-first requirement (mandatory)
+
+- Build all feature UI mobile-first.
+- Treat 430px as the maximum target viewport width for core screen layouts.
+- Verify layouts and interactions at 430px and below before desktop polish.
+- Prevent horizontal scrolling at mobile widths.
+- On wider viewports, keep the primary app container constrained to mobile width unless the active feature spec explicitly states otherwise.
+
 ## Permissions in UI
 
 ```tsx

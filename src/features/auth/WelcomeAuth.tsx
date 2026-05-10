@@ -1,0 +1,191 @@
+import { useMemo, useState } from "react";
+
+type AuthMode = "login" | "register";
+
+interface WelcomeAuthProps {
+  isLoading: boolean;
+  errorMessage: string | null;
+  onLogin: (email: string, password: string) => Promise<void>;
+  onRegister: (name: string, email: string, password: string) => Promise<void>;
+  onGoogleLogin: () => Promise<void>;
+}
+
+function WelcomeAuth({
+  isLoading,
+  errorMessage,
+  onLogin,
+  onRegister,
+  onGoogleLogin,
+}: WelcomeAuthProps) {
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const submitLabel = useMemo(() => {
+    return mode === "login" ? "Log ind" : "Opret konto";
+  }, [mode]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLocalError(null);
+
+    if (mode === "register") {
+      if (name.trim().length < 2) {
+        setLocalError("Navn skal være mindst 2 tegn.");
+        return;
+      }
+
+      if (password.length < 6) {
+        setLocalError("Adgangskode skal være mindst 6 tegn.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setLocalError("Adgangskoderne matcher ikke.");
+        return;
+      }
+
+      await onRegister(name.trim(), email.trim(), password);
+      return;
+    }
+
+    await onLogin(email.trim(), password);
+  }
+
+  return (
+    <section className="auth-shell">
+      <div className="pointer-events-none absolute -left-12 top-[-84px] h-64 w-64 rounded-full bg-emerald-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-[-120px] h-72 w-72 rounded-full bg-cyan-300/25 blur-3xl" />
+
+      <div className="auth-shell__content">
+        <header className="mb-8">
+          <p className="eyebrow">GSB Bødekasse</p>
+          <h1 className="app-title mt-3 text-white">Velkommen til holdets bødekasse</h1>
+          <p className="mt-3 text-sm text-slate-200/80">
+            Log ind eller opret en konto for at se dine bøder, betale med MobilePay og
+            følge holdets aktivitet.
+          </p>
+        </header>
+
+        <div className="segment mb-4 text-sm">
+          <button
+            type="button"
+            onClick={() => setMode("login")}
+            className={`segment__button ${
+              mode === "login" ? "segment__button--active" : ""
+            }`}
+          >
+            Log ind
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("register")}
+            className={`segment__button ${
+              mode === "register" ? "segment__button--active" : ""
+            }`}
+          >
+            Opret konto
+          </button>
+        </div>
+
+        <form
+          onSubmit={(event) => {
+            void handleSubmit(event);
+          }}
+          className="auth-panel"
+        >
+          <div className="space-y-3">
+            {mode === "register" && (
+              <label className="field">
+                <span className="field__label">Navn</span>
+                <input
+                  className="field__input"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  autoComplete="name"
+                  required
+                />
+              </label>
+            )}
+
+            <label className="field">
+              <span className="field__label">E-mail</span>
+              <input
+                type="email"
+                className="field__input"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                required
+              />
+            </label>
+
+            <label className="field">
+              <span className="field__label">Adgangskode</span>
+              <input
+                type="password"
+                className="field__input"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                required
+              />
+            </label>
+
+            {mode === "register" && (
+              <label className="field">
+                <span className="field__label">Gentag adgangskode</span>
+                <input
+                  type="password"
+                  className="field__input"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  autoComplete="new-password"
+                  required
+                />
+              </label>
+            )}
+          </div>
+
+          {(localError || errorMessage) && (
+            <p className="status-error mt-3">{localError ?? errorMessage}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="btn-primary mt-4 w-full text-sm disabled:opacity-50"
+          >
+            {isLoading ? "Vent..." : submitLabel}
+          </button>
+
+          <div className="my-4 flex items-center gap-3 text-xs text-slate-300/80">
+            <span className="h-px flex-1 bg-white/20" />
+            <span>Eller</span>
+            <span className="h-px flex-1 bg-white/20" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              void onGoogleLogin();
+            }}
+            disabled={isLoading}
+            className="btn-ghost w-full text-sm disabled:opacity-50"
+          >
+            Fortsæt med Google
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-xs text-slate-300/75">
+          Du skal være medlem af et hold for at få adgang til bødekassen.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+export default WelcomeAuth;
