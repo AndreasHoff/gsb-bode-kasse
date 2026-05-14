@@ -30,7 +30,7 @@ Before implementing a feature, read its spec. Before adding a feature, write one
 - Fines are **soft-deleted** (set `deletedAt`), never hard-deleted
 - Only one Season per team can be `isActive = true` at a time
 - Payment status transitions: `unpaid` → `pending` → `approved` (or `disputed`)
-- Only Treasurers and Admins can approve payments
+- Current implementation baseline: Firestore writes are admin-only by default
 - Role hierarchy: Player < Captain < Treasurer < Admin
 
 ## Permissions
@@ -38,9 +38,9 @@ Before implementing a feature, read its spec. Before adding a feature, write one
 Always use helpers from `src/lib/permissions.ts` — never hardcode role strings in UI or logic.
 
 ```ts
-canAssignFines(role)      // captain | treasurer | admin
-canApprovePayments(role)  // treasurer | admin
-canDeleteFines(role)      // captain | admin
+canAssignFines(role)      // admin only (v1 baseline)
+canApprovePayments(role)  // admin only (v1 baseline)
+canDeleteFines(role)      // admin only (v1 baseline)
 canManageMembers(role)    // admin only
 canManageSeasons(role)    // admin only
 ```

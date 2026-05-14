@@ -4,6 +4,19 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.4.1 — 2026-05-14
+
+**Refaktorering: generel Firestore-sikkerhedsmodel (admin-write baseline)**
+
+- Opdateret `firestore.rules` til en mere generel model: holdmedlemmer har læseadgang, mens skrivning er begrænset til admins
+- Fjernet detaljerede rolle-specifikke skriveregler i Firestore (captain/treasurer carve-outs) for at holde reglerne enklere i v1
+- Beholdt `activityLog` som append-only (`create` tilladt for admin, `update/delete` blokeret)
+- Opdateret `src/lib/permissions.ts`, så alle muterende handlinger følger admin-only baseline
+- Opdateret `README.md` med tydelig note om nuværende implementeringspolitik samt justeret rolle-matrix
+- Opdateret `.github/copilot-instructions.md`, så agent-instruktioner matcher den nye baseline
+
+---
+
 ## v0.4.0 — 2026-05-14
 
 **Automatisk deployment til GitHub Pages**
