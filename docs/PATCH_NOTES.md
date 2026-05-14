@@ -4,6 +4,16 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.4.1 — 2026-05-14
+
+**UI-justering: mere luft i registerformularen**
+
+- Øget padding i auth-panelet for en mere åben registeroplevelse
+- Løftet den lodrette afstand mellem felterne på registerskærmen
+- Beholder login-flowets tætte kompakthed, men gør registrering mere læsbar på mobil
+
+---
+
 ## v0.4.0 — 2026-05-10
 
 **CI/CD: automatisk deploy til GitHub Pages**

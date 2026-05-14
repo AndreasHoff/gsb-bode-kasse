@@ -97,7 +97,7 @@ function WelcomeAuth({
           }}
           className="auth-panel"
         >
-          <div className="space-y-3">
+          <div className={mode === "register" ? "space-y-4" : "space-y-3"}>
             {mode === "register" && (
               <label className="field">
                 <span className="field__label">Navn</span>

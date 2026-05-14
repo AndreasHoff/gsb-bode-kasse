@@ -175,7 +175,7 @@ button:focus-visible {
 }
 
 .auth-panel {
-  padding: 1rem;
+  padding: 1.25rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 1.5rem;
   background: rgba(255, 255, 255, 0.08);
