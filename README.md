@@ -20,7 +20,7 @@ Inspired by Teambox and PayTheHippo — but faster, more transparent, and better
 |--------------|-----------------------------------------|
 | Frontend     | React + TypeScript (Vite 5)             |
 | Styling      | TailwindCSS v4                          |
-| Backend      | Firebase / Supabase *(TBD)*             |
+| Backend      | Firebase (Firestore)                    |
 | Mobile       | Capacitor *(future App Store wrapping)* |
 | Payments     | MobilePay deep-link (no fintech infra)  |
 
@@ -74,15 +74,45 @@ docs/
 
 ---
 
+## Development Readiness (Scaffolding Phase)
+
+You can start building now.
+
+Current documentation already covers:
+- Core domain entities and non-negotiable business rules (`docs/specs/domain/entities.md`)
+- Core user/system flows (`docs/specs/flows/flows.md`)
+- Initial feature-level specs F001–F008 (`docs/specs/features/`)
+
+Before implementing each new feature, still add/confirm:
+- A dedicated F00N feature spec with flow, edge cases, and acceptance criteria
+- Any missing role/permission constraints
+- Any backend data/index/security rule implications
+
+Use this checklist to decide if a feature is ready for implementation:
+- [ ] User pain/problem is explicit
+- [ ] Goal and actors are explicit
+- [ ] Preconditions and flow are concrete
+- [ ] Edge cases include empty state, permission failure, network failure, duplicate actions
+- [ ] Acceptance criteria are testable
+- [ ] Firestore entity updates are mapped (`docs/specs/domain/entities.md`)
+- [ ] ActivityLog mutation impact is defined
+
+For backend data modeling during scaffolding, treat the current domain model as **v1 baseline** and evolve it feature-by-feature (instead of attempting full upfront modeling).
+
+---
+
 ## Roles & Permissions
+
+Current implementation policy (v1): Firestore writes are restricted to admins.
+Feature-specific exceptions for non-admin writes can be introduced later as explicit, scoped changes.
 
 | Action                | Player | Captain | Treasurer | Admin |
 |-----------------------|--------|---------|-----------|-------|
 | View team overview    | ✓      | ✓       | ✓         | ✓     |
-| Assign fine           |        | ✓       | ✓         | ✓     |
-| Bulk assign fine      |        | ✓       | ✓         | ✓     |
-| Delete fine           |        | ✓       |           | ✓     |
-| Approve payment       |        |         | ✓         | ✓     |
+| Assign fine           |        |         |           | ✓     |
+| Bulk assign fine      |        |         |           | ✓     |
+| Delete fine           |        |         |           | ✓     |
+| Approve payment       |        |         |           | ✓     |
 | Manage members        |        |         |           | ✓     |
 | Manage seasons        |        |         |           | ✓     |
 
@@ -106,47 +136,11 @@ Payments use **MobilePay deep-linking** — no fintech infrastructure required:
 - **Social-first**: culture software, not accounting software
 - **AI-friendly**: structured for GitHub Copilot, Claude, Cursor agents
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## Shipping Rule (Versioning + Patch Notes)
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+When shipping a feature or fix, always update both:
 
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
-
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
-
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+1. `package.json` version (semver: patch for fixes, minor for features)
+2. `docs/PATCH_NOTES.md` with a new entry (version, date, bullet points in Danish)
