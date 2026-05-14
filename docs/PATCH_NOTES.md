@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.4.0 — 2026-05-14
+
+**Automatisk deployment til GitHub Pages**
+
+- Tilføjet GitHub Actions workflow til automatisk build og deploy til GitHub Pages ved push til `main`
+- Workflow bruger eksisterende build-flow via `npm run build` og publicerer `dist` som Pages artifact
+- Opdateret `vite.config.ts` med dynamisk `base` til GitHub Pages (`/<repo>/`) under Actions, så assets loader korrekt i produktion
+- Bevarer lokal udvikling uændret med `base: /` udenfor GitHub Actions
+
+---
+
 ## v0.3.2 — 2026-05-10
 
 **UI-forbedring: globale semantiske stilklasser**
