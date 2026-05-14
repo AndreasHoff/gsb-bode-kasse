@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.4.2 — 2026-05-14
+
+**Fix: Firebase konfiguration på GitHub Pages**
+
+- Opdateret `.github/workflows/deploy.yml` så Firebase `VITE_`-variabler injiceres fra GitHub Secrets under build
+- Tilføjet valideringsstep i deploy-workflow, der fejler tydeligt hvis en nødvendig Firebase-variabel mangler
+- Tilføjet runtime-validering i `src/lib/firebase.ts` med en klar fejlbesked ved manglende konfiguration
+- Opdateret `README.md` med krav til `.env.local` samt nødvendige GitHub Secrets for Pages deploy
+
+---
+
 ## v0.4.1 — 2026-05-14
 
 **Refaktorering: generel Firestore-sikkerhedsmodel (admin-write baseline)**
