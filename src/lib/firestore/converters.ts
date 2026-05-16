@@ -14,7 +14,9 @@ import type {
   Fine,
   Payment,
   ActivityLog,
+  FeatureProposal,
   PaymentStatus,
+  ProposalStatus,
   Role,
 } from "../../types/domain";
 
@@ -38,6 +40,7 @@ interface UserDoc extends DocumentData {
   name: string;
   email: string;
   avatarUrl?: string;
+  isSuperAdmin?: boolean;
   createdAt: Timestamp;
 }
 
@@ -125,6 +128,7 @@ export const userConverter: FirestoreDataConverter<User, UserDoc> = {
       name: user.name,
       email: user.email,
       ...(user.avatarUrl !== undefined && { avatarUrl: user.avatarUrl }),
+      ...(user.isSuperAdmin !== undefined && { isSuperAdmin: user.isSuperAdmin }),
       createdAt: Timestamp.fromDate(new Date(user.createdAt)),
     };
   },
@@ -135,6 +139,7 @@ export const userConverter: FirestoreDataConverter<User, UserDoc> = {
       name: d.name,
       email: d.email,
       avatarUrl: d.avatarUrl,
+      isSuperAdmin: d.isSuperAdmin,
       createdAt: toIso(d.createdAt),
     };
   },
@@ -340,6 +345,72 @@ export const activityLogConverter: FirestoreDataConverter<ActivityLog, ActivityL
       entityId: d.entityId,
       metadata: d.metadata,
       createdAt: toIso(d.createdAt),
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// FeatureProposal
+// ---------------------------------------------------------------------------
+
+interface FeatureProposalDoc extends DocumentData {
+  title: string;
+  problem: string;
+  desiredOutcome: string;
+  whereInApp?: string;
+  priority?: 1 | 2 | 3 | 4;
+  status: ProposalStatus;
+  statusUpdatedAt?: Timestamp;
+  githubIssueNumber?: number;
+  githubIssueUrl?: string;
+  exportedToGithubAt?: Timestamp;
+  approvedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export const featureProposalConverter: FirestoreDataConverter<FeatureProposal, FeatureProposalDoc> = {
+  toFirestore(modelObject: WithFieldValue<FeatureProposal>): FeatureProposalDoc {
+    const p = modelObject as FeatureProposal;
+    return {
+      title: p.title,
+      problem: p.problem,
+      desiredOutcome: p.desiredOutcome,
+      ...(p.whereInApp !== undefined && { whereInApp: p.whereInApp }),
+      ...(p.priority !== undefined && { priority: p.priority }),
+      status: p.status,
+      ...(p.statusUpdatedAt !== undefined && {
+        statusUpdatedAt: Timestamp.fromDate(new Date(p.statusUpdatedAt)),
+      }),
+      ...(p.githubIssueNumber !== undefined && { githubIssueNumber: p.githubIssueNumber }),
+      ...(p.githubIssueUrl !== undefined && { githubIssueUrl: p.githubIssueUrl }),
+      ...(p.exportedToGithubAt !== undefined && {
+        exportedToGithubAt: Timestamp.fromDate(new Date(p.exportedToGithubAt)),
+      }),
+      ...(p.approvedAt !== undefined && {
+        approvedAt: Timestamp.fromDate(new Date(p.approvedAt)),
+      }),
+      createdAt: Timestamp.fromDate(new Date(p.createdAt)),
+      updatedAt: Timestamp.fromDate(new Date(p.updatedAt)),
+    };
+  },
+  fromFirestore(snapshot: QueryDocumentSnapshot<FeatureProposalDoc>): FeatureProposal {
+    const d = snapshot.data();
+    return {
+      id: snapshot.id,
+      title: d.title,
+      problem: d.problem,
+      desiredOutcome: d.desiredOutcome,
+      whereInApp: d.whereInApp,
+      priority: d.priority,
+      status: d.status,
+      statusUpdatedAt: toIsoOpt(d.statusUpdatedAt),
+      githubIssueNumber: d.githubIssueNumber,
+      githubIssueUrl: d.githubIssueUrl,
+      exportedToGithubAt: toIsoOpt(d.exportedToGithubAt),
+      approvedAt: toIsoOpt(d.approvedAt),
+      createdAt: toIso(d.createdAt),
+      updatedAt: toIso(d.updatedAt),
     };
   },
 };

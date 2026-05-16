@@ -9,6 +9,7 @@ export interface User {
   name: string;
   email: string;
   avatarUrl?: string;
+  isSuperAdmin?: boolean;
   createdAt: string;
 }
 
@@ -86,4 +87,29 @@ export interface ActivityLog {
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
+}
+
+export type ProposalStatus =
+  | "new"
+  | "triaged"
+  | "planned"
+  | "implemented"
+  | "done"
+  | "abandoned";
+
+export interface FeatureProposal {
+  id: string;
+  title: string;
+  problem: string;
+  desiredOutcome: string;
+  whereInApp?: string;
+  priority?: 1 | 2 | 3 | 4;
+  status: ProposalStatus;
+  statusUpdatedAt?: string;
+  githubIssueNumber?: number;
+  githubIssueUrl?: string;
+  exportedToGithubAt?: string;
+  approvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }

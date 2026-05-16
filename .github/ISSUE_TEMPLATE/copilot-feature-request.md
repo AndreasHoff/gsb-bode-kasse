@@ -33,18 +33,16 @@ Write 1-3 realistic examples of how this should work.
 - [ ] Important
 - [ ] Critical
 
-## Attachments
-
-_Optional — add screenshots or recordings to illustrate the problem or desired behavior._
-
 ## Platform impact (if known)
 
 - [ ] Frontend UI only
-- [ ] Backend/server/database (Raspberry Pi execution required)
+- [ ] Requires a Firebase Cloud Function
+- [ ] Firestore schema change needed
 - [ ] Not sure
 
 ## Notes for Copilot (required behavior)
 
-- Convert this issue into Spec Kit artifacts (`spec.md`, `plan.md`, `tasks.md`) before implementation.
-- Classify execution environment as `frontend-only` or `backend/server/database`.
-- If backend/server/database scope exists, implement and validate on Raspberry Pi (or Pi-equivalent Linux ARM) via SSH/remote dev.
+- Convert this issue into a spec under `docs/specs/features/` (F00N naming convention) before implementation.
+- All UI copy must be in Danish.
+- If a Cloud Function is needed, the implementation lives in `functions/src/index.ts`.
+- Follow existing patterns in `src/lib/firestore/` for any new Firestore collections.

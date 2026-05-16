@@ -5,11 +5,11 @@ import PersonalOverview from "./features/personal/PersonalOverview";
 import AssignFine from "./features/fines/AssignFine";
 import ActivityLog from "./features/activity/ActivityLog";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
+import Proposals from "./features/proposals/Proposals";
 import {
   onAuthChange,
   registerWithEmail,
   signInWithEmail,
-  signInWithGoogle,
   signOut,
 } from "./lib/auth";
 import {
@@ -19,7 +19,7 @@ import {
 } from "./lib/firestore";
 import "./index.css";
 
-type Tab = "overview" | "personal" | "assign" | "activity";
+type Tab = "overview" | "personal" | "assign" | "activity" | "proposals";
 type AppStatus = "checking" | "signed-out" | "ready" | "no-membership";
 
 function App() {
@@ -29,6 +29,7 @@ function App() {
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [teamName, setTeamName] = useState("");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const isAuthLoading = status === "checking" || isSubmittingAuth;
 
@@ -50,18 +51,20 @@ function App() {
         setStatus("signed-out");
         setDisplayName("");
         setTeamName("");
+        setIsSuperAdmin(false);
         return;
       }
 
       setStatus("checking");
 
       try {
-        await ensureUserProfile({
+        const userProfile = await ensureUserProfile({
           id: user.uid,
           name: user.displayName?.trim() || user.email || "Spiller",
           email: user.email || "ukendt@bruger.local",
           avatarUrl: user.photoURL || undefined,
         });
+        setIsSuperAdmin(userProfile.isSuperAdmin === true);
 
         const memberships = await getActiveMembershipsForUser(user.uid);
 
@@ -131,19 +134,6 @@ function App() {
     }
   }
 
-  async function handleGoogleLogin(): Promise<void> {
-    setIsSubmittingAuth(true);
-    setAuthError(null);
-
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      setAuthError(toFriendlyErrorMessage(error));
-    } finally {
-      setIsSubmittingAuth(false);
-    }
-  }
-
   async function handleSignOut(): Promise<void> {
     await signOut();
   }
@@ -155,7 +145,6 @@ function App() {
         errorMessage={authError}
         onLogin={handleLoginWithEmail}
         onRegister={handleRegisterWithEmail}
-        onGoogleLogin={handleGoogleLogin}
       />
     );
   }
@@ -217,6 +206,7 @@ function App() {
         {activeTab === "personal" && <PersonalOverview />}
         {activeTab === "assign" && <AssignFine />}
         {activeTab === "activity" && <ActivityLog />}
+        {activeTab === "proposals" && <Proposals />}
       </main>
 
       {/* Bottom navigation */}
@@ -225,6 +215,9 @@ function App() {
         <NavButton label="Mine" emoji="👤" active={activeTab === "personal"} onClick={() => setActiveTab("personal")} />
         <NavButton label="Giv bøde" emoji="🎯" active={activeTab === "assign"} onClick={() => setActiveTab("assign")} />
         <NavButton label="Aktivitet" emoji="📋" active={activeTab === "activity"} onClick={() => setActiveTab("activity")} />
+        {isSuperAdmin && (
+          <NavButton label="Idéforslag" emoji="💡" active={activeTab === "proposals"} onClick={() => setActiveTab("proposals")} />
+        )}
       </nav>
     </div>
   );
