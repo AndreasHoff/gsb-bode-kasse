@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
 import TeamOverview from "./features/overview/TeamOverview";
 import PersonalOverview from "./features/personal/PersonalOverview";
@@ -30,6 +30,9 @@ function App() {
   const [displayName, setDisplayName] = useState("");
   const [teamName, setTeamName] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  // Holds the name entered during registration so syncUserSession can use it
+  // before Firebase Auth's onAuthStateChanged fires (before updateProfile runs).
+  const pendingNameRef = useRef<string | null>(null);
 
   const isAuthLoading = status === "checking" || isSubmittingAuth;
 
@@ -58,27 +61,34 @@ function App() {
       setStatus("checking");
 
       try {
+        const resolvedName =
+          pendingNameRef.current ||
+          user.displayName?.trim() ||
+          user.email ||
+          "Spiller";
         const userProfile = await ensureUserProfile({
           id: user.uid,
-          name: user.displayName?.trim() || user.email || "Spiller",
+          name: resolvedName,
           email: user.email || "ukendt@bruger.local",
           avatarUrl: user.photoURL || undefined,
         });
-        setIsSuperAdmin(userProfile.isSuperAdmin === true);
+        const superAdmin = userProfile.isSuperAdmin === true;
+        setIsSuperAdmin(superAdmin);
 
         const memberships = await getActiveMembershipsForUser(user.uid);
 
         if (memberships.length === 0) {
-          setDisplayName(user.displayName?.trim() || user.email || "Spiller");
+          setDisplayName(userProfile.name);
           setTeamName("");
-          setStatus("no-membership");
+          // Super-admins can access the app (proposals) without a team membership
+          setStatus(superAdmin ? "ready" : "no-membership");
           return;
         }
 
         const primaryMembership = memberships[0];
         const team = await getTeam(primaryMembership.teamId);
 
-        setDisplayName(user.displayName?.trim() || user.email || "Spiller");
+        setDisplayName(userProfile.name);
         setTeamName(team?.name || "Mit hold");
         setStatus("ready");
       } catch (error) {
@@ -125,11 +135,13 @@ function App() {
     setIsSubmittingAuth(true);
     setAuthError(null);
 
+    pendingNameRef.current = name.trim();
     try {
       await registerWithEmail(name, email, password);
     } catch (error) {
       setAuthError(toFriendlyErrorMessage(error));
     } finally {
+      pendingNameRef.current = null;
       setIsSubmittingAuth(false);
     }
   }

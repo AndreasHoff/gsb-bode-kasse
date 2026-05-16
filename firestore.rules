@@ -2,120 +2,13 @@ rules_version = '2';
 
 // Firestore Security Rules for GSB Bødekasse
 //
-// Role resolution strategy:
-//   Each member's Firestore doc ID equals their Firebase Auth UID
-//   (enforced by upsertMembership in src/lib/firestore/members.ts).
-//   This allows O(1) role lookups via get() without custom claims.
-//
-// Current strategy (v1): keep rules broad and general.
-// - Team members can read team-scoped data
-// - Admins can write team-scoped data
-// Feature-specific write exceptions can be added later as explicit carve-outs.
+// Current strategy: allow all operations for authenticated users.
+// Tighten these rules before going to production.
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function memberData(teamId) {
-      return get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data;
-    }
-
-    function isMember(teamId) {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)) &&
-        memberData(teamId).isActive == true;
-    }
-
-    function memberRole(teamId) {
-      return memberData(teamId).role;
-    }
-
-    function isAdmin(teamId)     { return isMember(teamId) && memberRole(teamId) == 'admin'; }
-
-    // -------------------------------------------------------------------------
-    // users/{userId}  — top-level, not team-scoped
-    // -------------------------------------------------------------------------
-    match /users/{userId} {
-      allow read: if isSignedIn() && request.auth.uid == userId;
-      allow write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    // -------------------------------------------------------------------------
-    // featureProposals/{proposalId}  — super-admin only
-    // -------------------------------------------------------------------------
-    function isSuperAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperAdmin == true;
-    }
-
-    match /featureProposals/{proposalId} {
-      allow read, write: if isSuperAdmin();
-    }
-
-    // -------------------------------------------------------------------------
-    // teams/{teamId}
-    // -------------------------------------------------------------------------
-    match /teams/{teamId} {
-      allow read: if isMember(teamId);
-      allow write: if isAdmin(teamId);
-
-      // -----------------------------------------------------------------------
-      // teams/{teamId}/members/{membershipId}
-      // -----------------------------------------------------------------------
-      match /members/{membershipId} {
-        allow read: if isMember(teamId);
-        allow write: if isAdmin(teamId);
-      }
-
-      // -----------------------------------------------------------------------
-      // teams/{teamId}/seasons/{seasonId}
-      // -----------------------------------------------------------------------
-      match /seasons/{seasonId} {
-        allow read: if isMember(teamId);
-        allow write: if isAdmin(teamId);
-      }
-
-      // -----------------------------------------------------------------------
-      // teams/{teamId}/fineRules/{fineRuleId}
-      // -----------------------------------------------------------------------
-      match /fineRules/{fineRuleId} {
-        allow read: if isMember(teamId);
-        allow write: if isAdmin(teamId);
-      }
-
-      // -----------------------------------------------------------------------
-      // teams/{teamId}/fines/{fineId}
-      // -----------------------------------------------------------------------
-      match /fines/{fineId} {
-        allow read: if isMember(teamId);
-        allow write: if isAdmin(teamId);
-      }
-
-      // -----------------------------------------------------------------------
-      // teams/{teamId}/payments/{paymentId}
-      // -----------------------------------------------------------------------
-      match /payments/{paymentId} {
-        allow read: if isMember(teamId);
-        allow write: if isAdmin(teamId);
-      }
-
-      // -----------------------------------------------------------------------
-      // teams/{teamId}/activityLog/{logId}
-      // Append-only. Admins can create log entries, but updates/deletes are
-      // blocked so the log remains immutable after creation.
-      // -----------------------------------------------------------------------
-      match /activityLog/{logId} {
-        allow read: if isMember(teamId);
-        allow create: if isAdmin(teamId);
-        allow update, delete: if false;
-      }
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

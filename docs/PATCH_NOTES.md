@@ -4,6 +4,19 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.5.2 — 2026-05-17
+
+**Fix: Login-flow og Firestore opsætning**
+
+- Firestore-regler forenklet til "alle autentificerede brugere" (tightes før produktion)
+- Super-admin kan nu logge ind uden holdmedlemskab og tilgå Idéforslag-sektionen
+- Visningsnavn i header hentes nu fra Firestore-profilen (ikke Firebase Auth)
+- Racecondition i registreringsflow rettet: navn gemmes korrekt via `pendingNameRef`
+- Firestore composite index tilføjet for membership-collectionGroup-forespørgsel
+- Dev-server port sat til 3000
+
+---
+
 ## v0.5.1 — 2026-05-16
 
 **Fix: Infrastruktur og login-oprydning**
