@@ -48,6 +48,18 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // featureProposals/{proposalId}  — super-admin only
+    // -------------------------------------------------------------------------
+    function isSuperAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperAdmin == true;
+    }
+
+    match /featureProposals/{proposalId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // -------------------------------------------------------------------------
     // teams/{teamId}
     // -------------------------------------------------------------------------
     match /teams/{teamId} {

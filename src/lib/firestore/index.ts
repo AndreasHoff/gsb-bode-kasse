@@ -48,3 +48,13 @@ export {
   approvePayment,
   disputePayment,
 } from "./payments";
+
+export type { CreateProposalInput, UpdateProposalInput } from "./proposals";
+export {
+  getProposals,
+  getProposal,
+  createProposal,
+  updateProposal,
+  updateProposalStatus,
+  approveProposal,
+} from "./proposals";

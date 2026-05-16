@@ -38,3 +38,8 @@ export function canViewActivityLog(role: Role): boolean {
 export function canManageFineRules(role: Role): boolean {
   return isAdminRole(role);
 }
+
+/** Returns true if the user is a super-admin (can manage feature proposals) */
+export function canManageProposals(isSuperAdmin: boolean | undefined): boolean {
+  return isSuperAdmin === true;
+}

@@ -7,7 +7,6 @@ interface WelcomeAuthProps {
   errorMessage: string | null;
   onLogin: (email: string, password: string) => Promise<void>;
   onRegister: (name: string, email: string, password: string) => Promise<void>;
-  onGoogleLogin: () => Promise<void>;
 }
 
 function WelcomeAuth({
@@ -15,7 +14,6 @@ function WelcomeAuth({
   errorMessage,
   onLogin,
   onRegister,
-  onGoogleLogin,
 }: WelcomeAuthProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [name, setName] = useState("");
@@ -162,22 +160,6 @@ function WelcomeAuth({
             {isLoading ? "Vent..." : submitLabel}
           </button>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-slate-300/80">
-            <span className="h-px flex-1 bg-white/20" />
-            <span>Eller</span>
-            <span className="h-px flex-1 bg-white/20" />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              void onGoogleLogin();
-            }}
-            disabled={isLoading}
-            className="btn-ghost w-full text-sm disabled:opacity-50"
-          >
-            Fortsæt med Google
-          </button>
         </form>
 
         <p className="mt-4 text-center text-xs text-slate-300/75">

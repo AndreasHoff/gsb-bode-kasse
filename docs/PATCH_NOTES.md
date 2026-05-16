@@ -4,6 +4,34 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.5.1 — 2026-05-16
+
+**Fix: Infrastruktur og login-oprydning**
+
+- Fjernet Google-login — appen bruger udelukkende e-mail/adgangskode
+- Dev-server kører nu på port 3000
+- Tilføjet `firestore.indexes.json` med composite index for membership-forespørgsler (rettede generisk login-fejl for nye brugere)
+- `firebase.json` opdateret til at referere index-filen
+
+---
+
+## v0.5.0 — 2026-05-16
+
+**Feature: Idéforslag — opret GitHub-issues direkte fra appen**
+
+- Ny sektion „Idéforslag“ i navigationen (kun synlig for super-admin)
+- Super-admin kan oprette, redigere og følge forslag gennem livscyklus: Ny → Under vurdering → Planlagt → Implementeret → Færdig
+- Manuelt „Eksporten til GitHub“-knap opretter et GitHub-issue via Firebase Cloud Function (PAT opbevares som Firebase Secret)
+- Forslag med status `done`, `implemented` eller `abandoned` er låst for redigering
+- Godkend-knap tilgængelig når status er `implemented`
+- Tilføjet `isSuperAdmin?: boolean` til `User`-domænetypen og Firestore-konverter
+- Tilføjet `canManageProposals()` til `permissions.ts`
+- Firestore-regler låser `featureProposals`-kollektionen til kun super-admin
+- Oprettet `firebase.json` og `functions/` med TypeScript Cloud Function til GitHub API-kald
+- Opdateret `.github/ISSUE_TEMPLATE/copilot-feature-request.md` til Firebase-arkitektur
+
+---
+
 ## v0.4.2 — 2026-05-14
 
 **Fix: Firebase konfiguration på GitHub Pages**

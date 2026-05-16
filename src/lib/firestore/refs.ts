@@ -9,6 +9,7 @@ import {
   fineConverter,
   paymentConverter,
   activityLogConverter,
+  featureProposalConverter,
 } from "./converters";
 // ---------------------------------------------------------------------------
 // Top-level collections
@@ -28,6 +29,12 @@ export const teamsCol = () =>
 
 export const teamDoc = (teamId: string) =>
   doc(db, "teams", teamId).withConverter(teamConverter);
+
+export const proposalsCol = () =>
+  collection(db, "featureProposals").withConverter(featureProposalConverter);
+
+export const proposalDoc = (proposalId: string) =>
+  doc(db, "featureProposals", proposalId).withConverter(featureProposalConverter);
 
 // ---------------------------------------------------------------------------
 // Sub-collections under teams/{teamId}
