@@ -8,7 +8,7 @@ interface ExportResult {
 export async function callExportProposalToGithub(
   proposalId: string,
 ): Promise<ExportResult> {
-  const functions = getFunctions();
+  const functions = getFunctions(undefined, "europe-west1");
   const fn = httpsCallable<{ proposalId: string }, ExportResult>(
     functions,
     "exportProposalToGithub",

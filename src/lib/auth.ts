@@ -1,12 +1,24 @@
 import {
+  browserLocalPersistence,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
+  setPersistence,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
 } from "firebase/auth";
 import { auth } from "./firebase";
+
+let authPersistencePromise: Promise<void> | null = null;
+
+export function ensurePersistentAuth(): Promise<void> {
+  if (!authPersistencePromise) {
+    authPersistencePromise = setPersistence(auth, browserLocalPersistence);
+  }
+
+  return authPersistencePromise;
+}
 
 export async function registerWithEmail(
   name: string,

@@ -18,7 +18,7 @@ interface ExportResult {
 }
 
 export const exportProposalToGithub = onCall<ExportInput, Promise<ExportResult>>(
-  { secrets: [GITHUB_PAT, GITHUB_REPO] },
+  { region: "europe-west1", secrets: [GITHUB_PAT, GITHUB_REPO] },
   async (request) => {
     // 1. Require authentication
     if (!request.auth) {
@@ -73,12 +73,14 @@ export const exportProposalToGithub = onCall<ExportInput, Promise<ExportResult>>
       throw new HttpsError("internal", `GitHub API fejl: ${response.status} — ${errorText}`);
     }
 
-    const issue = (await response.json()) as { number: number; html_url: string };
+    const issue = (await response.json()) as { id: number; number: number; html_url: string };
 
     // 5. Persist GitHub metadata back to Firestore
     await db.collection("featureProposals").doc(proposalId).update({
+      githubIssueId: String(issue.id),
       githubIssueNumber: issue.number,
       githubIssueUrl: issue.html_url,
+      githubIssueRepo: repo,
       exportedToGithubAt: new Date(),
       updatedAt: new Date(),
     });

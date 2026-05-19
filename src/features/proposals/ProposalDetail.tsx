@@ -9,9 +9,9 @@ import { callExportProposalToGithub } from "../../lib/functions";
 import { formatRelativeTime } from "../../lib/utils";
 import {
   STATUS_LABELS,
-  PRIORITY_LABELS,
   ALL_PROPOSAL_STATUSES,
   LOCKED_STATUSES,
+  PriorityBadge,
   StatusBadge,
 } from "./proposal-utils";
 
@@ -111,7 +111,7 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
         >
           ← Tilbage
         </button>
-        <p className="text-sm text-red-600">{error ?? "Forslaget blev ikke fundet"}</p>
+        <p className="status-error">{error ?? "Forslaget blev ikke fundet"}</p>
       </div>
     );
   }
@@ -148,9 +148,7 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {proposal.priority !== undefined && (
-            <span className="text-xs text-[var(--color-text-muted)]">
-              Prioritet: {PRIORITY_LABELS[proposal.priority]}
-            </span>
+            <PriorityBadge priority={proposal.priority} withPrefix={true} />
           )}
           <span className="text-xs text-[var(--color-text-muted)]">
             Oprettet {formatRelativeTime(proposal.createdAt)}
@@ -241,7 +239,7 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
         </button>
       )}
 
-      {actionError && <p className="text-sm text-red-600 mt-2">{actionError}</p>}
+      {actionError && <p className="status-error mt-2">{actionError}</p>}
     </div>
   );
 }

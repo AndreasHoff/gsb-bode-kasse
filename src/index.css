@@ -4,16 +4,55 @@
   font-family: "Manrope", "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  --color-bg: #f2f6f6;
-  --color-surface: #ffffff;
-  --color-surface-muted: #e6efef;
-  --color-text: #102022;
-  --color-text-muted: #587178;
+  --color-bg: #0e2021;
+  --color-surface: #163738;
+  --color-surface-muted: #214b4d;
+  --color-text: #effcf9;
+  --color-text-muted: #b6d7d2;
   --color-primary: #0f766e;
   --color-primary-strong: #115e59;
   --color-primary-contrast: #f5fffe;
   --color-accent: #ea580c;
-  --color-border: #c8d8d9;
+  --color-error: #ffd0d6;
+  --color-border: rgba(196, 230, 223, 0.3);
+  --color-bg-glow-cool: rgba(120, 220, 206, 0.24);
+  --color-bg-glow-warm: rgba(248, 163, 115, 0.22);
+  --color-auth-bg-start: #0e2021;
+  --color-auth-bg-end: #163738;
+  --color-auth-text: #effcf9;
+  --color-auth-text-muted: rgba(219, 237, 234, 0.82);
+  --color-auth-footnote: rgba(219, 237, 234, 0.74);
+  --color-auth-error: #ffd0d6;
+  --color-auth-orb-left: rgba(120, 220, 206, 0.24);
+  --color-auth-orb-right: rgba(248, 163, 115, 0.22);
+  --color-auth-panel-border: rgba(255, 255, 255, 0.14);
+  --color-auth-panel-bg: rgba(255, 255, 255, 0.08);
+  --color-auth-segment-border: rgba(255, 255, 255, 0.16);
+  --color-auth-segment-bg: rgba(255, 255, 255, 0.1);
+  --color-auth-segment-text: rgba(239, 252, 249, 0.86);
+  --color-auth-segment-hover: rgba(255, 255, 255, 0.12);
+  --color-auth-segment-active-bg: #ffffff;
+  --color-auth-segment-active-text: #102022;
+  --color-auth-input-border: rgba(255, 255, 255, 0.16);
+  --color-auth-input-bg: rgba(12, 28, 29, 0.6);
+  --color-auth-input-placeholder: rgba(219, 237, 234, 0.56);
+  --color-status-new-bg: #f3f4f6;
+  --color-status-new-text: #374151;
+  --color-status-triaged-bg: #dbeafe;
+  --color-status-triaged-text: #1d4ed8;
+  --color-status-planned-bg: #fef3c7;
+  --color-status-planned-text: #b45309;
+  --color-status-implemented-bg: #ccfbf1;
+  --color-status-implemented-text: #0f766e;
+  --color-status-done-bg: #dcfce7;
+  --color-status-done-text: #15803d;
+  --color-status-abandoned-bg: #fee2e2;
+  --color-status-abandoned-text: #b91c1c;
+  --color-priority-low: #62d56d;
+  --color-priority-moderate: #f0db42;
+  --color-priority-high: #f5a14a;
+  --color-priority-critical: #e24f7b;
+  --app-main-bottom-space: calc(6.5rem + env(safe-area-inset-bottom, 0px));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -32,9 +71,9 @@ a:hover {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 10% 10%, #d7efef 0%, transparent 28%),
-    radial-gradient(circle at 90% 90%, #ffe8d9 0%, transparent 26%),
-    var(--color-bg);
+    radial-gradient(circle at 10% 10%, var(--color-bg-glow-cool) 0%, transparent 28%),
+    radial-gradient(circle at 90% 90%, var(--color-bg-glow-warm) 0%, transparent 26%),
+    linear-gradient(180deg, var(--color-auth-bg-start) 0%, var(--color-auth-bg-end) 100%);
   color: var(--color-text);
   min-width: 320px;
   min-height: 100vh;
@@ -73,13 +112,19 @@ button:focus-visible {
 }
 
 .app-shell {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   max-width: 430px;
   min-height: 100vh;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  background:
+    radial-gradient(circle at 12% 8%, var(--color-auth-orb-left) 0%, transparent 28%),
+    radial-gradient(circle at 88% 88%, var(--color-auth-orb-right) 0%, transparent 26%),
+    linear-gradient(180deg, var(--color-auth-bg-start) 0%, var(--color-auth-bg-end) 100%);
+  box-shadow: 0 16px 48px rgba(7, 17, 18, 0.55);
 }
 
 .app-screen {
@@ -91,7 +136,10 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: var(--color-bg);
+  background:
+    radial-gradient(circle at 12% 8%, var(--color-auth-orb-left) 0%, transparent 28%),
+    radial-gradient(circle at 88% 88%, var(--color-auth-orb-right) 0%, transparent 26%),
+    linear-gradient(180deg, var(--color-auth-bg-start) 0%, var(--color-auth-bg-end) 100%);
   color: var(--color-text);
 }
 
@@ -104,13 +152,19 @@ button:focus-visible {
   padding: 1rem;
 }
 
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: var(--app-main-bottom-space);
+}
+
 .app-header {
   position: sticky;
   top: 0;
   z-index: 10;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  background: color-mix(in srgb, var(--color-auth-bg-end) 74%, transparent);
   backdrop-filter: blur(12px);
 }
 
@@ -135,7 +189,7 @@ button:focus-visible {
 
 .eyebrow {
   margin: 0;
-  color: color-mix(in srgb, var(--color-primary) 74%, white);
+  color: color-mix(in srgb, var(--color-primary) 62%, var(--color-text));
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.22em;
@@ -145,12 +199,13 @@ button:focus-visible {
 .app-card {
   border: 1px solid var(--color-border);
   border-radius: 1.5rem;
-  background: var(--color-surface);
-  box-shadow: 0 16px 40px rgba(16, 32, 34, 0.08);
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  box-shadow: 0 16px 32px rgba(5, 15, 15, 0.35);
+  backdrop-filter: blur(8px);
 }
 
 .app-card--muted {
-  background: color-mix(in srgb, var(--color-surface-muted) 70%, white);
+  background: color-mix(in srgb, var(--color-surface-muted) 78%, transparent);
 }
 
 .auth-shell {
@@ -158,10 +213,33 @@ button:focus-visible {
   overflow: hidden;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 8%, rgba(120, 220, 206, 0.24) 0, transparent 28%),
-    radial-gradient(circle at 88% 88%, rgba(248, 163, 115, 0.22) 0, transparent 26%),
-    linear-gradient(180deg, #0e2021 0%, #163738 100%);
-  color: #effcf9;
+    radial-gradient(circle at 12% 8%, var(--color-auth-orb-left) 0, transparent 28%),
+    radial-gradient(circle at 88% 88%, var(--color-auth-orb-right) 0, transparent 26%),
+    linear-gradient(180deg, var(--color-auth-bg-start) 0%, var(--color-auth-bg-end) 100%);
+  color: var(--color-auth-text);
+}
+
+.auth-shell__orb {
+  pointer-events: none;
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+}
+
+.auth-shell__orb--left {
+  left: -3rem;
+  top: -5.25rem;
+  width: 16rem;
+  height: 16rem;
+  background: var(--color-auth-orb-left);
+}
+
+.auth-shell__orb--right {
+  right: -5rem;
+  bottom: -7.5rem;
+  width: 18rem;
+  height: 18rem;
+  background: var(--color-auth-orb-right);
 }
 
 .auth-shell__content {
@@ -176,18 +254,18 @@ button:focus-visible {
 
 .auth-panel {
   padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--color-auth-panel-border);
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-auth-panel-bg);
   backdrop-filter: blur(14px);
 }
 
 .segment {
   display: inline-flex;
   padding: 0.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--color-auth-segment-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-auth-segment-bg);
 }
 
 .segment__button {
@@ -195,17 +273,29 @@ button:focus-visible {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: rgba(239, 252, 249, 0.86);
+  color: var(--color-auth-segment-text);
 }
 
 .segment__button:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--color-auth-segment-hover);
 }
 
 .segment__button--active,
 .segment__button--active:hover {
-  background: white;
-  color: #102022;
+  background: var(--color-auth-segment-active-bg);
+  color: var(--color-auth-segment-active-text);
+}
+
+.auth-title {
+  color: var(--color-auth-text);
+}
+
+.auth-copy {
+  color: var(--color-auth-text-muted);
+}
+
+.auth-footnote {
+  color: var(--color-auth-footnote);
 }
 
 .field {
@@ -222,26 +312,26 @@ button:focus-visible {
 .field__input {
   width: 100%;
   padding: 0.7rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, white);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
   border-radius: 0.95rem;
-  background: color-mix(in srgb, var(--color-surface-muted) 34%, white);
+  background: color-mix(in srgb, var(--color-surface-muted) 66%, transparent);
   color: var(--color-text);
   font: inherit;
   box-sizing: border-box;
 }
 
 .auth-panel .field__input {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(12, 28, 29, 0.6);
-  color: white;
+  border-color: var(--color-auth-input-border);
+  background: var(--color-auth-input-bg);
+  color: var(--color-auth-text);
 }
 
 .field__input::placeholder {
-  color: color-mix(in srgb, var(--color-text-muted) 70%, white);
+  color: color-mix(in srgb, var(--color-text-muted) 86%, transparent);
 }
 
 .auth-panel .field__input::placeholder {
-  color: rgba(219, 237, 234, 0.56);
+  color: var(--color-auth-input-placeholder);
 }
 
 .field__input:focus {
@@ -272,12 +362,12 @@ button:focus-visible {
 
 .btn-secondary {
   border-color: var(--color-border);
-  background: var(--color-surface-muted);
+  background: color-mix(in srgb, var(--color-surface-muted) 82%, transparent);
   color: var(--color-text);
 }
 
 .btn-secondary:hover {
-  background: color-mix(in srgb, var(--color-surface-muted) 80%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-surface-muted) 96%, transparent);
 }
 
 .btn-ghost {
@@ -291,8 +381,12 @@ button:focus-visible {
 }
 
 .status-error {
-  color: #ffd0d6;
+  color: var(--color-error);
   font-size: 0.875rem;
+}
+
+.auth-shell .status-error {
+  color: var(--color-auth-error);
 }
 
 .status-note {
@@ -306,6 +400,78 @@ button:focus-visible {
   color: var(--color-text-muted);
 }
 
+.status-badge {
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-badge--new {
+  background: var(--color-status-new-bg);
+  color: var(--color-status-new-text);
+}
+
+.status-badge--triaged {
+  background: var(--color-status-triaged-bg);
+  color: var(--color-status-triaged-text);
+}
+
+.status-badge--planned {
+  background: var(--color-status-planned-bg);
+  color: var(--color-status-planned-text);
+}
+
+.status-badge--implemented {
+  background: var(--color-status-implemented-bg);
+  color: var(--color-status-implemented-text);
+}
+
+.status-badge--done {
+  background: var(--color-status-done-bg);
+  color: var(--color-status-done-text);
+}
+
+.status-badge--abandoned {
+  background: var(--color-status-abandoned-bg);
+  color: var(--color-status-abandoned-text);
+}
+
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0.15rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-surface) 76%, transparent);
+}
+
+.priority-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+}
+
+.priority-dot--1 {
+  background: var(--color-priority-low);
+}
+
+.priority-dot--2 {
+  background: var(--color-priority-moderate);
+}
+
+.priority-dot--3 {
+  background: var(--color-priority-high);
+}
+
+.priority-dot--4 {
+  background: var(--color-priority-critical);
+}
+
 .app-nav {
   position: fixed;
   left: 50%;
@@ -314,8 +480,10 @@ button:focus-visible {
   max-width: 430px;
   transform: translateX(-50%);
   display: flex;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  background: color-mix(in srgb, var(--color-auth-bg-end) 82%, transparent);
+  box-shadow: 0 -12px 20px rgba(6, 15, 16, 0.46);
+  backdrop-filter: blur(10px);
 }
 
 .app-nav__button {
@@ -325,17 +493,18 @@ button:focus-visible {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: var(--color-text-muted);
+  color: color-mix(in srgb, var(--color-text-muted) 90%, white);
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 .app-nav__button:hover {
-  background: color-mix(in srgb, var(--color-surface-muted) 40%, white);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .app-nav__button--active,
 .app-nav__button--active:hover {
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-surface-muted) 55%, white);
+  color: color-mix(in srgb, var(--color-primary) 78%, var(--color-text));
+  background: color-mix(in srgb, var(--color-primary) 32%, transparent);
+  box-shadow: inset 0 2px 0 var(--color-primary);
 }

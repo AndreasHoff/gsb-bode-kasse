@@ -361,8 +361,10 @@ interface FeatureProposalDoc extends DocumentData {
   priority?: 1 | 2 | 3 | 4;
   status: ProposalStatus;
   statusUpdatedAt?: Timestamp;
+  githubIssueId?: string;
   githubIssueNumber?: number;
   githubIssueUrl?: string;
+  githubIssueRepo?: string;
   exportedToGithubAt?: Timestamp;
   approvedAt?: Timestamp;
   createdAt: Timestamp;
@@ -382,8 +384,10 @@ export const featureProposalConverter: FirestoreDataConverter<FeatureProposal, F
       ...(p.statusUpdatedAt !== undefined && {
         statusUpdatedAt: Timestamp.fromDate(new Date(p.statusUpdatedAt)),
       }),
+      ...(p.githubIssueId !== undefined && { githubIssueId: p.githubIssueId }),
       ...(p.githubIssueNumber !== undefined && { githubIssueNumber: p.githubIssueNumber }),
       ...(p.githubIssueUrl !== undefined && { githubIssueUrl: p.githubIssueUrl }),
+      ...(p.githubIssueRepo !== undefined && { githubIssueRepo: p.githubIssueRepo }),
       ...(p.exportedToGithubAt !== undefined && {
         exportedToGithubAt: Timestamp.fromDate(new Date(p.exportedToGithubAt)),
       }),
@@ -405,8 +409,10 @@ export const featureProposalConverter: FirestoreDataConverter<FeatureProposal, F
       priority: d.priority,
       status: d.status,
       statusUpdatedAt: toIsoOpt(d.statusUpdatedAt),
+      githubIssueId: d.githubIssueId,
       githubIssueNumber: d.githubIssueNumber,
       githubIssueUrl: d.githubIssueUrl,
+      githubIssueRepo: d.githubIssueRepo,
       exportedToGithubAt: toIsoOpt(d.exportedToGithubAt),
       approvedAt: toIsoOpt(d.approvedAt),
       createdAt: toIso(d.createdAt),
