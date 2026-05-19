@@ -32,7 +32,11 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
         setProblem(p.problem);
         setDesiredOutcome(p.desiredOutcome);
         setWhereInApp(p.whereInApp ?? "");
-        setPriority(p.priority !== undefined ? (String(p.priority) as "1" | "2" | "3" | "4") : "");
+        setPriority(
+          p.priority !== undefined
+            ? (String(p.priority) as "1" | "2" | "3" | "4")
+            : "",
+        );
       })
       .catch(() => setError("Kunne ikke hente forslaget"))
       .finally(() => setLoading(false));
@@ -83,93 +87,161 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
 
   return (
     <div className="app-page">
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          type="button"
-          className="btn-secondary px-3 py-1.5 text-sm"
-          onClick={onCancel}
-        >
-          ← Tilbage
-        </button>
-        <h1 className="app-title">{isEditMode ? "Rediger forslag" : "Nyt forslag"}</h1>
+      <button
+        type="button"
+        className="mb-3 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        onClick={onCancel}
+      >
+        ← Tilbage
+      </button>
+
+      <div className="mb-6">
+        <p className="eyebrow mb-2">Idéforslag</p>
+        <h1 className="app-title">{isEditMode ? "Rediger idé" : "Ny idé"}</h1>
       </div>
 
       <form
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-5"
       >
         <label className="field">
-          <span className="field__label">Titel *</span>
+          <span className="field__label text-base font-semibold">Titel *</span>
+          <p className="app-subtitle mt-0 mb-2">Hvad vil du have? (en sætning)</p>
           <input
             className="field__input"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Kort og beskrivende titel"
+            placeholder="F.eks. Tilføj søgefunktion til galleriet"
             required
           />
         </label>
 
         <label className="field">
-          <span className="field__label">Hvad er problemet? *</span>
+          <span className="field__label text-base font-semibold">Problem *</span>
+          <p className="app-subtitle mt-0 mb-2">
+            Hvad er udfordringen? Hvorfor ønsker du dette?
+          </p>
           <textarea
             className="field__input"
             rows={4}
             value={problem}
             onChange={(e) => setProblem(e.target.value)}
-            placeholder="Beskriv hvad der er svært, forvirrende eller mangler i dag"
+            placeholder="Beskriv problemet eller behovet..."
             required
           />
         </label>
 
         <label className="field">
-          <span className="field__label">Hvad bør ske i stedet? *</span>
+          <span className="field__label text-base font-semibold">Ønsket udfald *</span>
+          <p className="app-subtitle mt-0 mb-2">
+            Hvad skal det se ud / virke som, når det er færdigt?
+          </p>
           <textarea
             className="field__input"
             rows={4}
             value={desiredOutcome}
             onChange={(e) => setDesiredOutcome(e.target.value)}
-            placeholder="Beskriv den ønskede adfærd eller løsning"
+            placeholder="Beskriv det ønskede resultat..."
             required
           />
         </label>
 
         <label className="field">
-          <span className="field__label">Hvor i appen?</span>
+          <span className="field__label text-base font-semibold">
+            Sted i appen <span className="font-normal">(valgfri)</span>
+          </span>
+          <p className="app-subtitle mt-0 mb-2">
+            Hvilken side eller del af appen handler dette om?
+          </p>
           <input
             className="field__input"
             type="text"
             value={whereInApp}
             onChange={(e) => setWhereInApp(e.target.value)}
-            placeholder="F.eks. Holdoversigt, Bødeliste..."
+            placeholder="F.eks. Albumvisning, Upload-side..."
           />
         </label>
 
-        <label className="field">
-          <span className="field__label">Prioritet</span>
-          <select
-            className="field__input"
-            value={priority}
-            onChange={(e) =>
-              setPriority(e.target.value as "" | "1" | "2" | "3" | "4")
-            }
-          >
-            <option value="">Ingen</option>
-            <option value="1">Lav</option>
-            <option value="2">Moderat</option>
-            <option value="3">Høj</option>
-            <option value="4">Kritisk</option>
-          </select>
-        </label>
+        <section>
+          <p className="field__label text-base font-semibold">
+            Prioritet <span className="font-normal">(valgfri)</span>
+          </p>
+          <p className="app-subtitle mt-0 mb-3">Hvor vigtigt er dette for dig?</p>
+          <div className="flex flex-wrap gap-2">
+            <PriorityChip
+              label="Lav"
+              value={1}
+              isActive={priority === "1"}
+              onClick={() => setPriority((prev) => (prev === "1" ? "" : "1"))}
+            />
+            <PriorityChip
+              label="Moderat"
+              value={2}
+              isActive={priority === "2"}
+              onClick={() => setPriority((prev) => (prev === "2" ? "" : "2"))}
+            />
+            <PriorityChip
+              label="Høj"
+              value={3}
+              isActive={priority === "3"}
+              onClick={() => setPriority((prev) => (prev === "3" ? "" : "3"))}
+            />
+            <PriorityChip
+              label="Kritisk"
+              value={4}
+              isActive={priority === "4"}
+              onClick={() => setPriority((prev) => (prev === "4" ? "" : "4"))}
+            />
+          </div>
+        </section>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="status-error">{error}</p>}
 
-        <button type="submit" className="btn-primary w-full" disabled={saving}>
-          {saving ? "Gemmer..." : isEditMode ? "Gem ændringer" : "Opret forslag"}
+        <button type="submit" className="btn-primary w-full py-3" disabled={saving}>
+          {saving ? "Gemmer..." : isEditMode ? "Gem ændringer" : "Opret idé"}
         </button>
       </form>
     </div>
+  );
+}
+
+function PriorityChip({
+  label,
+  value,
+  isActive,
+  onClick,
+}: {
+  label: string;
+  value: 1 | 2 | 3 | 4;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-full border px-4 py-2 text-sm font-semibold transition-colors"
+      style={
+        isActive
+          ? {
+              borderColor: "var(--color-primary)",
+              background: "color-mix(in srgb, var(--color-primary) 32%, transparent)",
+              color: "var(--color-text)",
+            }
+          : {
+              borderColor: "var(--color-border)",
+              background: "color-mix(in srgb, var(--color-surface) 76%, transparent)",
+              color: "var(--color-text)",
+            }
+      }
+    >
+      <span className="inline-flex items-center gap-2">
+        <span className={`priority-dot priority-dot--${value}`} />
+        {label}
+      </span>
+    </button>
   );
 }

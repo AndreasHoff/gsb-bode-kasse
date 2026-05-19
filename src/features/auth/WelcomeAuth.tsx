@@ -55,14 +55,14 @@ function WelcomeAuth({
 
   return (
     <section className="auth-shell">
-      <div className="pointer-events-none absolute -left-12 top-[-84px] h-64 w-64 rounded-full bg-emerald-300/25 blur-3xl" />
-      <div className="pointer-events-none absolute -right-20 bottom-[-120px] h-72 w-72 rounded-full bg-cyan-300/25 blur-3xl" />
+      <div className="auth-shell__orb auth-shell__orb--left" />
+      <div className="auth-shell__orb auth-shell__orb--right" />
 
       <div className="auth-shell__content">
         <header className="mb-8">
           <p className="eyebrow">GSB Bødekasse</p>
-          <h1 className="app-title mt-3 text-white">Velkommen til holdets bødekasse</h1>
-          <p className="mt-3 text-sm text-slate-200/80">
+          <h1 className="app-title auth-title mt-3">Velkommen til holdets bødekasse</h1>
+          <p className="auth-copy mt-3 text-sm">
             Log ind eller opret en konto for at se dine bøder, betale med MobilePay og
             følge holdets aktivitet.
           </p>
@@ -162,7 +162,7 @@ function WelcomeAuth({
 
         </form>
 
-        <p className="mt-4 text-center text-xs text-slate-300/75">
+        <p className="auth-footnote mt-4 text-center text-xs">
           Du skal være medlem af et hold for at få adgang til bødekassen.
         </p>
       </div>

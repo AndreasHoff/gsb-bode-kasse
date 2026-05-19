@@ -1,5 +1,7 @@
 import type { ProposalStatus } from "../../types/domain";
 
+export type PriorityValue = 1 | 2 | 3 | 4;
+
 export const STATUS_LABELS: Record<ProposalStatus, string> = {
   new: "Ny",
   triaged: "Under vurdering",
@@ -16,6 +18,13 @@ export const PRIORITY_LABELS: Record<number, string> = {
   4: "Kritisk",
 };
 
+const PRIORITY_DOT_CLASS: Record<PriorityValue, string> = {
+  1: "priority-dot--1",
+  2: "priority-dot--2",
+  3: "priority-dot--3",
+  4: "priority-dot--4",
+};
+
 export const ALL_PROPOSAL_STATUSES: ProposalStatus[] = [
   "new",
   "triaged",
@@ -28,20 +37,35 @@ export const ALL_PROPOSAL_STATUSES: ProposalStatus[] = [
 export const LOCKED_STATUSES: ProposalStatus[] = ["done", "implemented", "abandoned"];
 
 const STATUS_COLORS: Record<ProposalStatus, string> = {
-  new: "bg-gray-100 text-gray-700",
-  triaged: "bg-blue-100 text-blue-700",
-  planned: "bg-amber-100 text-amber-700",
-  implemented: "bg-teal-100 text-teal-700",
-  done: "bg-green-100 text-green-700",
-  abandoned: "bg-red-100 text-red-700",
+  new: "status-badge--new",
+  triaged: "status-badge--triaged",
+  planned: "status-badge--planned",
+  implemented: "status-badge--implemented",
+  done: "status-badge--done",
+  abandoned: "status-badge--abandoned",
 };
 
 export function StatusBadge({ status }: { status: ProposalStatus }) {
   return (
     <span
-      className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[status]}`}
+      className={`status-badge shrink-0 ${STATUS_COLORS[status]}`}
     >
       {STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+export function PriorityBadge({
+  priority,
+  withPrefix = false,
+}: {
+  priority: PriorityValue;
+  withPrefix?: boolean;
+}) {
+  return (
+    <span className="priority-badge">
+      <span className={`priority-dot ${PRIORITY_DOT_CLASS[priority]}`} />
+      {withPrefix ? `Prioritet: ${PRIORITY_LABELS[priority]}` : PRIORITY_LABELS[priority]}
     </span>
   );
 }

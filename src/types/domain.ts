@@ -106,8 +106,10 @@ export interface FeatureProposal {
   priority?: 1 | 2 | 3 | 4;
   status: ProposalStatus;
   statusUpdatedAt?: string;
+  githubIssueId?: string;
   githubIssueNumber?: number;
   githubIssueUrl?: string;
+  githubIssueRepo?: string;
   exportedToGithubAt?: string;
   approvedAt?: string;
   createdAt: string;

@@ -4,6 +4,16 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.5.3 — 2026-05-19
+
+**Fix: Stabil GitHub-eksport fra Idéforslag**
+
+- Rettet `GITHUB_REPO`-secret til korrekt repository-slug, så eksport ikke længere fejler med GitHub API 404
+- Eksport-flow valideret end-to-end fra app til Cloud Function i `europe-west1`
+- GitHub-metadata (inkl. `githubIssueNumber`) bevares i `featureProposals` efter succesfuld eksport for bedre sporbarhed
+
+---
+
 ## v0.5.2 — 2026-05-17
 
 **Fix: Login-flow og Firestore opsætning**

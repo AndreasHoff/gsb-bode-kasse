@@ -7,6 +7,7 @@ import ActivityLog from "./features/activity/ActivityLog";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import {
+  ensurePersistentAuth,
   onAuthChange,
   registerWithEmail,
   signInWithEmail,
@@ -38,10 +39,25 @@ function App() {
 
   useEffect(() => {
     let isAlive = true;
+    let unsubscribe: (() => void) | null = null;
 
-    const unsubscribe = onAuthChange((user) => {
-      void syncUserSession(user);
-    });
+    void setupAuthListener();
+
+    async function setupAuthListener(): Promise<void> {
+      try {
+        await ensurePersistentAuth();
+      } catch {
+        // Continue with default persistence if local persistence is unavailable.
+      }
+
+      if (!isAlive) {
+        return;
+      }
+
+      unsubscribe = onAuthChange((user) => {
+        void syncUserSession(user);
+      });
+    }
 
     async function syncUserSession(user: FirebaseUser | null): Promise<void> {
       if (!isAlive) {
@@ -99,7 +115,7 @@ function App() {
 
     return () => {
       isAlive = false;
-      unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
@@ -200,20 +216,31 @@ function App() {
             <p className="app-title app-title--compact">{headerTitle}</p>
             <p className="app-subtitle text-xs">{displayName}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              void handleSignOut();
-            }}
-            className="btn-secondary px-3 py-1.5 text-xs"
-          >
-            Log ud
-          </button>
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("proposals")}
+                className="btn-secondary px-3 py-1.5 text-xs"
+              >
+                Idéforslag
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                void handleSignOut();
+              }}
+              className="btn-secondary px-3 py-1.5 text-xs"
+            >
+              Log ud
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Page content */}
-      <main className="flex-1 overflow-y-auto pb-20">
+      <main className="app-main">
         {activeTab === "overview" && <TeamOverview />}
         {activeTab === "personal" && <PersonalOverview />}
         {activeTab === "assign" && <AssignFine />}
@@ -227,9 +254,6 @@ function App() {
         <NavButton label="Mine" emoji="👤" active={activeTab === "personal"} onClick={() => setActiveTab("personal")} />
         <NavButton label="Giv bøde" emoji="🎯" active={activeTab === "assign"} onClick={() => setActiveTab("assign")} />
         <NavButton label="Aktivitet" emoji="📋" active={activeTab === "activity"} onClick={() => setActiveTab("activity")} />
-        {isSuperAdmin && (
-          <NavButton label="Idéforslag" emoji="💡" active={activeTab === "proposals"} onClick={() => setActiveTab("proposals")} />
-        )}
       </nav>
     </div>
   );

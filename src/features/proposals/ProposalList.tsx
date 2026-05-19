@@ -4,8 +4,8 @@ import { getProposals } from "../../lib/firestore";
 import { formatRelativeTime } from "../../lib/utils";
 import {
   STATUS_LABELS,
-  PRIORITY_LABELS,
   ALL_PROPOSAL_STATUSES,
+  PriorityBadge,
   StatusBadge,
 } from "./proposal-utils";
 
@@ -70,7 +70,7 @@ export default function ProposalList({ onNew, onSelect }: Props) {
       {loading && (
         <p className="status-note text-center py-8">Henter forslag...</p>
       )}
-      {error && <p className="text-sm text-red-600 py-4">{error}</p>}
+      {error && <p className="status-error py-4">{error}</p>}
 
       {!loading && !error && filtered.length === 0 && (
         <div className="empty-state">
@@ -95,9 +95,7 @@ export default function ProposalList({ onNew, onSelect }: Props) {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {proposal.priority !== undefined && (
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  {PRIORITY_LABELS[proposal.priority]}
-                </span>
+                <PriorityBadge priority={proposal.priority} />
               )}
               {proposal.githubIssueNumber !== undefined && (
                 <span className="text-xs text-[var(--color-text-muted)]">
