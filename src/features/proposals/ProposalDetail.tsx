@@ -14,6 +14,7 @@ import {
   PriorityBadge,
   StatusBadge,
 } from "./proposal-utils";
+import { ProposalDetailSection } from "./proposal-layout.tsx";
 
 interface Props {
   proposalId: string;
@@ -119,12 +120,11 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
   const isLocked = LOCKED_STATUSES.includes(proposal.status);
 
   return (
-    <div className="app-page">
-      {/* Header row */}
-      <div className="flex items-center gap-3 mb-5">
+    <div className="app-page proposal-detail-page pb-8">
+      <div className="flex items-center gap-3 mb-6">
         <button
           type="button"
-          className="btn-secondary px-3 py-1.5 text-sm shrink-0"
+          className="btn-secondary px-3 py-2 text-sm shrink-0 rounded-2xl"
           onClick={onBack}
         >
           ← Tilbage
@@ -132,7 +132,7 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
         {!isLocked && (
           <button
             type="button"
-            className="btn-secondary px-3 py-1.5 text-sm ml-auto"
+            className="btn-secondary px-3 py-2 text-sm ml-auto rounded-2xl"
             onClick={() => onEdit(proposal.id)}
           >
             Rediger
@@ -140,46 +140,30 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
         )}
       </div>
 
-      {/* Title + status */}
-      <div className="mb-5">
-        <div className="flex items-start gap-2 mb-2">
-          <h1 className="app-title flex-1 leading-snug">{proposal.title}</h1>
+      <div className="proposal-detail-hero">
+        <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={proposal.status} />
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
           {proposal.priority !== undefined && (
-            <PriorityBadge priority={proposal.priority} withPrefix={true} />
+            <PriorityBadge priority={proposal.priority} />
           )}
-          <span className="text-xs text-[var(--color-text-muted)]">
-            Oprettet {formatRelativeTime(proposal.createdAt)}
-          </span>
+        </div>
+        <h1 className="app-title leading-tight">{proposal.title}</h1>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-[var(--color-text-muted)]">
+          <span>Oprettet {formatRelativeTime(proposal.createdAt)}</span>
           {proposal.statusUpdatedAt && (
-            <span className="text-xs text-[var(--color-text-muted)]">
+            <span>
               Status opdateret {formatRelativeTime(proposal.statusUpdatedAt)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Content sections */}
-      <div className="flex flex-col gap-4 mb-6">
-        <DetailSection label="Hvad er problemet?" content={proposal.problem} />
-        <DetailSection
-          label="Hvad bør ske i stedet?"
-          content={proposal.desiredOutcome}
-        />
-        {proposal.whereInApp && (
-          <DetailSection label="Hvor i appen?" content={proposal.whereInApp} />
-        )}
-      </div>
-
-      {/* GitHub link or export button */}
       {proposal.githubIssueUrl ? (
         <a
           href={proposal.githubIssueUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-6"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-primary)] mb-6"
         >
           <span>GitHub #{proposal.githubIssueNumber}</span>
           {proposal.exportedToGithubAt && (
@@ -192,44 +176,41 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
       ) : (
         <button
           type="button"
-          className="btn-secondary w-full mb-5 text-sm"
+          className="btn-secondary w-full mb-6 text-sm rounded-2xl"
           onClick={() => {
             void handleExportToGithub();
           }}
           disabled={exporting}
         >
-          {exporting ? "Eksporterer..." : "Eksporter til GitHub"}
+          {exporting ? "Eksporterer..." : "Eksportér til GitHub"}
         </button>
       )}
 
-      {/* Status control */}
-      <div className="mb-4">
-        <label className="field">
-          <span className="field__label text-xs uppercase tracking-wide font-bold text-[var(--color-text-muted)]">
-            Skift status
-          </span>
-          <select
-            className="field__input text-sm"
-            value={proposal.status}
-            onChange={(e) => {
-              void handleStatusChange(e.target.value as ProposalStatus);
-            }}
-            disabled={changingStatus}
-          >
-            {ALL_PROPOSAL_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
+      <div className="app-card app-card--muted proposal-status-control mb-6">
+        <label htmlFor="proposal-status-select" className="proposal-status-control__label">
+          Status (kun admin):
         </label>
+        <select
+          id="proposal-status-select"
+          className="proposal-status-control__select"
+          value={proposal.status}
+          onChange={(e) => {
+            void handleStatusChange(e.target.value as ProposalStatus);
+          }}
+          disabled={changingStatus}
+        >
+          {ALL_PROPOSAL_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s]}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Approve button */}
       {proposal.status === "implemented" && (
         <button
           type="button"
-          className="btn-primary w-full mb-4"
+          className="btn-primary w-full mb-6 rounded-2xl"
           onClick={() => {
             void handleApprove();
           }}
@@ -239,16 +220,25 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
         </button>
       )}
 
-      {actionError && <p className="status-error mt-2">{actionError}</p>}
-    </div>
-  );
-}
+      {actionError && <p className="status-error mb-6">{actionError}</p>}
 
-function DetailSection({ label, content }: { label: string; content: string }) {
-  return (
-    <div className="app-card app-card--muted p-4">
-      <p className="eyebrow mb-2">{label}</p>
-      <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+      <div className="proposal-detail-stack">
+        <ProposalDetailSection title="Hvad er problemet?">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{proposal.problem}</p>
+        </ProposalDetailSection>
+        <ProposalDetailSection title="Hvad bør ske i stedet?">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+            {proposal.desiredOutcome}
+          </p>
+        </ProposalDetailSection>
+        {proposal.whereInApp && (
+          <ProposalDetailSection title="Hvor i appen?">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              {proposal.whereInApp}
+            </p>
+          </ProposalDetailSection>
+        )}
+      </div>
     </div>
   );
 }

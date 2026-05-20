@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import type { FeatureProposal } from "../../types/domain";
 import { createProposal, getProposal, updateProposal } from "../../lib/firestore";
 import type { CreateProposalInput, UpdateProposalInput } from "../../lib/firestore";
+import {
+  ProposalField,
+  ProposalPageHeader,
+  ProposalSection,
+} from "./proposal-layout.tsx";
 
 interface Props {
   proposalId?: string;
@@ -86,29 +91,28 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
   }
 
   return (
-    <div className="app-page">
+    <div className="app-page pb-8">
       <button
         type="button"
-        className="mb-3 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        className="mb-4 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
         onClick={onCancel}
       >
         ← Tilbage
       </button>
 
-      <div className="mb-6">
-        <p className="eyebrow mb-2">Idéforslag</p>
-        <h1 className="app-title">{isEditMode ? "Rediger idé" : "Ny idé"}</h1>
-      </div>
+      <ProposalPageHeader
+        eyebrow="Idéforslag"
+        title={isEditMode ? "Rediger idé" : "Ny idé"}
+        subtitle="Skriv lidt mere luftigt, så hver del er let at læse og scanne."
+      />
 
       <form
         onSubmit={(e) => {
           void handleSubmit(e);
         }}
-        className="flex flex-col gap-5"
+        className="proposal-form-stack"
       >
-        <label className="field">
-          <span className="field__label text-base font-semibold">Titel *</span>
-          <p className="app-subtitle mt-0 mb-2">Hvad vil du have? (en sætning)</p>
+        <ProposalField label="Titel *" hint="Hvad vil du have? (en sætning)">
           <input
             className="field__input"
             type="text"
@@ -117,13 +121,12 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
             placeholder="F.eks. Tilføj søgefunktion til galleriet"
             required
           />
-        </label>
+        </ProposalField>
 
-        <label className="field">
-          <span className="field__label text-base font-semibold">Problem *</span>
-          <p className="app-subtitle mt-0 mb-2">
-            Hvad er udfordringen? Hvorfor ønsker du dette?
-          </p>
+        <ProposalField
+          label="Problem *"
+          hint="Hvad er udfordringen? Hvorfor ønsker du dette?"
+        >
           <textarea
             className="field__input"
             rows={4}
@@ -132,13 +135,12 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
             placeholder="Beskriv problemet eller behovet..."
             required
           />
-        </label>
+        </ProposalField>
 
-        <label className="field">
-          <span className="field__label text-base font-semibold">Ønsket udfald *</span>
-          <p className="app-subtitle mt-0 mb-2">
-            Hvad skal det se ud / virke som, når det er færdigt?
-          </p>
+        <ProposalField
+          label="Ønsket udfald *"
+          hint="Hvad skal det se ud / virke som, når det er færdigt?"
+        >
           <textarea
             className="field__input"
             rows={4}
@@ -147,15 +149,12 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
             placeholder="Beskriv det ønskede resultat..."
             required
           />
-        </label>
+        </ProposalField>
 
-        <label className="field">
-          <span className="field__label text-base font-semibold">
-            Sted i appen <span className="font-normal">(valgfri)</span>
-          </span>
-          <p className="app-subtitle mt-0 mb-2">
-            Hvilken side eller del af appen handler dette om?
-          </p>
+        <ProposalField
+          label={"Sted i appen (valgfri)"}
+          hint="Hvilken side eller del af appen handler dette om?"
+        >
           <input
             className="field__input"
             type="text"
@@ -163,14 +162,11 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
             onChange={(e) => setWhereInApp(e.target.value)}
             placeholder="F.eks. Albumvisning, Upload-side..."
           />
-        </label>
+        </ProposalField>
 
-        <section>
-          <p className="field__label text-base font-semibold">
-            Prioritet <span className="font-normal">(valgfri)</span>
-          </p>
-          <p className="app-subtitle mt-0 mb-3">Hvor vigtigt er dette for dig?</p>
-          <div className="flex flex-wrap gap-2">
+        <ProposalSection title="Prioritet (valgfri)">
+          <p className="proposal-field__hint mb-4">Hvor vigtigt er dette for dig?</p>
+          <div className="proposal-chip-group">
             <PriorityChip
               label="Lav"
               value={1}
@@ -196,11 +192,11 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
               onClick={() => setPriority((prev) => (prev === "4" ? "" : "4"))}
             />
           </div>
-        </section>
+        </ProposalSection>
 
         {error && <p className="status-error">{error}</p>}
 
-        <button type="submit" className="btn-primary w-full py-3" disabled={saving}>
+        <button type="submit" className="btn-primary w-full py-3 rounded-2xl" disabled={saving}>
           {saving ? "Gemmer..." : isEditMode ? "Gem ændringer" : "Opret idé"}
         </button>
       </form>
@@ -223,7 +219,7 @@ function PriorityChip({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full border px-4 py-2 text-sm font-semibold transition-colors"
+      className="proposal-chip"
       style={
         isActive
           ? {
