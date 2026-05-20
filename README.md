@@ -91,6 +91,7 @@ docs/
 | F006 | Delete / Undo Fine       | Spec complete |
 | F007 | Activity Log             | Spec complete |
 | F008 | Member Welcome & Auth    | Spec complete |
+| F009 | Navbar med venstre sidemenu | Spec complete |
 
 ---
 
@@ -101,7 +102,7 @@ You can start building now.
 Current documentation already covers:
 - Core domain entities and non-negotiable business rules (`docs/specs/domain/entities.md`)
 - Core user/system flows (`docs/specs/flows/flows.md`)
-- Initial feature-level specs F001–F008 (`docs/specs/features/`)
+- Initial feature-level specs F001–F009 (`docs/specs/features/`)
 
 Before implementing each new feature, still add/confirm:
 - A dedicated F00N feature spec with flow, edge cases, and acceptance criteria
