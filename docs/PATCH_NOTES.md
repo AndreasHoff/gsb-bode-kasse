@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.5.4 — 2026-05-20
+
+**UI: Refinement af Idéforslag-layout**
+
+- Øget vertikal afstand mellem elementer i forslags-hero-området for mindre klammert udseende
+- Redesignet status-kontrolelement med horisontalt layout (label på venstre side, dropdown på højre)
+- Optimeret typografi og kortkomplethed i oversigten: mindre font-size og tightere paddings
+- Øget spacing mellem filter-pills med dedikeret CSS-layout klasse for garanteret synlighed
+- Refineret padding/margin på kort-komponenter for bedre andel
+
+---
+
 ## v0.5.3 — 2026-05-19
 
 **Fix: Stabil GitHub-eksport fra Idéforslag**
