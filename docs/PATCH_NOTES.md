@@ -4,6 +4,15 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.5.5 — 2026-05-21
+
+**Fix: Header-knapper afstand**
+
+- Tilføjet dedikeret CSS-layout klasse `.app-header__actions` med eksplicit gap for sikret spacing mellem Idéforslag og Log ud-knapper
+- Samme mønster som filter-pills: utility-only gap erstattet med konkret CSS-regel
+
+---
+
 ## v0.5.4 — 2026-05-20
 
 **UI: Refinement af Idéforslag-layout**

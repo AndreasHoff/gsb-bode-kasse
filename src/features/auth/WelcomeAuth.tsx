@@ -60,12 +60,7 @@ function WelcomeAuth({
 
       <div className="auth-shell__content">
         <header className="mb-8">
-          <p className="eyebrow">GSB Bødekasse</p>
           <h1 className="app-title auth-title mt-3">Velkommen til holdets bødekasse</h1>
-          <p className="auth-copy mt-3 text-sm">
-            Log ind eller opret en konto for at se dine bøder, betale med MobilePay og
-            følge holdets aktivitet.
-          </p>
         </header>
 
         <div className="segment mb-4 text-sm">
@@ -159,12 +154,7 @@ function WelcomeAuth({
           >
             {isLoading ? "Vent..." : submitLabel}
           </button>
-
         </form>
-
-        <p className="auth-footnote mt-4 text-center text-xs">
-          Du skal være medlem af et hold for at få adgang til bødekassen.
-        </p>
       </div>
     </section>
   );

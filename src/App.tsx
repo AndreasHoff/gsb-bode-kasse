@@ -216,7 +216,7 @@ function App() {
             <p className="app-title app-title--compact">{headerTitle}</p>
             <p className="app-subtitle text-xs">{displayName}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="app-header__actions">
             {isSuperAdmin && (
               <button
                 type="button"

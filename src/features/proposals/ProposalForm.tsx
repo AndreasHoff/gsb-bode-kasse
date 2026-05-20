@@ -94,16 +94,14 @@ export default function ProposalForm({ proposalId, onSave, onCancel }: Props) {
     <div className="app-page pb-8">
       <button
         type="button"
-        className="mb-4 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        className="mb-2 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
         onClick={onCancel}
       >
         ← Tilbage
       </button>
 
       <ProposalPageHeader
-        eyebrow="Idéforslag"
         title={isEditMode ? "Rediger idé" : "Ny idé"}
-        subtitle="Skriv lidt mere luftigt, så hver del er let at læse og scanne."
       />
 
       <form
