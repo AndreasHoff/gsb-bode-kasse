@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
+import patchNotesMarkdown from "../docs/PATCH_NOTES.md?raw";
 import TeamOverview from "./features/overview/TeamOverview";
 import PersonalOverview from "./features/personal/PersonalOverview";
 import AssignFine from "./features/fines/AssignFine";
@@ -20,11 +21,18 @@ import {
 } from "./lib/firestore";
 import "./index.css";
 
-type Tab = "overview" | "personal" | "assign" | "activity" | "proposals";
+type Tab =
+  | "overview"
+  | "personal"
+  | "assign"
+  | "activity"
+  | "proposals"
+  | "settings";
 type AppStatus = "checking" | "signed-out" | "ready" | "no-membership";
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [status, setStatus] = useState<AppStatus>("checking");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
@@ -126,6 +134,10 @@ function App() {
 
     return "GSB Bødekasse";
   }, [teamName]);
+  const appVersion = useMemo(
+    () => getCurrentVersionFromPatchNotes(patchNotesMarkdown),
+    [],
+  );
 
   async function handleLoginWithEmail(
     email: string,
@@ -208,24 +220,75 @@ function App() {
     );
   }
 
+  const menuItems: Array<{ tab: Tab; label: string; emoji: string }> = [
+    { tab: "overview", label: "Hold", emoji: "🏆" },
+    { tab: "personal", label: "Mine", emoji: "👤" },
+    { tab: "assign", label: "Giv bøde", emoji: "🎯" },
+    { tab: "activity", label: "Aktivitet", emoji: "📋" },
+  ];
+
+  if (isSuperAdmin) {
+    menuItems.push(
+      { tab: "proposals", label: "Idéforslag", emoji: "💡" },
+      { tab: "settings", label: "Indstillinger", emoji: "⚙️" },
+    );
+  }
+
   return (
     <div className="app-shell">
+      {isSideMenuOpen && (
+        <button
+          type="button"
+          className="app-menu-backdrop"
+          aria-label="Luk sidemenu"
+          onClick={() => setIsSideMenuOpen(false)}
+        />
+      )}
+      <aside
+        id="app-side-menu"
+        className={`app-side-menu ${isSideMenuOpen ? "app-side-menu--open" : ""}`}
+      >
+        <div className="app-side-menu__header">
+          <p className="app-title app-title--compact">Menu</p>
+          <p className="app-subtitle text-xs">{headerTitle}</p>
+        </div>
+        <nav className="app-side-menu__nav">
+          {menuItems.map((item) => (
+            <button
+              key={item.tab}
+              type="button"
+              onClick={() => {
+                setActiveTab(item.tab);
+                setIsSideMenuOpen(false);
+              }}
+              className={`app-side-menu__button ${
+                activeTab === item.tab ? "app-side-menu__button--active" : ""
+              }`}
+            >
+              <span>{item.emoji}</span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
       <header className="app-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="app-title app-title--compact">{headerTitle}</p>
-            <p className="app-subtitle text-xs">{displayName}</p>
+        <div className="app-navbar">
+          <button
+            type="button"
+            onClick={() => setIsSideMenuOpen((open) => !open)}
+            className="app-navbar__burger"
+            aria-controls="app-side-menu"
+            aria-expanded={isSideMenuOpen}
+            aria-label={isSideMenuOpen ? "Luk menu" : "Åbn menu"}
+          >
+            ☰
+          </button>
+          <div className="app-navbar__brand">
+            <p className="app-title app-title--compact">GSB Bødekasse</p>
+            <p className="app-subtitle text-xs">{appVersion}</p>
           </div>
-          <div className="app-header__actions">
-            {isSuperAdmin && (
-              <button
-                type="button"
-                onClick={() => setActiveTab("proposals")}
-                className="btn-secondary px-3 py-1.5 text-xs"
-              >
-                Idéforslag
-              </button>
-            )}
+          <div className="app-navbar__user">
+            <p className="app-subtitle app-navbar__user-name">{displayName}</p>
             <button
               type="button"
               onClick={() => {
@@ -246,44 +309,35 @@ function App() {
         {activeTab === "assign" && <AssignFine />}
         {activeTab === "activity" && <ActivityLog />}
         {activeTab === "proposals" && <Proposals />}
+        {activeTab === "settings" && <SettingsPlaceholder />}
       </main>
-
-      {/* Bottom navigation */}
-      <nav className="app-nav">
-        <NavButton label="Hold" emoji="🏆" active={activeTab === "overview"} onClick={() => setActiveTab("overview")} />
-        <NavButton label="Mine" emoji="👤" active={activeTab === "personal"} onClick={() => setActiveTab("personal")} />
-        <NavButton label="Giv bøde" emoji="🎯" active={activeTab === "assign"} onClick={() => setActiveTab("assign")} />
-        <NavButton label="Aktivitet" emoji="📋" active={activeTab === "activity"} onClick={() => setActiveTab("activity")} />
-      </nav>
     </div>
   );
 }
 
-function NavButton({
-  label,
-  emoji,
-  active,
-  onClick,
-}: {
-  label: string;
-  emoji: string;
-  active: boolean;
-  onClick: () => void;
-}) {
+function SettingsPlaceholder() {
   return (
-    <button
-      onClick={onClick}
-      className={`app-nav__button ${
-        active ? "app-nav__button--active" : ""
-      }`}
-    >
-      <span className="text-xl">{emoji}</span>
-      <span>{label}</span>
-    </button>
+    <div className="app-page">
+      <h1 className="app-title">Indstillinger</h1>
+      <p className="app-subtitle mb-6">Flere admin-funktioner kommer snart.</p>
+      <div className="empty-state">
+        <p className="text-4xl mb-3">⚙️</p>
+        <p className="text-sm">Denne sektion udbygges løbende.</p>
+      </div>
+    </div>
   );
 }
 
 export default App;
+
+function getCurrentVersionFromPatchNotes(patchNotes: string): string {
+  const latestVersionMatch = patchNotes.match(/^##\s+(v\d+\.\d+\.\d+)/m);
+  if (!latestVersionMatch) {
+    return "v0.0.0";
+  }
+
+  return latestVersionMatch[1];
+}
 
 function toFriendlyErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
