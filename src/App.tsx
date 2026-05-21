@@ -134,10 +134,7 @@ function App() {
 
     return "GSB Bødekasse";
   }, [teamName]);
-  const appVersion = useMemo(
-    () => getCurrentVersionFromPatchNotes(patchNotesMarkdown),
-    [],
-  );
+  const appVersion = getCurrentVersionFromPatchNotes(patchNotesMarkdown);
 
   async function handleLoginWithEmail(
     email: string,
@@ -244,33 +241,32 @@ function App() {
           onClick={() => setIsSideMenuOpen(false)}
         />
       )}
-      <aside
-        id="app-side-menu"
-        className={`app-side-menu ${isSideMenuOpen ? "app-side-menu--open" : ""}`}
-      >
-        <div className="app-side-menu__header">
-          <p className="app-title app-title--compact">Menu</p>
-          <p className="app-subtitle text-xs">{headerTitle}</p>
-        </div>
-        <nav className="app-side-menu__nav">
-          {menuItems.map((item) => (
-            <button
-              key={item.tab}
-              type="button"
-              onClick={() => {
-                setActiveTab(item.tab);
-                setIsSideMenuOpen(false);
-              }}
-              className={`app-side-menu__button ${
-                activeTab === item.tab ? "app-side-menu__button--active" : ""
-              }`}
-            >
-              <span>{item.emoji}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
+      {isSideMenuOpen && (
+        <aside id="app-side-menu" className="app-side-menu app-side-menu--open">
+          <div className="app-side-menu__header">
+            <p className="app-title app-title--compact">Menu</p>
+            <p className="app-subtitle text-xs">{headerTitle}</p>
+          </div>
+          <nav className="app-side-menu__nav">
+            {menuItems.map((item) => (
+              <button
+                key={item.tab}
+                type="button"
+                onClick={() => {
+                  setActiveTab(item.tab);
+                  setIsSideMenuOpen(false);
+                }}
+                className={`app-side-menu__button ${
+                  activeTab === item.tab ? "app-side-menu__button--active" : ""
+                }`}
+              >
+                <span>{item.emoji}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
+      )}
       <header className="app-header">
         <div className="app-navbar">
           <button
