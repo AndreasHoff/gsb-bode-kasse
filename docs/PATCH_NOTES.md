@@ -4,6 +4,16 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.8.0 — 2026-05-21
+
+**Feature: Skift farvetema i hele appen**
+
+- Tilføjet temaknap (`🎨`) i navbaren, så brugeren kan skifte mellem grønt og violet tema
+- Farveskiftet påvirker hele appen via globale CSS-variabler (`:root[data-theme="violet"]`)
+- Valgt tema gemmes i browserens localStorage og bevares ved genindlæsning
+
+---
+
 ## v0.7.0 — 2026-05-21
 
 **Feature: Bødekatalog — ny "Bøder"-fane i bundnavigationen**
