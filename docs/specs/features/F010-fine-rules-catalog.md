@@ -32,19 +32,19 @@ Alle teammedlemmer kan se en liste over holdets aktive bødetyper. Admins kan op
 5. Admin trykker "+ Ny bøde".
 6. Systemet viser en formular med felterne: Titel, Beløb, Emoji (valgfri), Beskrivelse (valgfri).
 7. Admin udfylder formen og trykker "Gem".
-8. Systemet gemmer den nye `FineRule` i Firestore og viser den opdaterede liste.
+8. Systemet gemmer den nye `FineRule` og en `rule.created` ActivityLog-entry atomisk i Firestore og viser den opdaterede liste.
 
 **Rediger bøde (admin only):**
 
 5. Admin trykker "Rediger" på en eksisterende bødetype.
 6. Systemet viser formularen med de eksisterende værdier.
 7. Admin ændrer felterne og trykker "Gem ændringer".
-8. Systemet opdaterer `FineRule`-dokumentet og viser den opdaterede liste.
+8. Systemet opdaterer `FineRule`-dokumentet og skriver en `rule.updated` ActivityLog-entry atomisk og viser den opdaterede liste.
 
 **Deaktiver bøde (admin only):**
 
 5. Admin trykker "Deaktiver" på en aktiv bødetype.
-6. Systemet sætter `isActive = false` på dokumentet.
+6. Systemet sætter `isActive = false` og skriver en `rule.deactivated` ActivityLog-entry atomisk.
 7. Den deaktiverede bødetype skjules fra listen.
 
 ## Edge Cases
@@ -61,9 +61,10 @@ Alle teammedlemmer kan se en liste over holdets aktive bødetyper. Admins kan op
 - Alle teammedlemmer kan se listen over aktive bødetyper.
 - Listen viser emoji (hvis angivet), titel og beløb (formateret med `formatAmount()`).
 - Admins ser "+ Ny bøde"-knap øverst og "Rediger"/"Deaktiver"-knapper på hver bøde.
-- Ikke-admins ser ingen admin-kontrolelementer.
-- Admin kan oprette en ny bøde med mindst titel og beløb.
-- Admin kan redigere titel, beløb, emoji og beskrivelse på en eksisterende bøde.
-- Admin kan deaktivere en bøde; den fjernes fra listen umiddelbart efter.
+- Ikke-admins ser ingen admin-kontrolelementer og kan ikke nå opret/rediger-formularen.
+- Admin kan oprette en ny bøde med mindst titel og beløb; `rule.created` ActivityLog-entry oprettes atomisk.
+- Admin kan redigere titel, beløb, emoji og beskrivelse på en eksisterende bøde; `rule.updated` ActivityLog-entry oprettes atomisk.
+- Admin kan deaktivere en bøde; den fjernes fra listen umiddelbart efter; `rule.deactivated` ActivityLog-entry oprettes atomisk.
 - Tomt stadie vises korrekt, når der ikke er aktive bøder.
+- Fejltilstand (Firestore load/write) vises inline; fejl ryddes ved ny indlæsning.
 - Ingen fejl ved TypeScript-kompilering.

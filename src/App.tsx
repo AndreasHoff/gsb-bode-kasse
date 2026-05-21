@@ -111,6 +111,9 @@ function App() {
         if (memberships.length === 0) {
           setDisplayName(userProfile.name);
           setTeamName("");
+          setTeamId("");
+          setUserRole(null);
+          setUserId(user.uid);
           // Super-admins can access the app (proposals) without a team membership
           setStatus(superAdmin ? "ready" : "no-membership");
           return;
