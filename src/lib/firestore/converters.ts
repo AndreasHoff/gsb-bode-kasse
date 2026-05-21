@@ -357,6 +357,8 @@ interface FeatureProposalDoc extends DocumentData {
   title: string;
   problem: string;
   desiredOutcome: string;
+  creatorId: string;
+  creatorName: string;
   whereInApp?: string;
   priority?: 1 | 2 | 3 | 4;
   status: ProposalStatus;
@@ -378,6 +380,8 @@ export const featureProposalConverter: FirestoreDataConverter<FeatureProposal, F
       title: p.title,
       problem: p.problem,
       desiredOutcome: p.desiredOutcome,
+      creatorId: p.creatorId,
+      creatorName: p.creatorName,
       ...(p.whereInApp !== undefined && { whereInApp: p.whereInApp }),
       ...(p.priority !== undefined && { priority: p.priority }),
       status: p.status,
@@ -405,6 +409,8 @@ export const featureProposalConverter: FirestoreDataConverter<FeatureProposal, F
       title: d.title,
       problem: d.problem,
       desiredOutcome: d.desiredOutcome,
+      creatorId: d.creatorId ?? "",
+      creatorName: d.creatorName ?? "Ukendt bruger",
       whereInApp: d.whereInApp,
       priority: d.priority,
       status: d.status,

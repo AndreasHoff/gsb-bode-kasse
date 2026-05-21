@@ -188,6 +188,38 @@ Immutable audit trail of all significant actions.
 
 ---
 
+## FeatureProposal
+
+Feature proposal from super-admin users for product improvements.
+
+| Field              | Type     | Description                                 |
+|--------------------|----------|---------------------------------------------|
+| id                 | string   | Unique identifier                           |
+| title              | string   | Proposal title                              |
+| problem            | string   | Current pain/problem statement              |
+| desiredOutcome     | string   | Desired behavior/outcome                    |
+| creatorId          | string   | Reference to User (proposal creator)        |
+| creatorName        | string   | Snapshot of creator display name            |
+| whereInApp         | string?  | Optional area/screen reference              |
+| priority           | 1-4?     | Optional urgency (low to critical)          |
+| status             | enum     | Lifecycle status (new -> done/abandoned)   |
+| statusUpdatedAt    | datetime?| Timestamp for latest status change          |
+| approvedAt         | datetime?| Timestamp when marked done                  |
+| githubIssueId      | string?  | Exported GitHub issue id                    |
+| githubIssueNumber  | number?  | Exported GitHub issue number                |
+| githubIssueUrl     | string?  | Exported GitHub issue URL                   |
+| githubIssueRepo    | string?  | GitHub repository used for export           |
+| exportedToGithubAt | datetime?| Timestamp for GitHub export                 |
+| createdAt          | datetime | Creation timestamp                          |
+| updatedAt          | datetime | Last write timestamp                        |
+
+**Business Rules:**
+- Only super-admins can create/edit proposal content.
+- Only `mchoffn@hotmail.com` can change proposal status, approve proposal completion, and export proposals to GitHub.
+- `creatorName` is a snapshot for UI context and may differ from the current User name later.
+
+---
+
 ## Role (Enum)
 
 ```ts

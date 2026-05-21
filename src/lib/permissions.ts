@@ -1,5 +1,7 @@
 import type { Role } from "../types/domain";
 
+const PROPOSAL_OWNER_EMAIL = "mchoffn@hotmail.com";
+
 function isAdminRole(role: Role): boolean {
   return role === "admin";
 }
@@ -42,4 +44,11 @@ export function canManageFineRules(role: Role): boolean {
 /** Returns true if the user is a super-admin (can manage feature proposals) */
 export function canManageProposals(isSuperAdmin: boolean | undefined): boolean {
   return isSuperAdmin === true;
+}
+
+/** Returns true only for the designated proposal owner email. */
+export function canExportAndManageProposalStatus(
+  email: string | null | undefined,
+): boolean {
+  return email?.trim().toLowerCase() === PROPOSAL_OWNER_EMAIL;
 }

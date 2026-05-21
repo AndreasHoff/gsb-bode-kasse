@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exportProposalToGithub = void 0;
+exports.approveProposal = exports.updateProposalStatus = exports.exportProposalToGithub = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const app_1 = require("firebase-admin/app");
@@ -8,18 +8,57 @@ const firestore_1 = require("firebase-admin/firestore");
 (0, app_1.initializeApp)();
 const GITHUB_PAT = (0, params_1.defineSecret)("GITHUB_PAT");
 const GITHUB_REPO = (0, params_1.defineSecret)("GITHUB_REPO");
+const PROPOSAL_OWNER_EMAIL = "mchoffn@hotmail.com";
+const ALLOWED_PROPOSAL_STATUSES = [
+    "new",
+    "triaged",
+    "planned",
+    "implemented",
+    "done",
+    "abandoned",
+];
+function toIsoIfDateLike(value) {
+    if (value && typeof value === "object" && "toDate" in value) {
+        const dateLike = value;
+        return dateLike.toDate().toISOString();
+    }
+    if (value instanceof Date) {
+        return value.toISOString();
+    }
+    return value;
+}
+function serializeProposal(id, proposal) {
+    const source = proposal !== null && proposal !== void 0 ? proposal : {};
+    const normalized = Object.assign({ id }, source);
+    const timestampKeys = [
+        "createdAt",
+        "updatedAt",
+        "statusUpdatedAt",
+        "exportedToGithubAt",
+        "approvedAt",
+    ];
+    for (const key of timestampKeys) {
+        normalized[key] = toIsoIfDateLike(normalized[key]);
+    }
+    return normalized;
+}
+function requireProposalOwnerEmail(request) {
+    var _a, _b;
+    const email = typeof ((_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.email) === "string"
+        ? request.auth.token.email.trim().toLowerCase()
+        : "";
+    if (email !== PROPOSAL_OWNER_EMAIL) {
+        throw new https_1.HttpsError("permission-denied", "Ingen adgang");
+    }
+}
 exports.exportProposalToGithub = (0, https_1.onCall)({ region: "europe-west1", secrets: [GITHUB_PAT, GITHUB_REPO] }, async (request) => {
-    var _a;
     // 1. Require authentication
     if (!request.auth) {
         throw new https_1.HttpsError("unauthenticated", "Du skal være logget ind");
     }
-    // 2. Require super-admin
+    // 2. Require designated owner email
+    requireProposalOwnerEmail(request);
     const db = (0, firestore_1.getFirestore)();
-    const userSnap = await db.collection("users").doc(request.auth.uid).get();
-    if (!userSnap.exists || ((_a = userSnap.data()) === null || _a === void 0 ? void 0 : _a.isSuperAdmin) !== true) {
-        throw new https_1.HttpsError("permission-denied", "Ingen adgang");
-    }
     // 3. Load proposal
     const { proposalId } = request.data;
     if (!proposalId) {
@@ -65,6 +104,68 @@ exports.exportProposalToGithub = (0, https_1.onCall)({ region: "europe-west1", s
         updatedAt: new Date(),
     });
     return { issueNumber: issue.number, issueUrl: issue.html_url };
+});
+exports.updateProposalStatus = (0, https_1.onCall)({ region: "europe-west1" }, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "Du skal være logget ind");
+    }
+    requireProposalOwnerEmail(request);
+    const { proposalId, status } = request.data;
+    if (!proposalId || typeof proposalId !== "string") {
+        throw new https_1.HttpsError("invalid-argument", "proposalId mangler");
+    }
+    if (!ALLOWED_PROPOSAL_STATUSES.includes(status)) {
+        throw new https_1.HttpsError("invalid-argument", "Ugyldig status");
+    }
+    const db = (0, firestore_1.getFirestore)();
+    const ref = db.collection("featureProposals").doc(proposalId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+        throw new https_1.HttpsError("not-found", "Forslaget blev ikke fundet");
+    }
+    const existing = snap.data();
+    const now = new Date();
+    const updates = {
+        status,
+        statusUpdatedAt: now,
+        updatedAt: now,
+    };
+    // Clear approval when rolling back away from "done"
+    if (existing.status === "done" && status !== "done") {
+        updates.approvedAt = null;
+    }
+    await ref.update(updates);
+    const updated = await ref.get();
+    return { proposal: serializeProposal(updated.id, updated.data()) };
+});
+exports.approveProposal = (0, https_1.onCall)({ region: "europe-west1" }, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "Du skal være logget ind");
+    }
+    requireProposalOwnerEmail(request);
+    const { proposalId } = request.data;
+    if (!proposalId || typeof proposalId !== "string") {
+        throw new https_1.HttpsError("invalid-argument", "proposalId mangler");
+    }
+    const db = (0, firestore_1.getFirestore)();
+    const ref = db.collection("featureProposals").doc(proposalId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+        throw new https_1.HttpsError("not-found", "Forslaget blev ikke fundet");
+    }
+    const existing = snap.data();
+    if (existing.status !== "implemented") {
+        throw new https_1.HttpsError("failed-precondition", "Kan kun godkende forslag med status 'implemented'");
+    }
+    const now = new Date();
+    await ref.update({
+        status: "done",
+        approvedAt: now,
+        statusUpdatedAt: now,
+        updatedAt: now,
+    });
+    const updated = await ref.get();
+    return { proposal: serializeProposal(updated.id, updated.data()) };
 });
 // ---------------------------------------------------------------------------
 // Helpers

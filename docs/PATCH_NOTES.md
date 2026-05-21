@@ -4,6 +4,21 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.9.0 — 2026-05-22
+
+**Feature + Sikkerhed: Stram adgang på idéforslag + visning af forslagsopretter**
+
+- Statusændringer og godkendelse af idéforslag flyttet til Firebase Cloud Functions med server-side adgangstjek
+- GitHub-eksport låst til den specifikke bruger `mchoffn@hotmail.com` (både i UI og backend)
+- Firestore-regler opdateret, så beskyttede proposal-felter ikke kan ændres uden korrekt adgang
+- Tilføjet nye functions: `updateProposalStatus` og `approveProposal`
+- Tilføjet `creatorId` og `creatorName` på `FeatureProposal`
+- Ved oprettelse af forslag hentes skaberens navn fra brugerprofil (`users.name`) og gemmes på forslaget
+- Opretternavn vises nu i forslagets kort i listevisning samt i detaljevisning ved siden af oprettelsestidspunkt
+- Domænedokumentation for `FeatureProposal` tilføjet i `docs/specs/domain/entities.md`
+
+---
+
 ## v0.8.0 — 2026-05-21
 
 **Feature: Skift farvetema i hele appen**
