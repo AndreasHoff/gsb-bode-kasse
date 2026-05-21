@@ -63,23 +63,31 @@ export default function FineRuleForm({
 
     try {
       if (isEditMode && ruleId) {
-        await updateFineRule(teamId, ruleId, {
-          title: title.trim(),
-          amount,
-          emoji: emoji.trim() || undefined,
-          description: description.trim() || undefined,
-        });
-      } else {
-        await createFineRule({
+        await updateFineRule(
           teamId,
-          title: title.trim(),
-          amount,
-          emoji: emoji.trim() || undefined,
-          description: description.trim() || undefined,
-          isActive: true,
-          createdBy: userId,
-          createdAt: new Date().toISOString(),
-        });
+          ruleId,
+          {
+            title: title.trim(),
+            amount,
+            emoji: emoji.trim() || undefined,
+            description: description.trim() || undefined,
+          },
+          userId,
+        );
+      } else {
+        await createFineRule(
+          {
+            teamId,
+            title: title.trim(),
+            amount,
+            emoji: emoji.trim() || undefined,
+            description: description.trim() || undefined,
+            isActive: true,
+            createdBy: userId,
+            createdAt: new Date().toISOString(),
+          },
+          userId,
+        );
       }
       onSave();
     } catch (err) {

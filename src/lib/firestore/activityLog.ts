@@ -13,7 +13,10 @@ export type ActivityLogAction =
   | "season.created"
   | "season.closed"
   | "member.added"
-  | "member.roleChanged";
+  | "member.roleChanged"
+  | "rule.created"
+  | "rule.updated"
+  | "rule.deactivated";
 
 export type LogActivityInput = {
   teamId: string;

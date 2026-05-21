@@ -2,7 +2,7 @@
 // Shows all fine rule types for the team.
 // Normal users: read-only list. Admin: full CRUD.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FineRule, Role } from "../../types/domain";
 import { getFineRules, deactivateFineRule } from "../../lib/firestore";
 import { canManageFineRules } from "../../lib/permissions";
@@ -22,6 +22,8 @@ type View =
 export default function FineRulesCatalog({ teamId, userRole, userId }: Props) {
   const [view, setView] = useState<View>({ screen: "list" });
 
+  const isAdmin = userRole !== null && canManageFineRules(userRole);
+
   if (!teamId) {
     return (
       <div className="app-page">
@@ -34,7 +36,7 @@ export default function FineRulesCatalog({ teamId, userRole, userId }: Props) {
     );
   }
 
-  if (view.screen === "form") {
+  if (view.screen === "form" && isAdmin) {
     return (
       <FineRuleForm
         teamId={teamId}
@@ -65,7 +67,7 @@ interface ListProps {
   onEdit: (ruleId: string) => void;
 }
 
-function FineRulesList({ teamId, userRole, onNew, onEdit }: ListProps) {
+function FineRulesList({ teamId, userRole, userId, onNew, onEdit }: ListProps) {
   const [rules, setRules] = useState<FineRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,23 +75,23 @@ function FineRulesList({ teamId, userRole, onNew, onEdit }: ListProps) {
 
   const isAdmin = userRole !== null && canManageFineRules(userRole);
 
-  function loadRules() {
+  const loadRules = useCallback(() => {
     setLoading(true);
+    setError(null);
     void getFineRules(teamId)
       .then((all) => setRules(all.filter((r) => r.isActive)))
       .catch(() => setError("Kunne ikke hente bøder"))
       .finally(() => setLoading(false));
-  }
+  }, [teamId]);
 
   useEffect(() => {
     loadRules();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamId]);
+  }, [loadRules]);
 
   async function handleDeactivate(ruleId: string) {
     setDeactivating(ruleId);
     try {
-      await deactivateFineRule(teamId, ruleId);
+      await deactivateFineRule(teamId, ruleId, userId);
       setRules((prev) => prev.filter((r) => r.id !== ruleId));
     } catch {
       setError("Kunne ikke deaktivere bøden");
@@ -178,7 +180,7 @@ function FineRuleCard({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {rule.emoji && (
-            <span className="text-2xl shrink-0" aria-hidden>
+            <span className="text-2xl shrink-0" aria-hidden="true">
               {rule.emoji}
             </span>
           )}
