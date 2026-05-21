@@ -30,6 +30,9 @@ type Tab =
   | "proposals"
   | "settings";
 type AppStatus = "checking" | "signed-out" | "ready" | "no-membership";
+type ColorTheme = "green" | "violet";
+
+const THEME_STORAGE_KEY = "gsb-color-theme";
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -43,6 +46,7 @@ function App() {
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [userId, setUserId] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(() => getInitialTheme());
   // Holds the name entered during registration so syncUserSession can use it
   // before Firebase Auth's onAuthStateChanged fires (before updateProfile runs).
   const pendingNameRef = useRef<string | null>(null);
@@ -139,6 +143,11 @@ function App() {
       unsubscribe?.();
     };
   }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", colorTheme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, colorTheme);
+  }, [colorTheme]);
 
   const headerTitle = useMemo(() => {
     if (teamName.trim().length > 0) {
@@ -298,6 +307,27 @@ function App() {
             <p className="app-subtitle text-xs">{appVersion}</p>
           </div>
           <div className="app-navbar__user">
+            <button
+              type="button"
+              onClick={() =>
+                setColorTheme((current) =>
+                  current === "green" ? "violet" : "green",
+                )
+              }
+              className="app-navbar__theme-toggle"
+              aria-label={
+                colorTheme === "green"
+                  ? "Skift til violet tema"
+                  : "Skift til grønt tema"
+              }
+              title={
+                colorTheme === "green"
+                  ? "Skift til violet tema"
+                  : "Skift til grønt tema"
+              }
+            >
+              🎨
+            </button>
             <p className="app-subtitle app-navbar__user-name">{displayName}</p>
             <button
               type="button"
@@ -365,6 +395,11 @@ function getCurrentVersionFromPatchNotes(patchNotes: string): string {
   }
 
   return latestVersionMatch[1];
+}
+
+function getInitialTheme(): ColorTheme {
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return storedTheme === "violet" ? "violet" : "green";
 }
 
 function toFriendlyErrorMessage(error: unknown): string {

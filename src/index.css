@@ -59,6 +59,41 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-theme="violet"] {
+  --color-bg: #1a1628;
+  --color-surface: #2a2340;
+  --color-surface-muted: #352a52;
+  --color-text: #f6f2ff;
+  --color-text-muted: #d8cdeb;
+  --color-primary: #7c3aed;
+  --color-primary-strong: #6d28d9;
+  --color-primary-contrast: #f9f8ff;
+  --color-accent: #f59e0b;
+  --color-error: #ffd4e6;
+  --color-border: rgba(215, 198, 255, 0.34);
+  --color-bg-glow-cool: rgba(167, 139, 250, 0.28);
+  --color-bg-glow-warm: rgba(251, 191, 36, 0.22);
+  --color-auth-bg-start: #1a1628;
+  --color-auth-bg-end: #2a2340;
+  --color-auth-text: #f6f2ff;
+  --color-auth-text-muted: rgba(236, 229, 255, 0.85);
+  --color-auth-footnote: rgba(236, 229, 255, 0.76);
+  --color-auth-error: #ffd4e6;
+  --color-auth-orb-left: rgba(167, 139, 250, 0.28);
+  --color-auth-orb-right: rgba(251, 191, 36, 0.22);
+  --color-auth-panel-border: rgba(255, 255, 255, 0.16);
+  --color-auth-panel-bg: rgba(255, 255, 255, 0.09);
+  --color-auth-segment-border: rgba(255, 255, 255, 0.2);
+  --color-auth-segment-bg: rgba(255, 255, 255, 0.11);
+  --color-auth-segment-text: rgba(246, 242, 255, 0.88);
+  --color-auth-segment-hover: rgba(255, 255, 255, 0.14);
+  --color-auth-segment-active-bg: #ffffff;
+  --color-auth-segment-active-text: #1f1733;
+  --color-auth-input-border: rgba(255, 255, 255, 0.18);
+  --color-auth-input-bg: rgba(24, 18, 40, 0.58);
+  --color-auth-input-placeholder: rgba(236, 229, 255, 0.56);
+}
+
 a {
   color: var(--color-primary);
   text-decoration: inherit;
@@ -196,6 +231,21 @@ button:focus-visible {
   align-items: center;
   justify-content: flex-end;
   gap: 0.55rem;
+}
+
+.app-navbar__theme-toggle {
+  width: 2.15rem;
+  min-height: 2.15rem;
+  padding: 0;
+  border-color: var(--color-border);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--color-surface-muted) 76%, transparent);
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.app-navbar__theme-toggle:hover {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .app-navbar__user-name {
