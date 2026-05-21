@@ -598,6 +598,7 @@ button:focus-visible {
 }
 
 .app-nav__button {
+  display: flex;
   flex: 1;
   flex-direction: column;
   padding: 0.55rem 0.25rem;

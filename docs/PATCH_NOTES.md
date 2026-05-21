@@ -4,6 +4,15 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.6.2 — 2026-05-21
+
+**Fix: Eksplicit flex-layout i bundnavigation**
+
+- Tilføjet eksplicit `display: flex` på `.app-nav__button`, så emoji + label altid stables korrekt i kolonne-layout
+- Ingen funktionsændring i navigation; justeringen gør layout-intentionen tydelig og robust i CSS
+
+---
+
 ## v0.6.1 — 2026-05-21
 
 **Fix: Bundnavigation tilbage sammen med sidemenu**
