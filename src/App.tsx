@@ -3,7 +3,7 @@ import type { User as FirebaseUser } from "firebase/auth";
 import patchNotesMarkdown from "../docs/PATCH_NOTES.md?raw";
 import TeamOverview from "./features/overview/TeamOverview";
 import PersonalOverview from "./features/personal/PersonalOverview";
-import AssignFine from "./features/fines/AssignFine";
+import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
 import ActivityLog from "./features/activity/ActivityLog";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
@@ -19,12 +19,13 @@ import {
   getActiveMembershipsForUser,
   getTeam,
 } from "./lib/firestore";
+import type { Role } from "./types/domain";
 import "./index.css";
 
 type Tab =
   | "overview"
   | "personal"
-  | "assign"
+  | "fine-rules"
   | "activity"
   | "proposals"
   | "settings";
@@ -38,6 +39,9 @@ function App() {
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [teamName, setTeamName] = useState("");
+  const [teamId, setTeamId] = useState("");
+  const [userRole, setUserRole] = useState<Role | null>(null);
+  const [userId, setUserId] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   // Holds the name entered during registration so syncUserSession can use it
   // before Firebase Auth's onAuthStateChanged fires (before updateProfile runs).
@@ -78,6 +82,9 @@ function App() {
         setStatus("signed-out");
         setDisplayName("");
         setTeamName("");
+        setTeamId("");
+        setUserRole(null);
+        setUserId("");
         setIsSuperAdmin(false);
         return;
       }
@@ -104,6 +111,9 @@ function App() {
         if (memberships.length === 0) {
           setDisplayName(userProfile.name);
           setTeamName("");
+          setTeamId("");
+          setUserRole(null);
+          setUserId(user.uid);
           // Super-admins can access the app (proposals) without a team membership
           setStatus(superAdmin ? "ready" : "no-membership");
           return;
@@ -112,6 +122,9 @@ function App() {
         const primaryMembership = memberships[0];
         const team = await getTeam(primaryMembership.teamId);
 
+        setUserId(user.uid);
+        setTeamId(primaryMembership.teamId);
+        setUserRole(primaryMembership.role);
         setDisplayName(userProfile.name);
         setTeamName(team?.name || "Mit hold");
         setStatus("ready");
@@ -220,8 +233,8 @@ function App() {
   const primaryMenuItems: Array<{ tab: Tab; label: string; emoji: string }> = [
     { tab: "overview", label: "Hold", emoji: "🏆" },
     { tab: "personal", label: "Mine", emoji: "👤" },
-    { tab: "assign", label: "Giv bøde", emoji: "🎯" },
-    { tab: "activity", label: "Aktivitet", emoji: "📋" },
+    { tab: "fine-rules", label: "Bøder", emoji: "📋" },
+    { tab: "activity", label: "Aktivitet", emoji: "📊" },
   ];
   const menuItems = [...primaryMenuItems];
 
@@ -303,7 +316,9 @@ function App() {
       <main className="app-main">
         {activeTab === "overview" && <TeamOverview />}
         {activeTab === "personal" && <PersonalOverview />}
-        {activeTab === "assign" && <AssignFine />}
+        {activeTab === "fine-rules" && (
+          <FineRulesCatalog teamId={teamId} userRole={userRole} userId={userId} />
+        )}
         {activeTab === "activity" && <ActivityLog />}
         {activeTab === "proposals" && <Proposals />}
         {activeTab === "settings" && <SettingsPlaceholder />}
