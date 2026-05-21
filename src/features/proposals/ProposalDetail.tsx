@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FeatureProposal, ProposalStatus } from "../../types/domain";
+import { auth } from "../../lib/firebase";
 import {
   getProposal,
   updateProposalStatus,
@@ -15,6 +16,7 @@ import {
   StatusBadge,
 } from "./proposal-utils";
 import { ProposalDetailSection } from "./proposal-layout.tsx";
+import { canExportAndManageProposalStatus } from "../../lib/permissions";
 
 interface Props {
   proposalId: string;
@@ -22,7 +24,11 @@ interface Props {
   onBack: () => void;
 }
 
-export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
+export default function ProposalDetail({
+  proposalId,
+  onEdit,
+  onBack,
+}: Props) {
   const [proposal, setProposal] = useState<FeatureProposal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +48,13 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
   }, [proposalId]);
 
   async function handleStatusChange(status: ProposalStatus) {
-    if (!proposal || status === proposal.status) return;
+    if (
+      !proposal ||
+      status === proposal.status ||
+      !canExportAndManageProposalStatus(auth.currentUser?.email)
+    ) {
+      return;
+    }
     setChangingStatus(true);
     setActionError(null);
     try {
@@ -56,7 +68,9 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
   }
 
   async function handleApprove() {
-    if (!proposal) return;
+    if (!proposal || !canExportAndManageProposalStatus(auth.currentUser?.email)) {
+      return;
+    }
     setApproving(true);
     setActionError(null);
     try {
@@ -70,7 +84,9 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
   }
 
   async function handleExportToGithub() {
-    if (!proposal) return;
+    if (!proposal || !canExportAndManageProposalStatus(auth.currentUser?.email)) {
+      return;
+    }
     setExporting(true);
     setActionError(null);
     try {
@@ -118,6 +134,9 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
   }
 
   const isLocked = LOCKED_STATUSES.includes(proposal.status);
+  const canManageProposalLifecycle = canExportAndManageProposalStatus(
+    auth.currentUser?.email,
+  );
 
   return (
     <div className="app-page proposal-detail-page pb-8">
@@ -149,7 +168,9 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
         </div>
         <h1 className="app-title leading-tight">{proposal.title}</h1>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-[var(--color-text-muted)]">
-          <span>Oprettet {formatRelativeTime(proposal.createdAt)}</span>
+          <span>
+            Oprettet {formatRelativeTime(proposal.createdAt)} af {proposal.creatorName || "Ukendt bruger"}
+          </span>
           {proposal.statusUpdatedAt && (
             <span>
               Status opdateret {formatRelativeTime(proposal.statusUpdatedAt)}
@@ -180,7 +201,12 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
           onClick={() => {
             void handleExportToGithub();
           }}
-          disabled={exporting}
+          disabled={exporting || !canManageProposalLifecycle}
+          title={
+            canManageProposalLifecycle
+              ? undefined
+              : "Kun mchoffn@hotmail.com kan eksportere til GitHub"
+          }
         >
           {exporting ? "Eksporterer..." : "Eksportér til GitHub"}
         </button>
@@ -188,7 +214,7 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
 
       <div className="app-card app-card--muted proposal-status-control mb-6">
         <label htmlFor="proposal-status-select" className="proposal-status-control__label">
-          Status (kun admin):
+          Status:
         </label>
         <select
           id="proposal-status-select"
@@ -197,7 +223,12 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
           onChange={(e) => {
             void handleStatusChange(e.target.value as ProposalStatus);
           }}
-          disabled={changingStatus}
+          disabled={changingStatus || !canManageProposalLifecycle}
+          title={
+            canManageProposalLifecycle
+              ? undefined
+              : "Kun mchoffn@hotmail.com kan ændre status"
+          }
         >
           {ALL_PROPOSAL_STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -214,7 +245,12 @@ export default function ProposalDetail({ proposalId, onEdit, onBack }: Props) {
           onClick={() => {
             void handleApprove();
           }}
-          disabled={approving}
+          disabled={approving || !canManageProposalLifecycle}
+          title={
+            canManageProposalLifecycle
+              ? undefined
+              : "Kun mchoffn@hotmail.com kan godkende som færdig"
+          }
         >
           {approving ? "Godkender..." : "✓ Godkend som færdig"}
         </button>

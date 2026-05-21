@@ -1,7 +1,10 @@
 import { getDocs, getDoc, doc, setDoc, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 import { proposalsCol, proposalDoc } from "./refs";
+import { auth } from "../firebase";
+import { getUserProfile } from "./users";
 import type { FeatureProposal, ProposalStatus } from "../../types/domain";
+import { callApproveProposal, callUpdateProposalStatus } from "../functions";
 
 const LOCKED_STATUSES: ProposalStatus[] = ["done", "implemented", "abandoned"];
 
@@ -25,6 +28,18 @@ export type CreateProposalInput = Pick<
 export async function createProposal(
   input: CreateProposalInput,
 ): Promise<FeatureProposal> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("Du skal være logget ind for at oprette et forslag");
+  }
+
+  const profile = await getUserProfile(currentUser.uid);
+  const creatorName =
+    profile?.name ||
+    currentUser.displayName ||
+    currentUser.email ||
+    "Ukendt bruger";
+
   const colRef = proposalsCol();
   const ref = doc(colRef);
   const now = new Date().toISOString();
@@ -33,6 +48,8 @@ export async function createProposal(
     title: input.title,
     problem: input.problem,
     desiredOutcome: input.desiredOutcome,
+    creatorId: currentUser.uid,
+    creatorName,
     ...(input.whereInApp !== undefined && { whereInApp: input.whereInApp }),
     ...(input.priority !== undefined && { priority: input.priority }),
     status: "new",
@@ -69,39 +86,9 @@ export async function updateProposalStatus(
   id: string,
   status: ProposalStatus,
 ): Promise<FeatureProposal> {
-  const existing = await getProposal(id);
-  if (!existing) throw new Error("Forslaget blev ikke fundet");
-  const now = new Date().toISOString();
-
-  const updated: FeatureProposal = {
-    ...existing,
-    status,
-    statusUpdatedAt: now,
-    updatedAt: now,
-  };
-
-  // Clear approval when rolling back away from "done"
-  if (existing.status === "done" && status !== "done") {
-    delete updated.approvedAt;
-  }
-
-  await setDoc(proposalDoc(id), updated);
-  return updated;
+  return callUpdateProposalStatus(id, status);
 }
 
 export async function approveProposal(id: string): Promise<FeatureProposal> {
-  const existing = await getProposal(id);
-  if (!existing) throw new Error("Forslaget blev ikke fundet");
-  if (existing.status !== "implemented") {
-    throw new Error("Kan kun godkende forslag med status 'implemented'");
-  }
-  const now = new Date().toISOString();
-  const updated: FeatureProposal = {
-    ...existing,
-    status: "done",
-    approvedAt: now,
-    updatedAt: now,
-  };
-  await setDoc(proposalDoc(id), updated);
-  return updated;
+  return callApproveProposal(id);
 }

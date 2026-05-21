@@ -102,6 +102,8 @@ export interface FeatureProposal {
   title: string;
   problem: string;
   desiredOutcome: string;
+  creatorId: string;
+  creatorName: string;
   whereInApp?: string;
   priority?: 1 | 2 | 3 | 4;
   status: ProposalStatus;

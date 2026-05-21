@@ -7,6 +7,24 @@ initializeApp();
 
 const GITHUB_PAT = defineSecret("GITHUB_PAT");
 const GITHUB_REPO = defineSecret("GITHUB_REPO");
+const PROPOSAL_OWNER_EMAIL = "mchoffn@hotmail.com";
+
+type ProposalStatus =
+  | "new"
+  | "triaged"
+  | "planned"
+  | "implemented"
+  | "done"
+  | "abandoned";
+
+const ALLOWED_PROPOSAL_STATUSES: ProposalStatus[] = [
+  "new",
+  "triaged",
+  "planned",
+  "implemented",
+  "done",
+  "abandoned",
+];
 
 interface ExportInput {
   proposalId: string;
@@ -17,6 +35,66 @@ interface ExportResult {
   issueUrl: string;
 }
 
+interface UpdateProposalStatusInput {
+  proposalId: string;
+  status: ProposalStatus;
+}
+
+interface ApproveProposalInput {
+  proposalId: string;
+}
+
+interface ProposalResponse {
+  proposal: Record<string, unknown>;
+}
+
+function toIsoIfDateLike(value: unknown): unknown {
+  if (value && typeof value === "object" && "toDate" in value) {
+    const dateLike = value as { toDate: () => Date };
+    return dateLike.toDate().toISOString();
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return value;
+}
+
+function serializeProposal(
+  id: string,
+  proposal: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const source = proposal ?? {};
+  const normalized: Record<string, unknown> = {
+    id,
+    ...source,
+  };
+
+  const timestampKeys = [
+    "createdAt",
+    "updatedAt",
+    "statusUpdatedAt",
+    "exportedToGithubAt",
+    "approvedAt",
+  ];
+
+  for (const key of timestampKeys) {
+    normalized[key] = toIsoIfDateLike(normalized[key]);
+  }
+
+  return normalized;
+}
+
+function requireProposalOwnerEmail(request: { auth?: { token?: { email?: unknown } } }): void {
+  const email =
+    typeof request.auth?.token?.email === "string"
+      ? request.auth.token.email.trim().toLowerCase()
+      : "";
+
+  if (email !== PROPOSAL_OWNER_EMAIL) {
+    throw new HttpsError("permission-denied", "Ingen adgang");
+  }
+}
+
 export const exportProposalToGithub = onCall<ExportInput, Promise<ExportResult>>(
   { region: "europe-west1", secrets: [GITHUB_PAT, GITHUB_REPO] },
   async (request) => {
@@ -25,12 +103,10 @@ export const exportProposalToGithub = onCall<ExportInput, Promise<ExportResult>>
       throw new HttpsError("unauthenticated", "Du skal være logget ind");
     }
 
-    // 2. Require super-admin
+    // 2. Require designated owner email
+    requireProposalOwnerEmail(request);
+
     const db = getFirestore();
-    const userSnap = await db.collection("users").doc(request.auth.uid).get();
-    if (!userSnap.exists || userSnap.data()?.isSuperAdmin !== true) {
-      throw new HttpsError("permission-denied", "Ingen adgang");
-    }
 
     // 3. Load proposal
     const { proposalId } = request.data;
@@ -86,6 +162,91 @@ export const exportProposalToGithub = onCall<ExportInput, Promise<ExportResult>>
     });
 
     return { issueNumber: issue.number, issueUrl: issue.html_url };
+  },
+);
+
+export const updateProposalStatus = onCall<
+  UpdateProposalStatusInput,
+  Promise<ProposalResponse>
+>({ region: "europe-west1" }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Du skal være logget ind");
+  }
+
+  requireProposalOwnerEmail(request);
+
+  const { proposalId, status } = request.data;
+  if (!proposalId || typeof proposalId !== "string") {
+    throw new HttpsError("invalid-argument", "proposalId mangler");
+  }
+  if (!ALLOWED_PROPOSAL_STATUSES.includes(status)) {
+    throw new HttpsError("invalid-argument", "Ugyldig status");
+  }
+
+  const db = getFirestore();
+  const ref = db.collection("featureProposals").doc(proposalId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Forslaget blev ikke fundet");
+  }
+
+  const existing = snap.data() as Record<string, unknown>;
+  const now = new Date();
+  const updates: Record<string, unknown> = {
+    status,
+    statusUpdatedAt: now,
+    updatedAt: now,
+  };
+
+  // Clear approval when rolling back away from "done"
+  if (existing.status === "done" && status !== "done") {
+    updates.approvedAt = null;
+  }
+
+  await ref.update(updates);
+  const updated = await ref.get();
+  return { proposal: serializeProposal(updated.id, updated.data()) };
+});
+
+export const approveProposal = onCall<ApproveProposalInput, Promise<ProposalResponse>>(
+  { region: "europe-west1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Du skal være logget ind");
+    }
+
+    requireProposalOwnerEmail(request);
+
+    const { proposalId } = request.data;
+    if (!proposalId || typeof proposalId !== "string") {
+      throw new HttpsError("invalid-argument", "proposalId mangler");
+    }
+
+    const db = getFirestore();
+    const ref = db.collection("featureProposals").doc(proposalId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "Forslaget blev ikke fundet");
+    }
+
+    const existing = snap.data() as Record<string, unknown>;
+    if (existing.status !== "implemented") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Kan kun godkende forslag med status 'implemented'",
+      );
+    }
+
+    const now = new Date();
+    await ref.update({
+      status: "done",
+      approvedAt: now,
+      statusUpdatedAt: now,
+      updatedAt: now,
+    });
+
+    const updated = await ref.get();
+    return { proposal: serializeProposal(updated.id, updated.data()) };
   },
 );
 

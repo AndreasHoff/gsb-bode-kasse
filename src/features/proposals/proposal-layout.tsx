@@ -129,7 +129,7 @@ export function ProposalCard({ proposal, onClick }: ProposalCardProps) {
             <span className="proposal-card__tag">GitHub #{proposal.githubIssueNumber}</span>
           )}
           <span className="proposal-card__time">
-            {formatRelativeTime(proposal.createdAt)}
+            Af {proposal.creatorName || "Ukendt bruger"} · {formatRelativeTime(proposal.createdAt)}
           </span>
         </div>
       </div>
