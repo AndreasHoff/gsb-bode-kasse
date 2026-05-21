@@ -4,6 +4,25 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.6.2 — 2026-05-21
+
+**Fix: Eksplicit flex-layout i bundnavigation**
+
+- Tilføjet eksplicit `display: flex` på `.app-nav__button`, så emoji + label altid stables korrekt i kolonne-layout
+- Ingen funktionsændring i navigation; justeringen gør layout-intentionen tydelig og robust i CSS
+
+---
+
+## v0.6.1 — 2026-05-21
+
+**Fix: Bundnavigation tilbage sammen med sidemenu**
+
+- Gendannet de 4 faste tabs i bunden (Hold, Mine, Giv bøde, Aktivitet), så de vises samtidig med venstre sidemenu
+- Justeret bundnavigationen, så den ligger en smule over nederste kant på mobil
+- Tilføjet sideafstand i bundnavigationen, så yderste tabs ikke ligger helt op ad skærmkanterne
+
+---
+
 ## v0.6.0 — 2026-05-20
 
 **Feature: Navbar med venstre sidemenu**

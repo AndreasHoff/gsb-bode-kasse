@@ -52,7 +52,7 @@
   --color-priority-moderate: #f0db42;
   --color-priority-high: #f5a14a;
   --color-priority-critical: #e24f7b;
-  --app-main-bottom-space: calc(1rem + env(safe-area-inset-bottom, 0px));
+  --app-main-bottom-space: calc(5.6rem + env(safe-area-inset-bottom, 0px));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -584,18 +584,21 @@ button:focus-visible {
 .app-nav {
   position: fixed;
   left: 50%;
-  bottom: 0;
-  width: 100%;
-  max-width: 430px;
+  bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  width: calc(100% - 0.9rem);
+  max-width: calc(430px - 0.9rem);
   transform: translateX(-50%);
   display: flex;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: 1rem;
   background: color-mix(in srgb, var(--color-auth-bg-end) 82%, transparent);
   box-shadow: 0 -12px 20px rgba(6, 15, 16, 0.46);
   backdrop-filter: blur(10px);
 }
 
 .app-nav__button {
+  display: flex;
   flex: 1;
   flex-direction: column;
   padding: 0.55rem 0.25rem;

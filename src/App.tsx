@@ -217,12 +217,13 @@ function App() {
     );
   }
 
-  const menuItems: Array<{ tab: Tab; label: string; emoji: string }> = [
+  const primaryMenuItems: Array<{ tab: Tab; label: string; emoji: string }> = [
     { tab: "overview", label: "Hold", emoji: "🏆" },
     { tab: "personal", label: "Mine", emoji: "👤" },
     { tab: "assign", label: "Giv bøde", emoji: "🎯" },
     { tab: "activity", label: "Aktivitet", emoji: "📋" },
   ];
+  const menuItems = [...primaryMenuItems];
 
   if (isSuperAdmin) {
     menuItems.push(
@@ -307,6 +308,22 @@ function App() {
         {activeTab === "proposals" && <Proposals />}
         {activeTab === "settings" && <SettingsPlaceholder />}
       </main>
+      <nav className="app-nav" aria-label="Bundnavigation">
+        {primaryMenuItems.map((item) => (
+          <button
+            key={item.tab}
+            type="button"
+            onClick={() => setActiveTab(item.tab)}
+            className={`app-nav__button ${
+              activeTab === item.tab ? "app-nav__button--active" : ""
+            }`}
+            aria-current={activeTab === item.tab ? "page" : undefined}
+          >
+            <span>{item.emoji}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
