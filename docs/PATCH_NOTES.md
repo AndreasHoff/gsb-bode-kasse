@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.6.0 — 2026-05-20
+
+**Feature: Navbar med venstre sidemenu**
+
+- Topsektionen er lavet om til en navbar med burger-menu til venstre, app-navn i midten og bruger + logout til højre
+- Tilføjet foldbar venstre sidemenu med overlay, der kan åbnes/lukkes via burger-knappen
+- Primær navigation er flyttet ind i sidemenuen med adminpunkter for super-admin (Idéforslag + Indstillinger)
+- Versionslabel i navbaren læses nu automatisk fra nyeste versionslinje i `docs/PATCH_NOTES.md`
+
+---
+
 ## v0.5.5 — 2026-05-21
 
 **Fix: Header-knapper afstand**
