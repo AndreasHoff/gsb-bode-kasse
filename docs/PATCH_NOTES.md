@@ -4,6 +4,20 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.7.0 — 2026-05-21
+
+**Feature: Bødekatalog — ny "Bøder"-fane i bundnavigationen**
+
+- Fanen "Giv bøde" er erstattet af "Bøder" i bundnavigationen
+- Alle holdmedlemmer kan se en liste over holdets aktive bødetyper med emoji, navn og beløb
+- Admins kan oprette nye bødetyper (titel, beløb, emoji, beskrivelse)
+- Admins kan redigere eksisterende bødetyper
+- Admins kan deaktivere bødetyper (de fjernes fra listen)
+- `App.tsx` udvides med `teamId`, `userRole` og `userId`-state, som populeres fra brugerens holdmedlemskab
+- Ny spec: `docs/specs/features/F010-fine-rules-catalog.md`
+
+---
+
 ## v0.6.2 — 2026-05-21
 
 **Fix: Eksplicit flex-layout i bundnavigation**
