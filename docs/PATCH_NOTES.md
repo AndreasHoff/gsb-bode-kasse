@@ -4,6 +4,16 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.9.1 — 2026-05-22
+
+**Fix: Login-fejl pga. Firestore-regler**
+
+- Tilføjet eksplicit Firestore-regel for `members` collection group, så session sync kan læse aktive medlemskaber ved login
+- Login-fejl vises nu med mere konkret Firebase-fejltekst i frontend og logges også i konsollen under fejlsøgning
+- Firestore-regler deployet igen efter rettelsen
+
+---
+
 ## v0.9.0 — 2026-05-22
 
 **Feature + Sikkerhed: Stram adgang på idéforslag + visning af forslagsopretter**

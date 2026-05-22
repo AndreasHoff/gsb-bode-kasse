@@ -133,6 +133,7 @@ function App() {
         setTeamName(team?.name || "Mit hold");
         setStatus("ready");
       } catch (error) {
+        console.error("[auth] Session sync failed", error);
         setAuthError(toFriendlyErrorMessage(error));
         setStatus("signed-out");
       }
@@ -168,6 +169,7 @@ function App() {
     try {
       await signInWithEmail(email, password);
     } catch (error) {
+      console.error("[auth] Login failed", error);
       setAuthError(toFriendlyErrorMessage(error));
     } finally {
       setIsSubmittingAuth(false);
@@ -186,6 +188,7 @@ function App() {
     try {
       await registerWithEmail(name, email, password);
     } catch (error) {
+      console.error("[auth] Registration failed", error);
       setAuthError(toFriendlyErrorMessage(error));
     } finally {
       pendingNameRef.current = null;
@@ -403,25 +406,57 @@ function getInitialTheme(): ColorTheme {
 }
 
 function toFriendlyErrorMessage(error: unknown): string {
-  if (!(error instanceof Error)) {
-    return "Der opstod en ukendt fejl. Prøv igen.";
-  }
+  const errorCode = getErrorCode(error);
+  const errorMessage = error instanceof Error ? error.message : "Ukendt fejl";
 
-  if (error.message.includes("auth/invalid-credential")) {
+  if (errorCode === "auth/invalid-credential") {
     return "Forkert e-mail eller adgangskode.";
   }
 
-  if (error.message.includes("auth/email-already-in-use")) {
+  if (errorCode === "auth/email-already-in-use") {
     return "E-mailen er allerede i brug.";
   }
 
-  if (error.message.includes("auth/weak-password")) {
+  if (errorCode === "auth/weak-password") {
     return "Adgangskoden er for svag. Brug mindst 6 tegn.";
   }
 
-  if (error.message.includes("auth/popup-closed-by-user")) {
+  if (errorCode === "auth/popup-closed-by-user") {
     return "Loginvinduet blev lukket før login blev gennemført.";
   }
 
-  return "Noget gik galt under login. Prøv igen.";
+  if (errorCode === "auth/too-many-requests") {
+    return "For mange loginforsøg. Prøv igen om lidt.";
+  }
+
+  if (errorCode === "auth/network-request-failed") {
+    return "Netværksfejl under login. Tjek forbindelse og prøv igen.";
+  }
+
+  if (errorCode === "auth/invalid-email") {
+    return "E-mailadressen er ugyldig.";
+  }
+
+  if (errorCode === "permission-denied") {
+    return "Adgang nægtet af Firestore-regler (permission-denied).";
+  }
+
+  if (errorCode === "failed-precondition") {
+    return "Mangler backend-konfiguration (failed-precondition), fx Firestore index.";
+  }
+
+  if (errorCode) {
+    return `Loginfejl (${errorCode}): ${errorMessage}`;
+  }
+
+  return `Loginfejl: ${errorMessage}`;
+}
+
+function getErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const maybeCode = (error as { code?: unknown }).code;
+  return typeof maybeCode === "string" ? maybeCode : null;
 }
