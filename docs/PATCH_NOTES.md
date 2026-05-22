@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.9.2 — 2026-05-22
+
+**UI Fix: Tydelig låst tilstand på forslagshandlinger**
+
+- Forbedret disabled-styling globalt for knapper (mindre saturation, tydeligere gråtoning, ingen aktiv klik-effekt)
+- Eksport-knappen i forslagdetaljer er nu tydeligere låst visuelt ved manglende adgang
+- Status-kortet i forslagdetaljer tones tydeligere ned ved manglende adgang
+- Tilføjet "Låst" badge ved statusfeltet, når brugeren ikke har rettighed til at ændre status
+
+---
+
 ## v0.9.1 — 2026-05-22
 
 **Fix: Login-fejl pga. Firestore-regler**

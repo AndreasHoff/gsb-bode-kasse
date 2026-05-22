@@ -140,6 +140,18 @@ button:active {
   transform: translateY(1px);
 }
 
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  filter: saturate(0.35) brightness(0.9);
+}
+
+button:disabled:hover,
+button:disabled:active {
+  transform: none;
+}
+
 button:focus,
 button:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--color-accent) 45%, white);

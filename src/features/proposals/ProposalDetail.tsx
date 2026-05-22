@@ -197,7 +197,7 @@ export default function ProposalDetail({
       ) : (
         <button
           type="button"
-          className="btn-secondary w-full mb-6 text-sm rounded-2xl"
+          className="btn-secondary w-full mb-6 text-sm rounded-2xl disabled:pointer-events-none"
           onClick={() => {
             void handleExportToGithub();
           }}
@@ -212,13 +212,22 @@ export default function ProposalDetail({
         </button>
       )}
 
-      <div className="app-card app-card--muted proposal-status-control mb-6">
+      <div
+        className={`app-card app-card--muted proposal-status-control mb-6 ${
+          !canManageProposalLifecycle ? "opacity-45 saturate-50" : ""
+        }`}
+      >
         <label htmlFor="proposal-status-select" className="proposal-status-control__label">
           Status:
+          {!canManageProposalLifecycle && (
+            <span className="ml-2 inline-flex items-center rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+              Låst
+            </span>
+          )}
         </label>
         <select
           id="proposal-status-select"
-          className="proposal-status-control__select"
+          className="proposal-status-control__select disabled:cursor-not-allowed disabled:opacity-60"
           value={proposal.status}
           onChange={(e) => {
             void handleStatusChange(e.target.value as ProposalStatus);
