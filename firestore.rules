@@ -43,6 +43,11 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // Required for collectionGroup("members") lookups during session sync.
+    match /{path=**}/members/{memberId} {
+      allow read, write: if isSignedIn();
+    }
+
     match /teams/{teamId} {
       allow read, write: if isSignedIn();
 
