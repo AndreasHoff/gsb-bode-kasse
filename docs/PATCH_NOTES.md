@@ -4,6 +4,16 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.11.1 — 2026-05-23
+
+**Fix: Cloud Functions deploy bygger ikke dobbelt lokalt**
+
+- `deploy:functions:safe` genbruger nu det eksisterende deploy-flow i stedet for at bygge functions lokalt to gange
+- Bevarer Firebase `predeploy`-builden som eneste lokale build-trin før upload
+- Reducerer unødvendig lokal ventetid ved deploy af Cloud Functions
+
+---
+
 ## v0.11.0 — 2026-05-23
 
 **Refaktor: forenklet rollemodel + dokumentation i sync**
