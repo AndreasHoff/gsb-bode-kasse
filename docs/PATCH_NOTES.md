@@ -4,6 +4,20 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.10.1 — 2026-05-23
+
+**Feature: Mine som startfane + GitHub Project automation + deploy scripts**
+
+- Appen starter nu i fanen "Mine" ved login, så brugeren lander direkte på personlig visning
+- Ved eksport af idéforslag til GitHub tilføjes issue automatisk til GitHub Project `AndreasHoff/projects/5`
+- Nyoprettede issue-items sættes automatisk til status `Todo` i project-feltet `Status`
+- Tilføjet root scripts til Cloud Functions-workflow:
+	- `build:functions`
+	- `deploy:functions`
+	- `deploy:functions:safe` (byg først, deploy derefter)
+
+---
+
 ## v0.10.0 — 2026-05-23
 
 **Feature: Hold-fane viser alle medlemmer + opdateret bundnavigation**

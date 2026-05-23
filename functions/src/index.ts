@@ -8,6 +8,10 @@ initializeApp();
 const GITHUB_PAT = defineSecret("GITHUB_PAT");
 const GITHUB_REPO = defineSecret("GITHUB_REPO");
 const PROPOSAL_OWNER_EMAIL = "mchoffn@hotmail.com";
+const GITHUB_PROJECT_OWNER = "AndreasHoff";
+const GITHUB_PROJECT_NUMBER = 5;
+const GITHUB_PROJECT_STATUS_FIELD = "Status";
+const GITHUB_PROJECT_TODO_OPTION = "Todo";
 
 type ProposalStatus =
   | "new"
@@ -33,6 +37,16 @@ interface ExportInput {
 interface ExportResult {
   issueNumber: number;
   issueUrl: string;
+}
+
+interface GitHubGraphQLResponse<TData> {
+  data?: TData;
+  errors?: Array<{ message?: string }>;
+}
+
+interface ProjectStatusFieldInfo {
+  id: string;
+  todoOptionId: string;
 }
 
 interface UpdateProposalStatusInput {
@@ -149,9 +163,22 @@ export const exportProposalToGithub = onCall<ExportInput, Promise<ExportResult>>
       throw new HttpsError("internal", `GitHub API fejl: ${response.status} — ${errorText}`);
     }
 
-    const issue = (await response.json()) as { id: number; number: number; html_url: string };
+    const issue = (await response.json()) as {
+      id: number;
+      node_id: string;
+      number: number;
+      html_url: string;
+    };
 
-    // 5. Persist GitHub metadata back to Firestore
+    // 5. Add issue to GitHub Project and set status to Todo
+    await addIssueToProjectTodo({
+      pat,
+      issueNodeId: issue.node_id,
+      projectOwner: GITHUB_PROJECT_OWNER,
+      projectNumber: GITHUB_PROJECT_NUMBER,
+    });
+
+    // 6. Persist GitHub metadata back to Firestore
     await db.collection("featureProposals").doc(proposalId).update({
       githubIssueId: String(issue.id),
       githubIssueNumber: issue.number,
@@ -297,4 +324,204 @@ function buildIssueBody(proposal: Record<string, unknown>): string {
   );
 
   return lines.join("\n");
+}
+
+async function addIssueToProjectTodo(input: {
+  pat: string;
+  issueNodeId: string;
+  projectOwner: string;
+  projectNumber: number;
+}): Promise<void> {
+  const { projectId, statusField } = await getProjectConfig(input);
+
+  const addItemResponse = await runGitHubGraphQL<{
+    addProjectV2ItemById?: { item?: { id?: string } };
+  }>({
+    pat: input.pat,
+    query: `
+      mutation AddIssueToProject($projectId: ID!, $contentId: ID!) {
+        addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+          item {
+            id
+          }
+        }
+      }
+    `,
+    variables: {
+      projectId,
+      contentId: input.issueNodeId,
+    },
+  });
+
+  const itemId = addItemResponse.addProjectV2ItemById?.item?.id;
+  if (!itemId) {
+    throw new HttpsError(
+      "internal",
+      "GitHub Project fejl: kunne ikke tilfoeje issue til project",
+    );
+  }
+
+  await runGitHubGraphQL({
+    pat: input.pat,
+    query: `
+      mutation SetProjectStatus(
+        $projectId: ID!
+        $itemId: ID!
+        $fieldId: ID!
+        $optionId: String!
+      ) {
+        updateProjectV2ItemFieldValue(
+          input: {
+            projectId: $projectId
+            itemId: $itemId
+            fieldId: $fieldId
+            value: { singleSelectOptionId: $optionId }
+          }
+        ) {
+          projectV2Item {
+            id
+          }
+        }
+      }
+    `,
+    variables: {
+      projectId,
+      itemId,
+      fieldId: statusField.id,
+      optionId: statusField.todoOptionId,
+    },
+  });
+}
+
+async function getProjectConfig(input: {
+  pat: string;
+  projectOwner: string;
+  projectNumber: number;
+}): Promise<{ projectId: string; statusField: ProjectStatusFieldInfo }> {
+  const projectQueryResponse = await runGitHubGraphQL<{
+    user?: {
+      projectV2?: {
+        id?: string;
+        fields?: {
+          nodes?: Array<{
+            __typename?: string;
+            id?: string;
+            name?: string;
+            options?: Array<{ id?: string; name?: string }>;
+          }>;
+        };
+      };
+    };
+  }>({
+    pat: input.pat,
+    query: `
+      query ProjectConfig($owner: String!, $number: Int!) {
+        user(login: $owner) {
+          projectV2(number: $number) {
+            id
+            fields(first: 50) {
+              nodes {
+                __typename
+                ... on ProjectV2SingleSelectField {
+                  id
+                  name
+                  options {
+                    id
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `,
+    variables: {
+      owner: input.projectOwner,
+      number: input.projectNumber,
+    },
+  });
+
+  const project = projectQueryResponse.user?.projectV2;
+  const projectId = project?.id;
+  if (!projectId) {
+    throw new HttpsError(
+      "internal",
+      `GitHub Project fejl: kunne ikke finde project ${input.projectOwner}/${input.projectNumber}`,
+    );
+  }
+
+  const statusFieldNode =
+    project.fields?.nodes?.find(
+      (field) =>
+        field.__typename === "ProjectV2SingleSelectField" &&
+        field.name?.trim().toLowerCase() === GITHUB_PROJECT_STATUS_FIELD.toLowerCase(),
+    ) ?? null;
+
+  if (!statusFieldNode?.id) {
+    throw new HttpsError(
+      "internal",
+      `GitHub Project fejl: feltet '${GITHUB_PROJECT_STATUS_FIELD}' blev ikke fundet`,
+    );
+  }
+
+  const todoOption =
+    statusFieldNode.options?.find(
+      (option) =>
+        option.name?.trim().toLowerCase() === GITHUB_PROJECT_TODO_OPTION.toLowerCase(),
+    ) ?? null;
+
+  if (!todoOption?.id) {
+    throw new HttpsError(
+      "internal",
+      `GitHub Project fejl: option '${GITHUB_PROJECT_TODO_OPTION}' blev ikke fundet i feltet '${GITHUB_PROJECT_STATUS_FIELD}'`,
+    );
+  }
+
+  return {
+    projectId,
+    statusField: {
+      id: statusFieldNode.id,
+      todoOptionId: todoOption.id,
+    },
+  };
+}
+
+async function runGitHubGraphQL<TData>(input: {
+  pat: string;
+  query: string;
+  variables: Record<string, unknown>;
+}): Promise<TData> {
+  const response = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.pat}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: input.query,
+      variables: input.variables,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new HttpsError("internal", `GitHub GraphQL fejl: ${response.status} — ${errorText}`);
+  }
+
+  const payload = (await response.json()) as GitHubGraphQLResponse<TData>;
+  if (payload.errors && payload.errors.length > 0) {
+    const messages = payload.errors
+      .map((error) => error.message ?? "Ukendt GraphQL fejl")
+      .join(" | ");
+    throw new HttpsError("internal", `GitHub GraphQL fejl: ${messages}`);
+  }
+
+  if (!payload.data) {
+    throw new HttpsError("internal", "GitHub GraphQL fejl: tomt svar");
+  }
+
+  return payload.data;
 }
