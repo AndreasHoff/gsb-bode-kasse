@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { FineRule } from "../../types/domain";
 import {
   createFineRule,
+  deactivateFineRule,
   getFineRule,
   updateFineRule,
 } from "../../lib/firestore";
@@ -33,6 +34,7 @@ export default function FineRuleForm({
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,6 +98,21 @@ export default function FineRuleForm({
     }
   }
 
+  async function handleDelete() {
+    if (!ruleId || deleting || saving) return;
+    if (!window.confirm("Er du sikker på, at du vil slette denne bøde?")) return;
+
+    setDeleting(true);
+    setError(null);
+    try {
+      await deactivateFineRule(teamId, ruleId, userId);
+      onSave();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke slette bøden. Prøv igen.");
+      setDeleting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="app-page">
@@ -129,7 +146,7 @@ export default function FineRuleForm({
       >
         <div>
           <label className="block text-sm font-semibold mb-1" htmlFor="fr-title">
-            Titel *
+            Navn *
           </label>
           <input
             id="fr-title"
@@ -198,10 +215,24 @@ export default function FineRuleForm({
         <button
           type="submit"
           className="btn-primary w-full py-3 rounded-2xl"
-          disabled={saving || !isValid}
+          disabled={saving || deleting || !isValid}
         >
           {saving ? "Gemmer..." : isEditMode ? "Gem ændringer" : "Opret bøde"}
         </button>
+
+        {isEditMode && (
+          <button
+            type="button"
+            className="w-full py-3 rounded-2xl border border-red-500 text-red-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              void handleDelete();
+            }}
+            disabled={deleting || saving}
+            aria-label="Slet bøde"
+          >
+            {deleting ? "Sletter..." : "🗑️ Slet bøde"}
+          </button>
+        )}
       </form>
     </div>
   );

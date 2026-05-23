@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { FineRule, Role } from "../../types/domain";
-import { getFineRules, deactivateFineRule } from "../../lib/firestore";
+import { getFineRules } from "../../lib/firestore";
 import { canManageFineRules } from "../../lib/permissions";
 import { formatAmount } from "../../lib/utils";
 import FineRuleForm from "./FineRuleForm";
@@ -13,16 +13,22 @@ interface Props {
   teamId: string;
   userRole: Role | null;
   userId: string;
+  isSuperAdmin: boolean;
 }
 
 type View =
   | { screen: "list" }
   | { screen: "form"; ruleId?: string };
 
-export default function FineRulesCatalog({ teamId, userRole, userId }: Props) {
+export default function FineRulesCatalog({
+  teamId,
+  userRole,
+  userId,
+  isSuperAdmin,
+}: Props) {
   const [view, setView] = useState<View>({ screen: "list" });
 
-  const isAdmin = userRole !== null && canManageFineRules(userRole);
+  const canManageRules = isSuperAdmin || (userRole !== null && canManageFineRules(userRole));
 
   if (!teamId) {
     return (
@@ -36,7 +42,7 @@ export default function FineRulesCatalog({ teamId, userRole, userId }: Props) {
     );
   }
 
-  if (view.screen === "form" && isAdmin) {
+  if (view.screen === "form" && canManageRules) {
     return (
       <FineRuleForm
         teamId={teamId}
@@ -52,7 +58,7 @@ export default function FineRulesCatalog({ teamId, userRole, userId }: Props) {
     <FineRulesList
       teamId={teamId}
       userRole={userRole}
-      userId={userId}
+      isSuperAdmin={isSuperAdmin}
       onNew={() => setView({ screen: "form" })}
       onEdit={(ruleId) => setView({ screen: "form", ruleId })}
     />
@@ -62,18 +68,23 @@ export default function FineRulesCatalog({ teamId, userRole, userId }: Props) {
 interface ListProps {
   teamId: string;
   userRole: Role | null;
-  userId: string;
+  isSuperAdmin: boolean;
   onNew: () => void;
   onEdit: (ruleId: string) => void;
 }
 
-function FineRulesList({ teamId, userRole, userId, onNew, onEdit }: ListProps) {
+function FineRulesList({
+  teamId,
+  userRole,
+  isSuperAdmin,
+  onNew,
+  onEdit,
+}: ListProps) {
   const [rules, setRules] = useState<FineRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deactivating, setDeactivating] = useState<string | null>(null);
 
-  const isAdmin = userRole !== null && canManageFineRules(userRole);
+  const canManageRules = isSuperAdmin || (userRole !== null && canManageFineRules(userRole));
 
   const loadRules = useCallback(() => {
     setLoading(true);
@@ -88,18 +99,6 @@ function FineRulesList({ teamId, userRole, userId, onNew, onEdit }: ListProps) {
     loadRules();
   }, [loadRules]);
 
-  async function handleDeactivate(ruleId: string) {
-    setDeactivating(ruleId);
-    try {
-      await deactivateFineRule(teamId, ruleId, userId);
-      setRules((prev) => prev.filter((r) => r.id !== ruleId));
-    } catch {
-      setError("Kunne ikke deaktivere bøden");
-    } finally {
-      setDeactivating(null);
-    }
-  }
-
   return (
     <div className="app-page pb-8">
       <div className="flex items-start justify-between mb-6 gap-3">
@@ -109,7 +108,7 @@ function FineRulesList({ teamId, userRole, userId, onNew, onEdit }: ListProps) {
             {loading ? "Henter..." : `${rules.length} bødetype${rules.length !== 1 ? "r" : ""}`}
           </p>
         </div>
-        {isAdmin && (
+        {canManageRules && (
           <button
             type="button"
             className="btn-primary px-4 py-2 text-sm rounded-2xl shrink-0"
@@ -132,7 +131,7 @@ function FineRulesList({ teamId, userRole, userId, onNew, onEdit }: ListProps) {
         <div className="app-card app-card--muted p-6 text-center">
           <p className="text-4xl mb-3">📋</p>
           <p className="text-sm font-semibold">Ingen bøder oprettet endnu.</p>
-          {isAdmin && (
+          {canManageRules && (
             <p className="text-xs text-[var(--color-text-muted)] mt-1">
               Tryk "+ Ny bøde" for at oprette den første bødetype.
             </p>
@@ -146,12 +145,8 @@ function FineRulesList({ teamId, userRole, userId, onNew, onEdit }: ListProps) {
             <FineRuleCard
               key={rule.id}
               rule={rule}
-              isAdmin={isAdmin}
-              isDeactivating={deactivating === rule.id}
+              canManageRules={canManageRules}
               onEdit={() => onEdit(rule.id)}
-              onDeactivate={() => {
-                void handleDeactivate(rule.id);
-              }}
             />
           ))}
         </div>
@@ -162,18 +157,14 @@ function FineRulesList({ teamId, userRole, userId, onNew, onEdit }: ListProps) {
 
 interface CardProps {
   rule: FineRule;
-  isAdmin: boolean;
-  isDeactivating: boolean;
+  canManageRules: boolean;
   onEdit: () => void;
-  onDeactivate: () => void;
 }
 
 function FineRuleCard({
   rule,
-  isAdmin,
-  isDeactivating,
+  canManageRules,
   onEdit,
-  onDeactivate,
 }: CardProps) {
   return (
     <div className="app-card p-4">
@@ -197,7 +188,7 @@ function FineRuleCard({
           <span className="text-sm font-bold text-[var(--color-primary-contrast)] bg-[var(--color-primary)] px-2.5 py-1 rounded-xl">
             {formatAmount(rule.amount)}
           </span>
-          {isAdmin && (
+          {canManageRules && (
             <div className="flex gap-1">
               <button
                 type="button"
@@ -206,15 +197,6 @@ function FineRuleCard({
                 aria-label={`Rediger ${rule.title}`}
               >
                 ✏️
-              </button>
-              <button
-                type="button"
-                className="btn-secondary px-2.5 py-1 text-xs rounded-xl"
-                onClick={onDeactivate}
-                disabled={isDeactivating}
-                aria-label={`Deaktiver ${rule.title}`}
-              >
-                {isDeactivating ? "…" : "🗑️"}
               </button>
             </div>
           )}
