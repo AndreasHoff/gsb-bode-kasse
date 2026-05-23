@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.approveProposal = exports.updateProposalStatus = exports.exportProposalToGithub = void 0;
+exports.migrateMembershipRoles = exports.approveProposal = exports.updateProposalStatus = exports.exportProposalToGithub = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const app_1 = require("firebase-admin/app");
@@ -21,6 +21,13 @@ const ALLOWED_PROPOSAL_STATUSES = [
     "done",
     "abandoned",
 ];
+const LEGACY_ROLE_MAP = {
+    member: "member",
+    admin: "admin",
+    player: "member",
+    captain: "member",
+    treasurer: "member",
+};
 function toIsoIfDateLike(value) {
     if (value && typeof value === "object" && "toDate" in value) {
         const dateLike = value;
@@ -177,6 +184,106 @@ exports.approveProposal = (0, https_1.onCall)({ region: "europe-west1" }, async 
     });
     const updated = await ref.get();
     return { proposal: serializeProposal(updated.id, updated.data()) };
+});
+exports.migrateMembershipRoles = (0, https_1.onCall)({ region: "europe-west1" }, async (request) => {
+    var _a, _b;
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "Du skal være logget ind");
+    }
+    requireProposalOwnerEmail(request);
+    const dryRun = ((_a = request.data) === null || _a === void 0 ? void 0 : _a.dryRun) === true;
+    const db = (0, firestore_1.getFirestore)();
+    const teamsSnap = await db.collection("teams").get();
+    const summary = {
+        dryRun,
+        teamsScanned: 0,
+        membersScanned: 0,
+        membersUpdated: 0,
+        rolesNormalized: 0,
+        idsRekeyed: 0,
+        skippedMissingUserId: 0,
+        skippedUnknownRole: 0,
+        writeCommits: 0,
+    };
+    let batch = db.batch();
+    let pendingOps = 0;
+    const queueSet = async (ref, data) => {
+        if (!dryRun) {
+            batch.set(ref, data);
+        }
+        pendingOps += 1;
+        if (pendingOps >= 450) {
+            if (!dryRun) {
+                await batch.commit();
+                summary.writeCommits += 1;
+            }
+            batch = db.batch();
+            pendingOps = 0;
+        }
+    };
+    const queueDelete = async (ref) => {
+        if (!dryRun) {
+            batch.delete(ref);
+        }
+        pendingOps += 1;
+        if (pendingOps >= 450) {
+            if (!dryRun) {
+                await batch.commit();
+                summary.writeCommits += 1;
+            }
+            batch = db.batch();
+            pendingOps = 0;
+        }
+    };
+    for (const teamDoc of teamsSnap.docs) {
+        summary.teamsScanned += 1;
+        const membersSnap = await teamDoc.ref.collection("members").get();
+        for (const memberDoc of membersSnap.docs) {
+            summary.membersScanned += 1;
+            const raw = memberDoc.data();
+            const userId = typeof raw.userId === "string" ? raw.userId.trim() : "";
+            if (!userId) {
+                summary.skippedMissingUserId += 1;
+                continue;
+            }
+            const role = normalizeMembershipRole(raw.role);
+            if (!role) {
+                summary.skippedUnknownRole += 1;
+                continue;
+            }
+            const normalized = {
+                userId,
+                teamId: teamDoc.id,
+                role,
+                joinedAt: (_b = raw.joinedAt) !== null && _b !== void 0 ? _b : new Date(),
+                isActive: typeof raw.isActive === "boolean" ? raw.isActive : true,
+            };
+            const needsRekey = memberDoc.id !== userId;
+            const needsRoleNormalize = raw.role !== role;
+            const needsTeamIdNormalize = raw.teamId !== teamDoc.id;
+            const needsActiveNormalize = typeof raw.isActive !== "boolean";
+            if (!needsRekey && !needsRoleNormalize && !needsTeamIdNormalize && !needsActiveNormalize) {
+                continue;
+            }
+            summary.membersUpdated += 1;
+            if (needsRoleNormalize) {
+                summary.rolesNormalized += 1;
+            }
+            if (needsRekey) {
+                summary.idsRekeyed += 1;
+            }
+            const targetRef = teamDoc.ref.collection("members").doc(userId);
+            await queueSet(targetRef, normalized);
+            if (needsRekey) {
+                await queueDelete(memberDoc.ref);
+            }
+        }
+    }
+    if (!dryRun && pendingOps > 0) {
+        await batch.commit();
+        summary.writeCommits += 1;
+    }
+    return { summary };
 });
 // ---------------------------------------------------------------------------
 // Helpers
@@ -355,5 +462,12 @@ async function runGitHubGraphQL(input) {
         throw new https_1.HttpsError("internal", "GitHub GraphQL fejl: tomt svar");
     }
     return payload.data;
+}
+function normalizeMembershipRole(role) {
+    if (typeof role !== "string") {
+        return null;
+    }
+    const normalized = LEGACY_ROLE_MAP[role.trim().toLowerCase()];
+    return normalized !== null && normalized !== void 0 ? normalized : null;
 }
 //# sourceMappingURL=index.js.map

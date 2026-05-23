@@ -62,6 +62,36 @@ interface ProposalResponse {
   proposal: Record<string, unknown>;
 }
 
+interface MigrateMembershipRolesInput {
+  dryRun?: boolean;
+}
+
+interface MembershipMigrationSummary {
+  dryRun: boolean;
+  teamsScanned: number;
+  membersScanned: number;
+  membersUpdated: number;
+  rolesNormalized: number;
+  idsRekeyed: number;
+  skippedMissingUserId: number;
+  skippedUnknownRole: number;
+  writeCommits: number;
+}
+
+interface MigrateMembershipRolesResponse {
+  summary: MembershipMigrationSummary;
+}
+
+type MembershipRole = "member" | "admin";
+
+const LEGACY_ROLE_MAP: Record<string, MembershipRole> = {
+  member: "member",
+  admin: "admin",
+  player: "member",
+  captain: "member",
+  treasurer: "member",
+};
+
 function toIsoIfDateLike(value: unknown): unknown {
   if (value && typeof value === "object" && "toDate" in value) {
     const dateLike = value as { toDate: () => Date };
@@ -276,6 +306,129 @@ export const approveProposal = onCall<ApproveProposalInput, Promise<ProposalResp
     return { proposal: serializeProposal(updated.id, updated.data()) };
   },
 );
+
+export const migrateMembershipRoles = onCall<
+  MigrateMembershipRolesInput,
+  Promise<MigrateMembershipRolesResponse>
+>({ region: "europe-west1" }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Du skal være logget ind");
+  }
+
+  requireProposalOwnerEmail(request);
+
+  const dryRun = request.data?.dryRun === true;
+  const db = getFirestore();
+  const teamsSnap = await db.collection("teams").get();
+
+  const summary: MembershipMigrationSummary = {
+    dryRun,
+    teamsScanned: 0,
+    membersScanned: 0,
+    membersUpdated: 0,
+    rolesNormalized: 0,
+    idsRekeyed: 0,
+    skippedMissingUserId: 0,
+    skippedUnknownRole: 0,
+    writeCommits: 0,
+  };
+
+  let batch = db.batch();
+  let pendingOps = 0;
+
+  const queueSet = async (ref: FirebaseFirestore.DocumentReference, data: Record<string, unknown>) => {
+    if (!dryRun) {
+      batch.set(ref, data);
+    }
+    pendingOps += 1;
+
+    if (pendingOps >= 450) {
+      if (!dryRun) {
+        await batch.commit();
+        summary.writeCommits += 1;
+      }
+      batch = db.batch();
+      pendingOps = 0;
+    }
+  };
+
+  const queueDelete = async (ref: FirebaseFirestore.DocumentReference) => {
+    if (!dryRun) {
+      batch.delete(ref);
+    }
+    pendingOps += 1;
+
+    if (pendingOps >= 450) {
+      if (!dryRun) {
+        await batch.commit();
+        summary.writeCommits += 1;
+      }
+      batch = db.batch();
+      pendingOps = 0;
+    }
+  };
+
+  for (const teamDoc of teamsSnap.docs) {
+    summary.teamsScanned += 1;
+
+    const membersSnap = await teamDoc.ref.collection("members").get();
+    for (const memberDoc of membersSnap.docs) {
+      summary.membersScanned += 1;
+
+      const raw = memberDoc.data() as Record<string, unknown>;
+      const userId = typeof raw.userId === "string" ? raw.userId.trim() : "";
+      if (!userId) {
+        summary.skippedMissingUserId += 1;
+        continue;
+      }
+
+      const role = normalizeMembershipRole(raw.role);
+      if (!role) {
+        summary.skippedUnknownRole += 1;
+        continue;
+      }
+
+      const normalized = {
+        userId,
+        teamId: teamDoc.id,
+        role,
+        joinedAt: raw.joinedAt ?? new Date(),
+        isActive: typeof raw.isActive === "boolean" ? raw.isActive : true,
+      };
+
+      const needsRekey = memberDoc.id !== userId;
+      const needsRoleNormalize = raw.role !== role;
+      const needsTeamIdNormalize = raw.teamId !== teamDoc.id;
+      const needsActiveNormalize = typeof raw.isActive !== "boolean";
+
+      if (!needsRekey && !needsRoleNormalize && !needsTeamIdNormalize && !needsActiveNormalize) {
+        continue;
+      }
+
+      summary.membersUpdated += 1;
+      if (needsRoleNormalize) {
+        summary.rolesNormalized += 1;
+      }
+      if (needsRekey) {
+        summary.idsRekeyed += 1;
+      }
+
+      const targetRef = teamDoc.ref.collection("members").doc(userId);
+      await queueSet(targetRef, normalized);
+
+      if (needsRekey) {
+        await queueDelete(memberDoc.ref);
+      }
+    }
+  }
+
+  if (!dryRun && pendingOps > 0) {
+    await batch.commit();
+    summary.writeCommits += 1;
+  }
+
+  return { summary };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -524,4 +677,13 @@ async function runGitHubGraphQL<TData>(input: {
   }
 
   return payload.data;
+}
+
+function normalizeMembershipRole(role: unknown): MembershipRole | null {
+  if (typeof role !== "string") {
+    return null;
+  }
+
+  const normalized = LEGACY_ROLE_MAP[role.trim().toLowerCase()];
+  return normalized ?? null;
 }

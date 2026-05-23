@@ -10,9 +10,7 @@ Alle teammedlemmer kan se en liste over holdets aktive bødetyper. Admins kan op
 
 ## Actors
 
-- Player (læseadgang)
-- Captain (læseadgang)
-- Treasurer (læseadgang)
+- Member (læseadgang)
 - Admin (fuld CRUD-adgang)
 
 ## Preconditions

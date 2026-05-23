@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import "./auth.css";
 
 type AuthMode = "login" | "register";
 

@@ -1,13 +1,13 @@
 # F009 - Navbar med venstre sidemenu
 
 ## Problem
-Admins mangler et tydeligt sted at finde flere funktioner og fremtidige indstillinger. Den nuværende topsektion giver ikke plads til en udvidbar menu.
+Brugere mangler et tydeligt sted at finde appens sektioner, og super-admin mangler et sted at finde globale funktioner og fremtidige indstillinger. Den nuværende topsektion giver ikke plads til en udvidbar menu.
 
 ## Goal
 Give brugeren en foldbar venstrestillet sidemenu via burger-menu samt en tydelig navbar med app-navn/version og brugerhandlinger.
 
 ## Actors
-Player, Captain, Treasurer, Admin.
+Member, Admin, Super-admin.
 
 ## Preconditions
 - Brugeren er logget ind.
@@ -19,12 +19,12 @@ Player, Captain, Treasurer, Admin.
 3. Systemet åbner sidemenuen fra venstre side.
 4. Brugeren vælger en menuhandling.
 5. Systemet navigerer til valgt skærm og lukker sidemenuen.
-6. Hvis brugeren er admin, viser systemet ekstra adminpunkter i menuen.
+6. Hvis brugeren er super-admin, viser systemet ekstra punkter for idéforslag og indstillinger i menuen.
 
 ## Edge Cases
 - Hvis brugeren trykker udenfor menuen, lukkes sidemenuen.
 - Hvis app-version ikke kan læses fra patch notes, vises fallback-version.
-- Hvis en ikke-admin bruger prøver at tilgå adminpunkter, må de ikke vises i menuen.
+- Hvis en bruger ikke er super-admin, må punkterne for idéforslag og indstillinger ikke vises i menuen.
 - Hvis netværk er ustabilt, skal menuens åbne/lukke-adfærd stadig virke lokalt.
 
 ## Acceptance Criteria
@@ -33,4 +33,4 @@ Player, Captain, Treasurer, Admin.
 - Lukker sidemenuen ved klik på overlay eller valg af menupunkt.
 - Viser `GSB Bødekasse` og den nyeste `vX.Y.Z` fra `docs/PATCH_NOTES.md` i navbarens midte.
 - Viser indlogget brugers navn og `Log ud`-knap i højre side af navbaren.
-- Viser admin-specifikke menupunkter kun for admin-brugere.
+- Viser super-admin-specifikke menupunkter kun for super-admin-brugere.

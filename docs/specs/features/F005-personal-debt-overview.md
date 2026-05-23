@@ -1,13 +1,13 @@
 # F005 - Personal Debt Overview
 
 ## Problem
-Players need a clear personal view of their own outstanding fines, payment history, and total debt.
+Members need a clear personal view of their own outstanding fines, payment history, and total debt.
 
 ## Goal
 Provide each user a personal dashboard showing all fines assigned to them for the active season, grouped by status.
 
 ## Actors
-- All roles (each user sees their own data)
+- Member, Admin
 
 ## Flow
 

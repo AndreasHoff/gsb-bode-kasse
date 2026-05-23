@@ -1,7 +1,7 @@
 ---
 description: "Create a new feature spec from a rough description. Produces a complete F00N spec file in docs/specs/features/."
 agent: agent
-argument-hint: "Describe the feature you want to spec out (e.g. 'Player notifications when a fine is assigned')"
+argument-hint: "Describe the feature you want to spec out (e.g. 'Member notifications when a fine is assigned')"
 ---
 
 Use the `spec-writer` agent to create a new feature spec based on the following description:

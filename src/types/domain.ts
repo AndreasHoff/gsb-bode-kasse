@@ -1,6 +1,6 @@
 // Domain entity types for the GSB Bødekasse platform
 
-export type Role = "player" | "captain" | "treasurer" | "admin";
+export type Role = "member" | "admin";
 
 export type PaymentStatus = "unpaid" | "pending" | "approved" | "disputed";
 

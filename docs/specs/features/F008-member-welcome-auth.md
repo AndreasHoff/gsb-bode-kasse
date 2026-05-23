@@ -1,16 +1,15 @@
 # F008 - Member Welcome, Register & Login
 
 ## Problem
-Nye og eksisterende spillere mangler en tydelig indgang til appen, og der er ingen samlet login/register-oplevelse før de møder bødeskærmene.
+Nye og eksisterende medlemmer mangler en tydelig indgang til appen, og der er ingen samlet login/register-oplevelse før de møder bødeskærmene.
 
 ## Goal
 Give medlemmer en mobil-first velkomstside med login og registrering, så de kan få adgang til appen via Firebase Auth.
 
 ## Actors
-- Player
-- Captain
-- Treasurer
+- Member
 - Admin
+- Super-admin
 
 ## Preconditions
 - Firebase Auth er konfigureret i miljøet.
@@ -19,12 +18,13 @@ Give medlemmer en mobil-first velkomstside med login og registrering, så de kan
 
 ## Flow
 1. System viser en velkomstside på mobil med valg mellem "Log ind" og "Opret konto".
-2. Player vælger login-metode (e-mail/adgangskode eller Google).
+2. Medlemmet vælger login-metode (e-mail/adgangskode eller Google).
 3. System autentificerer brugeren via Firebase Auth.
 4. System opretter en `users/{uid}` profil hvis den ikke findes.
 5. System slår brugerens aktive medlemskaber op.
 6. Hvis brugeren har et aktivt medlemskab, åbner systemet hovedappen.
-7. Hvis brugeren ikke har et aktivt medlemskab, viser systemet en forklaring og beder brugeren kontakte en admin.
+7. Hvis brugeren ikke har et aktivt medlemskab og ikke er super-admin, viser systemet en forklaring og beder brugeren kontakte en admin.
+8. Hvis brugeren er super-admin uden aktivt medlemskab, åbner systemet app-skallen med adgang til idéforslag.
 
 ## Edge Cases
 - Forkert e-mail eller adgangskode ved login.

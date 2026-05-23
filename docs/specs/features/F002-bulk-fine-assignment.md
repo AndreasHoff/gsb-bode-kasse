@@ -1,13 +1,13 @@
 # F002 - Bulk Fine Assignment
 
 ## Problem
-Assigning the same fine to multiple players (e.g. whole team was late) requires repeated individual assignments, which is slow and error-prone. Existing apps crash during bulk operations.
+Assigning the same fine to multiple members (e.g. the whole team was late) requires repeated individual assignments, which is slow and error-prone. Existing apps crash during bulk operations.
 
 ## Goal
-Allow authorized users to assign one fine to multiple team members in a single operation, atomically.
+Allow an admin to assign one fine to multiple team members in a single operation, atomically.
 
 ## Actors
-- Captain, Treasurer, Admin
+- Admin
 
 ## Preconditions
 - Team has at least one active Season

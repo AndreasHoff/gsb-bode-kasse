@@ -20,7 +20,7 @@ One or two sentences. What pain does this solve?
 What the feature achieves when done. One sentence.
 
 ## Actors
-Which roles interact with this feature (Player, Captain, Treasurer, Admin).
+Which roles interact with this feature (Member, Admin, and Super-admin only when the feature is explicitly cross-team/global).
 
 ## Preconditions
 What must be true before this flow can start.

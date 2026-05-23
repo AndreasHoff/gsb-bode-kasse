@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.11.0 — 2026-05-23
+
+**Refaktor: forenklet rollemodel + dokumentation i sync**
+
+- Kanonisk team-rollemodel er forenklet til `member` og `admin`
+- `isSuperAdmin` fastholdes som separat bruger-flag til scoped globale funktioner (idéforslag)
+- Domænetyper, specs og agent-instruktioner er opdateret, så rollebeskrivelser er konsistente på tværs af repoet
+- Tilføjet migrerings-callable i Cloud Functions til normalisering af legacy medlemsroller (`player/captain/treasurer` -> `member`)
+- Firestore-regler er midlertidigt beholdt i den eksisterende, mindre stramme model indtil næste sikkerhedsiteration
+
+---
+
 ## v0.10.2 — 2026-05-23
 
 **UX Fix: Idéforslag starter på filteret "Ny"**

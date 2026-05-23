@@ -21,7 +21,7 @@ import {
   getTeam,
 } from "./lib/firestore";
 import type { Role } from "./types/domain";
-import "./index.css";
+import "./App.css";
 
 type Tab =
   | "overview"
