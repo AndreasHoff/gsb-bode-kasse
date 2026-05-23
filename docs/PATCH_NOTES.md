@@ -4,6 +4,19 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.10.0 — 2026-05-23
+
+**Feature: Hold-fane viser alle medlemmer + opdateret bundnavigation**
+
+- Hold-fanen henter nu alle brugere fra Firebase (`users`) og viser dem som medlemmer i en sorteret liste
+- Tilføjet loading-, fejl- og tom tilstand i Hold-visningen for mere robust datahåndtering
+- Firestore data layer udvidet med `getUsers()` og eksporteret via `src/lib/firestore/index.ts`
+- Bundnavigationen er udtrukket til en separat komponent: `BottomNavbar`
+- CSS-navngivning opdateret fra `app-nav` til `bottom-navbar` for tydeligere struktur
+- Bundnavigationen er gjort fuld bredde uden kantlinje og uden border radius
+
+---
+
 ## v0.9.2 — 2026-05-22
 
 **UI Fix: Tydelig låst tilstand på forslagshandlinger**
