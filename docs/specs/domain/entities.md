@@ -14,11 +14,13 @@ Represents a registered user of the platform.
 | name         | string   | Display name                               |
 | email        | string   | Authentication email                       |
 | avatarUrl    | string?  | Optional profile image                     |
+| isSuperAdmin | boolean? | Global capability flag for proposal access |
 | createdAt    | datetime | Account creation timestamp                 |
 
 **Business Rules:**
 - Email must be unique across the system
 - A user can be a member of multiple teams
+- `isSuperAdmin` is a user-level capability flag, not a team membership role
 - Deleting a user does not delete historical records (soft delete)
 
 ---
@@ -56,7 +58,7 @@ Join entity between User and Team.
 
 **Business Rules:**
 - A user can only have one active membership per team
-- Role must be one of: Player, Captain, Treasurer, Admin
+- Role must be one of: Member, Admin
 - Only Admins can deactivate memberships
 
 ---
@@ -126,7 +128,7 @@ A fine assigned to one or more users.
 **Business Rules:**
 - A fine must belong to an active season
 - assignedTo must contain at least one user
-- Only Admins/Captains/Treasurers can assign fines
+- Only Admins can assign fines
 - Deleted fines are soft-deleted, not removed from DB
 - Shared fines are shown collectively but tracked individually
 
@@ -155,7 +157,7 @@ Tracks the payment state for a fine assigned to a specific user.
 
 **Business Rules:**
 - Each (fineId, userId) pair has exactly one Payment record
-- Only Admins/Treasurers can approve payments
+- Only Admins can approve payments
 - Approved payments cannot be reversed without creating an audit log entry
 
 ---
@@ -224,25 +226,25 @@ Feature proposal from super-admin users for product improvements.
 
 ```ts
 enum Role {
-  Player    = "player",
-  Captain   = "captain",
-  Treasurer = "treasurer",
-  Admin     = "admin",
+  Member = "member",
+  Admin  = "admin",
 }
 ```
 
+`isSuperAdmin` on `User` is a separate global capability flag and not part of the team membership role model.
+
 **Permission matrix:**
 
-| Action                    | Player | Captain | Treasurer | Admin |
-|---------------------------|--------|---------|-----------|-------|
-| View team overview        | ✓      | ✓       | ✓         | ✓     |
-| View personal debt        | ✓      | ✓       | ✓         | ✓     |
-| Initiate payment          | ✓      | ✓       | ✓         | ✓     |
-| Assign fine               |        | ✓       | ✓         | ✓     |
-| Bulk assign fine          |        | ✓       | ✓         | ✓     |
-| Delete/restore fine       |        | ✓       |           | ✓     |
-| Approve payment           |        |         | ✓         | ✓     |
-| Manage fine rules         |        | ✓       |           | ✓     |
-| Manage members            |        |         |           | ✓     |
-| Manage seasons            |        |         |           | ✓     |
-| View activity log         |        | ✓       | ✓         | ✓     |
+| Action                    | Member | Admin |
+|---------------------------|--------|-------|
+| View team overview        | ✓      | ✓     |
+| View personal debt        | ✓      | ✓     |
+| Initiate payment          | ✓      | ✓     |
+| Assign fine               |        | ✓     |
+| Bulk assign fine          |        | ✓     |
+| Delete/restore fine       |        | ✓     |
+| Approve payment           |        | ✓     |
+| Manage fine rules         |        | ✓     |
+| Manage members            |        | ✓     |
+| Manage seasons            |        | ✓     |
+| View activity log         |        | ✓     |

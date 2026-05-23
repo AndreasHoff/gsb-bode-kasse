@@ -89,7 +89,7 @@ export async function initiatePayment(
 
 /**
  * Transitions payment status from "pending" → "approved".
- * Only Treasurers and Admins may call this.
+ * Only admins may call this.
  * Writes an ActivityLog entry atomically.
  */
 export async function approvePayment(

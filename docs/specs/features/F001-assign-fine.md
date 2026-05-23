@@ -1,13 +1,13 @@
 # F001 - Assign Fine to Single User
 
 ## Problem
-Admins and captains need a fast, low-friction way to assign a fine to one player after a rule violation.
+Admins need a fast, low-friction way to assign a fine to one member after a rule violation.
 
 ## Goal
-Allow authorized users to assign a fine to a single team member in under 5 taps, with optional note.
+Allow an admin to assign a fine to a single team member in under 5 taps, with optional note.
 
 ## Actors
-- Captain, Treasurer, Admin
+- Admin
 
 ## Preconditions
 - Team has at least one active Season

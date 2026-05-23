@@ -7,7 +7,7 @@ Appens visuelle identitet er låst til ét grønt tema. Brugeren kan derfor ikke
 Giv brugeren mulighed for at skifte farvetema direkte i navbaren, så hele appens farver opdateres med det samme.
 
 ## Actors
-Player, Captain, Treasurer, Admin.
+Member, Admin, Super-admin.
 
 ## Preconditions
 - Brugeren er logget ind og ser app-skallen med navbar.

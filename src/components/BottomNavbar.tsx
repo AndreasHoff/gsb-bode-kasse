@@ -1,3 +1,5 @@
+import "./BottomNavbar.css";
+
 type BottomNavbarItem<T extends string> = {
   tab: T;
   label: string;

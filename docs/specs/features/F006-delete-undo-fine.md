@@ -4,10 +4,10 @@
 Admins sometimes assign fines by mistake and need a way to reverse them. The system must support undo without permanently destroying data.
 
 ## Goal
-Allow authorized users to soft-delete a fine assignment, with the option to restore it within a reasonable window.
+Allow an admin to soft-delete a fine assignment, with the option to restore it within a reasonable window.
 
 ## Actors
-- Captain, Admin
+- Admin
 
 ## Preconditions
 - Fine exists and has not been paid (status is `unpaid`)
@@ -36,7 +36,7 @@ Allow authorized users to soft-delete a fine assignment, with the option to rest
 ## Edge Cases
 - Fine is in `pending` or `approved` payment state → deletion not allowed; must dispute instead
 - Admin deletes own fine assignment → allowed
-- Captain tries to delete another captain's fine → allowed if same team
+- Member tries to delete a fine directly → not allowed
 - Restore after toast expires → must be done via ActivityLog admin view
 
 ## Acceptance Criteria

@@ -1,13 +1,13 @@
 # F004 - Team Overview (Shared Debt View)
 
 ## Problem
-The team needs a single shared view of all outstanding fines and balances so captains and players can see the full picture transparently.
+The team needs a single shared view of all outstanding fines and balances so members and admins can see the full picture transparently.
 
 ## Goal
 Provide a real-time, sorted list of all team members with their total outstanding debt for the active season.
 
 ## Actors
-- All roles (read-only for Players)
+- Member, Admin
 
 ## Flow
 

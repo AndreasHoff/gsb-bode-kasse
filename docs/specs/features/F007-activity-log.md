@@ -7,8 +7,8 @@ Teams need a transparent history of all actions: who assigned what fine, who pai
 Display a chronological, filterable audit trail of all team events for the active season.
 
 ## Actors
-- Captain, Treasurer, Admin (full view)
-- Player (own events only — future scope)
+- Admin (full view)
+- Member (own events only — future scope)
 
 ## Flow
 
@@ -29,7 +29,7 @@ Display a chronological, filterable audit trail of all team events for the activ
 | fine.deleted         | "🗑️ Jonas slettede en bøde for Mikkel"                 |
 | payment.approved     | "✅ Kasper godkendte Mikkels betaling – 50 kr"         |
 | payment.initiated    | "💸 Mikkel har sendt betaling via MobilePay"           |
-| member.added         | "➕ Andreas tilføjede Lasse som Player"                 |
+| member.added         | "➕ Andreas tilføjede Lasse som medlem"                |
 | season.created       | "📅 Ny sæson oprettet: Efterår 2025"                   |
 
 ## Edge Cases

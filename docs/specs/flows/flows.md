@@ -7,7 +7,7 @@ This document describes the complete lifecycle of a fine assignment, from creati
 │                     FINE ASSIGNMENT FLOW                        │
 └─────────────────────────────────────────────────────────────────┘
 
-  Admin/Captain
+  Admin
        │
        ▼
   [Select FineRule]
@@ -31,7 +31,7 @@ This document describes the complete lifecycle of a fine assignment, from creati
        │
        ▼
   [Team Overview updates]
-  [Player's personal view updates]
+  [Member's personal view updates]
        │
        ▼
   [Optional: Undo toast for ~8 seconds → F006]
@@ -46,7 +46,7 @@ This document describes the complete lifecycle of a fine assignment, from creati
 │                       PAYMENT FLOW                              │
 └─────────────────────────────────────────────────────────────────┘
 
-  Player
+  Member
     │
     ▼
   [View Personal Debt → F005]
@@ -60,14 +60,14 @@ This document describes the complete lifecycle of a fine assignment, from creati
   [ActivityLog: payment.initiated]
     │
     ▼
-  [MobilePay opens] ──── Player transfers money ──── [Player returns to app]
+  [MobilePay opens] ──── Member transfers money ──── [Member returns to app]
     │
     ▼
   [App shows: "Afventer godkendelse ⏳"]
 
         ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
-  Admin/Treasurer
+  Admin
     │
     ▼
   [Sees pending payment in overview]
@@ -80,7 +80,7 @@ This document describes the complete lifecycle of a fine assignment, from creati
   [ActivityLog: payment.approved]
     │
     ▼
-  [Fine removed from player's debt view]
+  [Fine removed from member's debt view]
   [Team overview debt total decreases]
 ```
 
@@ -119,7 +119,7 @@ This document describes the complete lifecycle of a fine assignment, from creati
   [User registers / logs in]
     │
     ▼
-  [Membership created with role: Player]
+  [Membership created with role: Member]
   [ActivityLog: member.added]
     │
     ▼

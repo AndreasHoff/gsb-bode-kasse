@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./proposals.css";
 import ProposalList from "./ProposalList";
 import ProposalForm from "./ProposalForm";
 import ProposalDetail from "./ProposalDetail";

@@ -135,10 +135,11 @@ Write rules that mirror `src/lib/permissions.ts` exactly:
 - teams/{teamId}: read = any authenticated member; write = admin only
 - members/{membershipId}: read = any member; write = admin only
 - seasons/{seasonId}: read = any member; write = admin only
-- fineRules/{fineRuleId}: read = any member; write = captain or admin
-- fines/{fineId}: read = any member; write = captain, treasurer, or admin (create); admin or captain (delete/update)
-- payments/{paymentId}: read = owner or treasurer/admin; write = owner (initiate); treasurer/admin (approve/dispute)
-- activityLog/{logId}: read = captain, treasurer, or admin; write = never from client (server/functions only, or via batch with fine/payment writes)
+- fineRules/{fineRuleId}: read = any member; write = admin only
+- fines/{fineId}: read = any member; write = admin only
+- payments/{paymentId}: read = owner or admin; write = owner (initiate); admin (approve/dispute)
+- activityLog/{logId}: read = admin only; write = never from client (server/functions only, or via batch with fine/payment writes)
+- featureProposals/{proposalId}: read/write = super-admin only
 ```
 
 Use `request.auth.token.role` **only if** you are using Firebase custom claims; otherwise derive role from a `get()` call on `members/{membershipId}` and document the tradeoff.

@@ -1,5 +1,18 @@
 # GSB Bødekasse – Project Guidelines
 
+## Documentation Precedence (Mandatory)
+
+Agents must consult `constitution.md` before planning or implementing changes.
+
+If documentation conflicts, resolve precedence in this order:
+1. `constitution.md`
+2. `.github/copilot-instructions.md`
+3. `.github/instructions/*.instructions.md`
+4. `docs/specs/**`
+5. `README.md`
+
+`README.md` is for onboarding and navigation; it is not the source of truth for non-negotiable rules.
+
 ## What This Project Is
 
 A **social-first sports club fine platform** ("bødekasse") for Danish badminton clubs.  
@@ -9,6 +22,7 @@ This is **culture software**, not accounting software. Keep that philosophy in a
 
 - **Vite 5 + React + TypeScript + TailwindCSS v4**
 - Feature-based folder structure under `src/features/`
+- Vertical-slice styling architecture: keep styling co-located with each feature under `src/features/<feature>/`; avoid central style files except app-wide foundation styles
 - Domain types in `src/types/domain.ts` — always consult before adding new types
 - Permission logic in `src/lib/permissions.ts` — all role checks go here
 - MobilePay integration in `src/lib/utils.ts`
@@ -25,17 +39,15 @@ Before implementing a feature, read its spec. Before adding a feature, write one
 
 ## Domain Rules (Non-Negotiable)
 
-- Fines are always scoped to an active **Season**
-- Every mutation (fine, payment, member) must produce an **ActivityLog** entry
-- Fines are **soft-deleted** (set `deletedAt`), never hard-deleted
-- Only one Season per team can be `isActive = true` at a time
-- Payment status transitions: `unpaid` → `pending` → `approved` (or `disputed`)
-- Current implementation baseline: Firestore writes are admin-only by default
-- Role hierarchy: Player < Captain < Treasurer < Admin
+Canonical domain and permission invariants are defined in `constitution.md`.
+
+When implementing from specs, always verify the resulting implementation remains consistent with `constitution.md`.
 
 ## Permissions
 
 Always use helpers from `src/lib/permissions.ts` — never hardcode role strings in UI or logic.
+
+Team membership roles are limited to `member` and `admin`. `isSuperAdmin` is a separate user-level capability used for scoped global features such as proposal management.
 
 ```ts
 canAssignFines(role)      // admin only (v1 baseline)
@@ -43,6 +55,7 @@ canApprovePayments(role)  // admin only (v1 baseline)
 canDeleteFines(role)      // admin only (v1 baseline)
 canManageMembers(role)    // admin only
 canManageSeasons(role)    // admin only
+canManageProposals(isSuperAdmin) // super-admin only
 ```
 
 ## Code Conventions

@@ -7,9 +7,12 @@ applyTo: "src/features/**"
 
 ## Before you write any code
 
-1. **Read the spec** — open `docs/specs/features/F0XX-<name>.md` for the feature you are implementing
-2. **Check domain types** — review `src/types/domain.ts` before creating any local interfaces
-3. **Check permissions** — identify which roles can trigger the feature; use helpers from `src/lib/permissions.ts`
+1. **Read the constitution** — review `constitution.md` for non-negotiable rules and architecture guardrails
+2. **Read the spec** — open `docs/specs/features/F0XX-<name>.md` for the feature you are implementing
+3. **Check domain types** — review `src/types/domain.ts` before creating any local interfaces
+4. **Check permissions** — identify which roles can trigger the feature; use helpers from `src/lib/permissions.ts`
+
+Team membership roles are limited to `member` and `admin`. `isSuperAdmin` is a separate user-level flag and should only be used for explicitly scoped cross-team capabilities.
 
 ## Component structure
 
@@ -23,6 +26,15 @@ src/features/<feature-name>/
 ```
 
 No barrel `index.ts` files unless there are 3+ exports.
+
+## Vertical-slice styling rules
+
+- Keep feature styles co-located inside the owning feature folder in `src/features/<feature>/`.
+- Prefer one feature-level stylesheet (for example `<feature>.css`) plus optional local component styles when needed.
+- Do not import styles across feature boundaries (for example, Feature A importing css from Feature B).
+- Shared global styling belongs only in app foundation files (such as `src/index.css` and `src/App.css`) and must stay generic.
+- Feature styles must not redefine app-wide foundations (tokens, reset-like rules, typography defaults, body/html rules).
+- If styling is reused by multiple features, promote it to a shared UI primitive/component instead of sharing raw css files.
 
 ## Mobile-first requirement (mandatory)
 
@@ -68,7 +80,7 @@ formatRelativeTime(isoStr)    // → "3 min. siden"
 
 ## ActivityLog
 
-Every mutation must produce an ActivityLog entry. Document the `action` string used — match the action types defined in `docs/specs/domain/entities.md`.
+Mutations to Fine, Payment, and Membership must produce an ActivityLog entry. Document the `action` string used — match the action types defined in `docs/specs/domain/entities.md`.
 
 ## Acceptance criteria
 
