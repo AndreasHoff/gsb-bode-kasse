@@ -4,6 +4,15 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.10.2 — 2026-05-23
+
+**UX Fix: Idéforslag starter på filteret "Ny"**
+
+- I forslagsoverblikket er standardfilteret ændret fra `Alle` til `Ny`
+- Gør det lettere at se nyligt oprettede idéer med det samme ved åbning af fanen
+
+---
+
 ## v0.10.1 — 2026-05-23
 
 **Feature: Mine som startfane + GitHub Project automation + deploy scripts**

@@ -21,7 +21,7 @@ interface Props {
 
 export default function ProposalList({ onNew, onSelect }: Props) {
   const [proposals, setProposals] = useState<FeatureProposal[]>([]);
-  const [filter, setFilter] = useState<FilterTab>("all");
+  const [filter, setFilter] = useState<FilterTab>("new");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
