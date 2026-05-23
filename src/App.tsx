@@ -7,6 +7,7 @@ import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
 import ActivityLog from "./features/activity/ActivityLog";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
+import BottomNavbar from "./components/BottomNavbar";
 import {
   ensurePersistentAuth,
   onAuthChange,
@@ -356,22 +357,11 @@ function App() {
         {activeTab === "proposals" && <Proposals />}
         {activeTab === "settings" && <SettingsPlaceholder />}
       </main>
-      <nav className="app-nav" aria-label="Bundnavigation">
-        {primaryMenuItems.map((item) => (
-          <button
-            key={item.tab}
-            type="button"
-            onClick={() => setActiveTab(item.tab)}
-            className={`app-nav__button ${
-              activeTab === item.tab ? "app-nav__button--active" : ""
-            }`}
-            aria-current={activeTab === item.tab ? "page" : undefined}
-          >
-            <span>{item.emoji}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
+      <BottomNavbar
+        items={primaryMenuItems}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
     </div>
   );
 }

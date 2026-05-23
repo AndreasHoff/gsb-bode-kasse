@@ -1,10 +1,16 @@
-import { getDoc, setDoc } from "firebase/firestore";
+import { getDoc, getDocs, setDoc } from "firebase/firestore";
+import { usersCol } from "./refs";
 import { userDoc } from "./refs";
 import type { User } from "../../types/domain";
 
 export async function getUserProfile(userId: string): Promise<User | null> {
   const snap = await getDoc(userDoc(userId));
   return snap.exists() ? snap.data() : null;
+}
+
+export async function getUsers(): Promise<User[]> {
+  const snap = await getDocs(usersCol());
+  return snap.docs.map((doc) => doc.data());
 }
 
 export async function ensureUserProfile(
