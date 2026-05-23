@@ -36,7 +36,7 @@ type ColorTheme = "green" | "violet";
 const THEME_STORAGE_KEY = "gsb-color-theme";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useState<Tab>("personal");
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [status, setStatus] = useState<AppStatus>("checking");
   const [authError, setAuthError] = useState<string | null>(null);
