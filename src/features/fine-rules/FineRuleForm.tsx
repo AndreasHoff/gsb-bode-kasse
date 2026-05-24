@@ -58,7 +58,7 @@ export default function FineRuleForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!isValid) return;
+    if (!isValid || deleting || saving) return;
 
     setSaving(true);
     setError(null);

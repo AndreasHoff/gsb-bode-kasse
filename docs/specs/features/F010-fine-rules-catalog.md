@@ -29,7 +29,7 @@ Alle teammedlemmer kan se en liste over holdets aktive bødetyper. Admins og sup
 **Opret ny bøde (admin/super-admin only):**
 
 5. Admin eller super-admin trykker "+ Ny bøde".
-6. Systemet viser en formular med felterne: Titel, Beløb, Emoji (valgfri), Beskrivelse (valgfri).
+6. Systemet viser en formular med felterne: Navn, Beløb, Emoji (valgfri), Beskrivelse (valgfri).
 7. Admin eller super-admin udfylder formen og trykker "Gem".
 8. Systemet gemmer den nye `FineRule` og en `rule.created` ActivityLog-entry atomisk i Firestore og viser den opdaterede liste.
 
@@ -60,11 +60,11 @@ Alle teammedlemmer kan se en liste over holdets aktive bødetyper. Admins og sup
 
 - Bundnavigationen viser "Bøder"-fanen i stedet for "Giv bøde".
 - Alle teammedlemmer kan se listen over aktive bødetyper.
-- Listen viser emoji (hvis angivet), titel og beløb (formateret med `formatAmount()`).
+- Listen viser emoji (hvis angivet), navn og beløb (formateret med `formatAmount()`).
 - Admins og super-admins ser "+ Ny bøde"-knap øverst og redigeringsikon på hver bøde.
 - Ikke-admins ser ingen admin-kontrolelementer og kan ikke nå opret/rediger-formularen.
-- Admin kan oprette en ny bøde med mindst titel og beløb; `rule.created` ActivityLog-entry oprettes atomisk.
-- Admin kan redigere titel, beløb, emoji og beskrivelse på en eksisterende bøde; `rule.updated` ActivityLog-entry oprettes atomisk.
+- Admin kan oprette en ny bøde med mindst navn og beløb; `rule.created` ActivityLog-entry oprettes atomisk.
+- Admin kan redigere navn, beløb, emoji og beskrivelse på en eksisterende bøde; `rule.updated` ActivityLog-entry oprettes atomisk.
 - Admin eller super-admin kan slette en bøde fra redigeringsvisningen; den fjernes fra listen umiddelbart efter; `rule.deactivated` ActivityLog-entry oprettes atomisk.
 - Tomt stadie vises korrekt, når der ikke er aktive bøder.
 - Fejltilstand (Firestore load/write) vises inline; fejl ryddes ved ny indlæsning.
