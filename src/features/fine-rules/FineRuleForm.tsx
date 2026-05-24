@@ -1,5 +1,5 @@
-// Feature: Fine Rules Catalog (F010)
-// Form for creating and editing FineRule entries (admin only)
+// Feature: Evangeliet / Fine Rules Catalog (F010)
+// Form for creating and editing fine rule entries (admin + super-admin only)
 
 import { useEffect, useState } from "react";
 import type { FineRule } from "../../types/domain";
@@ -49,7 +49,7 @@ export default function FineRuleForm({
         setEmoji(rule.emoji ?? "");
         setDescription(rule.description ?? "");
       })
-      .catch(() => setError("Kunne ikke hente bøden"))
+      .catch(() => setError("Kunne ikke hente opslaget"))
       .finally(() => setLoading(false));
   }, [teamId, ruleId]);
 
@@ -100,7 +100,7 @@ export default function FineRuleForm({
 
   async function handleDelete() {
     if (!ruleId || deleting || saving) return;
-    if (!window.confirm("Er du sikker på, at du vil slette denne bøde?")) return;
+    if (!window.confirm("Er du sikker på, at du vil slette dette opslag?")) return;
 
     setDeleting(true);
     setError(null);
@@ -116,7 +116,7 @@ export default function FineRuleForm({
   if (loading) {
     return (
       <div className="app-page">
-        <p className="status-note text-center py-8">Henter bøde...</p>
+        <p className="status-note text-center py-8">Henter opslag...</p>
       </div>
     );
   }
@@ -132,9 +132,11 @@ export default function FineRuleForm({
       </button>
 
       <div className="mb-6">
-        <h1 className="app-title">{isEditMode ? "Rediger bøde" : "Ny bøde"}</h1>
+        <h1 className="app-title">{isEditMode ? "Rediger opslag" : "Nyt opslag"}</h1>
         <p className="app-subtitle">
-          {isEditMode ? "Opdater bødetypen" : "Opret en ny bødetype til holdet"}
+          {isEditMode
+            ? "Opdater regelteksten i Evangeliet"
+            : "Tilføj en ny bøde og forklaring til Evangeliet"}
         </p>
       </div>
 
@@ -198,15 +200,15 @@ export default function FineRuleForm({
 
         <div>
           <label className="block text-sm font-semibold mb-1" htmlFor="fr-desc">
-            Beskrivelse (valgfri)
+            Forklaring (valgfri)
           </label>
           <textarea
             id="fr-desc"
             className="field__input"
-            rows={3}
+            rows={5}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Kort forklaring af bøden..."
+            placeholder="Skriv forklaring, undtagelser eller ekstra kontekst til opslaget..."
           />
         </div>
 
@@ -217,7 +219,7 @@ export default function FineRuleForm({
           className="btn-primary w-full py-3 rounded-2xl"
           disabled={saving || deleting || !isValid}
         >
-          {saving ? "Gemmer..." : isEditMode ? "Gem ændringer" : "Opret bøde"}
+          {saving ? "Gemmer..." : isEditMode ? "Gem ændringer" : "Opret opslag"}
         </button>
 
         {isEditMode && (
@@ -228,9 +230,9 @@ export default function FineRuleForm({
               void handleDelete();
             }}
             disabled={deleting || saving}
-            aria-label="Slet bøde"
+            aria-label="Slet opslag"
           >
-            {deleting ? "Sletter..." : "🗑️ Slet bøde"}
+            {deleting ? "Sletter..." : "🗑️ Slet opslag"}
           </button>
         )}
       </form>
