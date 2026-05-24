@@ -4,6 +4,20 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.12.0 — 2026-05-24
+
+**Feature: Brugerprofil (F012)**
+
+- Nyt menupunkt "Profil" (🪪) er tilføjet i venstre sidemenu for alle indloggede brugere
+- Profilsiden viser en personlig oversigt med avatar-initialer, brugernavn og e-mail
+- E-mail-feltet er skrivebeskyttet (disabled) og kan ikke ændres
+- Brugernavn er et redigerbart tekstfelt; ændringer gemmes direkte til Firestore ved tryk på "Gem"
+- Finansiel oversigt med to kort: "Indbetalt i alt" (godkendte betalinger) og "Udestående" (ubetalte/afventende betalinger)
+- "Betal nu"-knap åbner MobilePay deep link med samlet udestående beløb; deaktiveret ved 0 kr. udestående
+- Siden følger appens grøn/violet farvetema og er fuldt responsiv på 430px
+
+---
+
 ## v0.11.3 — 2026-05-24
 
 **Fix: superAdmin adgang til bøder + automatisk holdtilknytning til GSB**
