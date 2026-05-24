@@ -34,6 +34,7 @@ export {
 
 export {
   getFines,
+  getFinesForUser,
   getFine,
   assignFine,
   softDeleteFine,

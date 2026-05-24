@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.12.1 — 2026-05-24
+
+**Fix: Profil-flow robusthed og performance (F012)**
+
+- Profilsiden henter nu kun bøder tildelt den aktive bruger via dedikeret Firestore-query i stedet for hele holdets bødeliste
+- Ved fejl i betalingsoversigt nulstilles visningen til 0 kr. og der vises nu en "Prøv igen"-knap til genindlæsning
+- "Betal nu" er nu eksplicit deaktiveret når holdets MobilePay-modtager mangler, med forklarende fejltekst til brugeren
+- MobilePay fallback er gjort mere robust: web-fallback åbnes kun hvis appen ikke åbner, og sker i samme fane
+- Profil-opdatering er gjort robust mod manglende bruger-dokument ved merge-write i Firestore
+
+---
+
 ## v0.12.0 — 2026-05-24
 
 **Feature: Brugerprofil (F012)**

@@ -1,4 +1,4 @@
-import { getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
+import { getDoc, getDocs, setDoc } from "firebase/firestore";
 import { usersCol } from "./refs";
 import { userDoc } from "./refs";
 import type { User } from "../../types/domain";
@@ -39,5 +39,12 @@ export async function updateUserProfile(
   userId: string,
   updates: Pick<User, "name">,
 ): Promise<void> {
-  await updateDoc(userDoc(userId), { name: updates.name });
+  await setDoc(
+    userDoc(userId),
+    {
+      id: userId,
+      name: updates.name,
+    },
+    { merge: true },
+  );
 }

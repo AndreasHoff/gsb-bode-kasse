@@ -39,7 +39,7 @@ Give brugeren en profilside, der viser personlige oplysninger, en finansiel over
 
 - Brugeren har ingen bøder: Vis 0 kr. i begge kort, deaktiver "Betal nu".
 - Brugeren har ingen udestående: Vis 0 kr. for udestående, deaktiver "Betal nu".
-- Holdet har ingen MobilePay-modtager konfigureret: Vis "Betal nu"-knappen med fallback til web-URL.
+- Holdet har ingen MobilePay-modtager konfigureret: Deaktiver "Betal nu" og vis forklaringstekst.
 - Fejl ved gemning af brugernavn: Vis en fejlmeddelelse under navnefeltet.
 - Fejl ved hentning af data: Vis fejlbesked og mulighed for at prøve igen.
 - Tom navne-input: Tillad ikke gemning med tomt navn.
@@ -50,7 +50,8 @@ Give brugeren en profilside, der viser personlige oplysninger, en finansiel over
 - E-mail-feltet er disabled og kan ikke redigeres.
 - Brugernavn er redigerbart og gemmes ved tryk på "Gem"-knap.
 - Siden viser korrekt indbetalt og udestående beløb baseret på brugerens betalinger.
-- "Betal nu"-knap åbner MobilePay deep link eller web-URL med korrekt beløb og modtager.
+- "Betal nu"-knap åbner MobilePay deep link med korrekt beløb og modtager, og bruger web-fallback i samme fane hvis appen ikke åbner.
 - "Betal nu"-knap er deaktiveret når udestående beløb er 0.
+- "Betal nu"-knap er deaktiveret når holdets MobilePay-modtager mangler, og brugeren ser en forklaring.
 - Siden er fuldt funktionel på 430px viewport-bredde.
 - Siden benytter appens eksisterende farvetema (grøn/violet).
