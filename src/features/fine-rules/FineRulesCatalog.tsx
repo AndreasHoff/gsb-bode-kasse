@@ -28,7 +28,7 @@ export default function FineRulesCatalog({
 }: Props) {
   const [view, setView] = useState<View>({ screen: "list" });
 
-  const canManageRules = isSuperAdmin || (userRole !== null && canManageFineRules(userRole));
+  const canManageRules = canManageFineRules(userRole, isSuperAdmin);
 
   if (!teamId) {
     return (
@@ -84,7 +84,7 @@ function FineRulesList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const canManageRules = isSuperAdmin || (userRole !== null && canManageFineRules(userRole));
+  const canManageRules = canManageFineRules(userRole, isSuperAdmin);
 
   const loadRules = useCallback(() => {
     setLoading(true);

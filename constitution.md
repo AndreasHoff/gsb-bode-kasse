@@ -76,10 +76,18 @@ Before implementation work, use this order:
 3. Read matching .github/instructions/*.instructions.md files for scoped rules.
 4. Read the relevant feature spec in docs/specs/features/.
 
+Before making changes, sync your local repository against main:
+- Run `git pull origin main` from the repo root to ensure you are working from the latest code.
+- If local changes prevent pulling, stop and resolve with the user before implementation.
+
 During implementation:
 - Do not violate domain invariants defined in this document.
 - Use permission helpers instead of hardcoded role checks when helpers exist.
 - Keep architectural boundaries intact (feature-based structure and vertical-slice styling).
+
+For visual UI changes:
+- Validate the affected UI with Playwright tooling and capture screenshots as evidence.
+- Include screenshot evidence when reporting completion so visual regressions are traceable.
 
 ## 10. Constitution Change Control
 

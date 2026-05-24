@@ -90,6 +90,34 @@ npm run preview   # Preview production build
 npx tsc --noEmit  # Type-check only
 ```
 
+## Agent Execution Workflow (Mandatory)
+
+When an agent starts implementation work in this repository:
+
+1. Sync with main before coding:
+	- Run `git pull origin main` from the repository root.
+	- If pull is blocked by local changes, pause and resolve with the user before proceeding.
+2. Continue with constitution/spec/instruction reads and implementation.
+
+## Visual Change Evidence (Mandatory)
+
+For any feature or fix that changes visible UI/UX:
+
+- Use Playwright tooling to validate the changed screens.
+- Capture screenshots that show the implemented result (mobile width first, including 430px where relevant).
+- Provide those screenshots as completion evidence in the final delivery/update.
+
+If the visual flow requires privileges (for example `isSuperAdmin: true`) and no suitable test account is available:
+
+- Pause and request a dedicated test user from the maintainer.
+- Continue once credentials/claims are available.
+- Never commit credentials or secrets to the repository.
+
+Known test accounts for this repo:
+- Member/admin flow test email: `copilot.test.20260519.1@example.com`
+- Super-admin flow test email: `copilot@github.com`
+- Passwords are intentionally not stored in repo docs; use secure/local secret handling.
+
 ## Key Docs
 
 - [Domain Entities](../docs/specs/domain/entities.md)

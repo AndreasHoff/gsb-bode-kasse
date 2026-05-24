@@ -16,9 +16,12 @@ import {
   signOut,
 } from "./lib/auth";
 import {
+  backfillTeamMembershipsForAllUsers,
   ensureUserProfile,
   getActiveMembershipsForUser,
   getTeam,
+  getTeams,
+  upsertMembership,
 } from "./lib/firestore";
 import type { Role } from "./types/domain";
 import "./App.css";
@@ -114,13 +117,47 @@ function App() {
         const memberships = await getActiveMembershipsForUser(user.uid);
 
         if (memberships.length === 0) {
-          setDisplayName(userProfile.name);
-          setTeamName("");
-          setTeamId("");
-          setUserRole(null);
+          const teams = await getTeams();
+          const defaultTeam =
+            teams.find((team) => team.slug.trim().toLowerCase() === "gsb") ||
+            teams.find((team) => team.name.trim().toLowerCase() === "gsb") ||
+            teams[0];
+
+          if (!defaultTeam) {
+            setDisplayName(userProfile.name);
+            setTeamName("");
+            setTeamId("");
+            setUserRole(null);
+            setUserId(user.uid);
+            setStatus(superAdmin ? "ready" : "no-membership");
+            return;
+          }
+
+          const createdMembership = await upsertMembership(
+            {
+              userId: user.uid,
+              teamId: defaultTeam.id,
+              role: "member",
+              joinedAt: new Date().toISOString(),
+              isActive: true,
+            },
+            user.uid,
+            "member.added",
+          );
+
           setUserId(user.uid);
-          // Super-admins can access the app (proposals) without a team membership
-          setStatus(superAdmin ? "ready" : "no-membership");
+          setTeamId(defaultTeam.id);
+          setUserRole(createdMembership.role);
+          setDisplayName(userProfile.name);
+          setTeamName(defaultTeam.name || "Mit hold");
+          setStatus("ready");
+
+          if (superAdmin) {
+            void backfillTeamMembershipsForAllUsers(defaultTeam.id).catch((error) => {
+              console.error("[auth] Super-admin membership backfill failed", error);
+            });
+          }
+
           return;
         }
 
@@ -133,6 +170,12 @@ function App() {
         setDisplayName(userProfile.name);
         setTeamName(team?.name || "Mit hold");
         setStatus("ready");
+
+        if (superAdmin) {
+          void backfillTeamMembershipsForAllUsers(primaryMembership.teamId).catch((error) => {
+            console.error("[auth] Super-admin membership backfill failed", error);
+          });
+        }
       } catch (error) {
         console.error("[auth] Session sync failed", error);
         setAuthError(toFriendlyErrorMessage(error));

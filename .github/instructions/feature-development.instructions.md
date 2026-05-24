@@ -85,3 +85,23 @@ Mutations to Fine, Payment, and Membership must produce an ActivityLog entry. Do
 ## Acceptance criteria
 
 After implementing, verify each acceptance criterion from the spec is met before considering the feature complete.
+
+## Visual validation evidence (mandatory for UI changes)
+
+If a feature changes visible UI, layout, or interaction behavior:
+
+1. Validate the affected flow with Playwright tooling.
+2. Capture screenshots as evidence (mobile first, including 430px where relevant).
+3. Attach or reference screenshot evidence in your implementation summary.
+
+If the feature requires privileged access (for example super-admin-only views/actions) and available test users do not have required claims:
+
+1. Pause implementation validation.
+2. Ask the maintainer for a dedicated test user with correct claims (for example `isSuperAdmin: true`).
+3. Resume once role-ready credentials are available.
+
+Known test account emails:
+1. `copilot.test.20260519.1@example.com` (member/admin flows)
+2. `copilot@github.com` (super-admin flows)
+
+Passwords must be handled securely and never stored in repository files.
