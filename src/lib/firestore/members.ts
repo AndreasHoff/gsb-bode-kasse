@@ -10,6 +10,7 @@ import {
 import { db } from "../firebase";
 import { membersCol, memberDoc, activityLogCol } from "./refs";
 import { membershipConverter } from "./converters";
+import { getUsers } from "./users";
 import type { Membership, ActivityLog } from "../../types/domain";
 
 export async function getMemberships(teamId: string): Promise<Membership[]> {
@@ -76,4 +77,56 @@ export async function upsertMembership(
 
   await batch.commit();
   return membership;
+}
+
+/**
+ * Ensures all user profiles have an active membership in the given team.
+ * Missing memberships are created as `member`.
+ */
+export async function backfillTeamMembershipsForAllUsers(
+  teamId: string,
+): Promise<{ created: number; existing: number }> {
+  const [users, currentMemberships] = await Promise.all([
+    getUsers(),
+    getMemberships(teamId),
+  ]);
+
+  const existingUserIds = new Set(currentMemberships.map((m) => m.userId));
+
+  let batch = writeBatch(db);
+  let pendingWrites = 0;
+  let created = 0;
+  let existing = 0;
+
+  for (const user of users) {
+    if (existingUserIds.has(user.id)) {
+      existing += 1;
+      continue;
+    }
+
+    const membership: Membership = {
+      id: user.id,
+      userId: user.id,
+      teamId,
+      role: "member",
+      joinedAt: new Date().toISOString(),
+      isActive: true,
+    };
+
+    batch.set(memberDoc(teamId, user.id), membership);
+    pendingWrites += 1;
+    created += 1;
+
+    if (pendingWrites >= 450) {
+      await batch.commit();
+      batch = writeBatch(db);
+      pendingWrites = 0;
+    }
+  }
+
+  if (pendingWrites > 0) {
+    await batch.commit();
+  }
+
+  return { created, existing };
 }

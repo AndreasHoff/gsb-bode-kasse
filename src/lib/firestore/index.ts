@@ -12,6 +12,7 @@ export {
   getMemberships,
   getMembership,
   getActiveMembershipsForUser,
+  backfillTeamMembershipsForAllUsers,
   upsertMembership,
 } from "./members";
 

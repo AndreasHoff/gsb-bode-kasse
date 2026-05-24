@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.11.3 — 2026-05-24
+
+**Fix: superAdmin adgang til bøder + automatisk holdtilknytning til GSB**
+
+- Rettighedstjek for bøder er justeret, så både `admin` og `isSuperAdmin` kan oprette, redigere og slette bøder
+- SuperAdmin uden eksplicit teamrolle får nu stadig adgang via null-sikre permissions i bødeflowet
+- Ved login oprettes medlemskab automatisk på holdet `GSB` for brugere uden aktivt medlemskab (single-team model)
+- Eksisterende brugere er backfill'et til `GSB`, så bøde-fanen ikke længere rammer tilstanden "Intet hold valgt"
+- Agent-instruktioner er opdateret med obligatorisk `git pull origin main` før implementering og Playwright screenshot-evidens ved visuelle ændringer
+
+---
+
 ## v0.11.2 — 2026-05-23
 
 **Fix: CRUD-flow for bøder matcher admin/superAdmin behov**
