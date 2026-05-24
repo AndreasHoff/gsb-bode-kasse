@@ -351,7 +351,12 @@ function App() {
         {activeTab === "overview" && <TeamOverview />}
         {activeTab === "personal" && <PersonalOverview />}
         {activeTab === "fine-rules" && (
-          <FineRulesCatalog teamId={teamId} userRole={userRole} userId={userId} />
+          <FineRulesCatalog
+            teamId={teamId}
+            userRole={userRole}
+            userId={userId}
+            isSuperAdmin={isSuperAdmin}
+          />
         )}
         {activeTab === "activity" && <ActivityLog />}
         {activeTab === "proposals" && <Proposals />}

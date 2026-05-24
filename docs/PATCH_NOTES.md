@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.11.2 — 2026-05-23
+
+**Fix: CRUD-flow for bøder matcher admin/superAdmin behov**
+
+- Admins og superAdmins kan nu redigere bøder via redigeringsikonet i fanen "Bøder"
+- Redigeringsvisningen har nu en tydelig rød skraldespandsknap til at slette (deaktivere) en bøde
+- Formularen bruger nu feltnavnet "Navn" for bøden, mens "Beløb" fortsat er et påkrævet numerisk felt
+- F010-spec er opdateret, så flowet beskriver sletning fra redigeringsvisningen og adgang for superAdmins
+
+---
+
 ## v0.11.1 — 2026-05-23
 
 **Fix: Cloud Functions deploy bygger ikke dobbelt lokalt**
