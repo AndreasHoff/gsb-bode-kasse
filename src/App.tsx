@@ -7,6 +7,7 @@ import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
 import ActivityLog from "./features/activity/ActivityLog";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
+import UserProfile from "./features/profile/UserProfile";
 import BottomNavbar from "./components/BottomNavbar";
 import {
   ensurePersistentAuth,
@@ -32,7 +33,8 @@ type Tab =
   | "fine-rules"
   | "activity"
   | "proposals"
-  | "settings";
+  | "settings"
+  | "profile";
 type AppStatus = "checking" | "signed-out" | "ready" | "no-membership";
 type ColorTheme = "green" | "violet";
 
@@ -45,6 +47,7 @@ function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [teamName, setTeamName] = useState("");
   const [teamId, setTeamId] = useState("");
   const [userRole, setUserRole] = useState<Role | null>(null);
@@ -89,6 +92,7 @@ function App() {
       if (!user) {
         setStatus("signed-out");
         setDisplayName("");
+        setUserEmail("");
         setTeamName("");
         setTeamId("");
         setUserRole(null);
@@ -113,6 +117,7 @@ function App() {
         });
         const superAdmin = userProfile.isSuperAdmin === true;
         setIsSuperAdmin(superAdmin);
+        setUserEmail(userProfile.email);
 
         const memberships = await getActiveMembershipsForUser(user.uid);
 
@@ -294,6 +299,8 @@ function App() {
   ];
   const menuItems = [...primaryMenuItems];
 
+  menuItems.push({ tab: "profile", label: "Profil", emoji: "🪪" });
+
   if (isSuperAdmin) {
     menuItems.push(
       { tab: "proposals", label: "Idéforslag", emoji: "💡" },
@@ -404,6 +411,15 @@ function App() {
         {activeTab === "activity" && <ActivityLog />}
         {activeTab === "proposals" && <Proposals />}
         {activeTab === "settings" && <SettingsPlaceholder />}
+        {activeTab === "profile" && (
+          <UserProfile
+            userId={userId}
+            teamId={teamId}
+            email={userEmail}
+            displayName={displayName}
+            onNameChange={setDisplayName}
+          />
+        )}
       </main>
       <BottomNavbar
         items={primaryMenuItems}
