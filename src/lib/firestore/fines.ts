@@ -1,4 +1,4 @@
-import { getDocs, getDoc, doc, writeBatch } from "firebase/firestore";
+import { getDocs, getDoc, doc, writeBatch, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { finesCol, fineDoc, activityLogCol } from "./refs";
 import type { Fine, ActivityLog } from "../../types/domain";
@@ -8,6 +8,17 @@ export async function getFines(
   includeDeleted = false,
 ): Promise<Fine[]> {
   const snap = await getDocs(finesCol(teamId));
+  const fines = snap.docs.map((d) => d.data());
+  return includeDeleted ? fines : fines.filter((f) => !f.deletedAt);
+}
+
+export async function getFinesForUser(
+  teamId: string,
+  userId: string,
+  includeDeleted = false,
+): Promise<Fine[]> {
+  const q = query(finesCol(teamId), where("assignedTo", "array-contains", userId));
+  const snap = await getDocs(q);
   const fines = snap.docs.map((d) => d.data());
   return includeDeleted ? fines : fines.filter((f) => !f.deletedAt);
 }
@@ -109,7 +120,8 @@ export async function restoreFine(
   const batch = writeBatch(db);
 
   const fRef = fineDoc(teamId, fineId);
-  const { deletedAt: _, ...withoutDeleted } = existing;
+  const { deletedAt, ...withoutDeleted } = existing;
+  void deletedAt;
   const restored: Fine = { ...withoutDeleted };
   batch.set(fRef, restored);
 

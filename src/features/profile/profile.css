@@ -46,6 +46,19 @@
 	margin-bottom: 1.25rem;
 }
 
+.profile-stats-error {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.45rem;
+	margin-bottom: 1rem;
+}
+
+.profile-retry-btn {
+	font-size: 0.82rem;
+	padding: 0.4rem 0.65rem;
+}
+
 .profile-stat-card {
 	padding: 1rem 0.85rem;
 	border-radius: 1rem;
