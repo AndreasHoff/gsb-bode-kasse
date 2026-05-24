@@ -33,3 +33,18 @@ export async function ensureUserProfile(
   await setDoc(userDoc(user.id), user);
   return user;
 }
+
+/** Updates the mutable fields of a user profile (currently: name). */
+export async function updateUserProfile(
+  userId: string,
+  updates: Pick<User, "name">,
+): Promise<void> {
+  await setDoc(
+    userDoc(userId),
+    {
+      id: userId,
+      name: updates.name,
+    },
+    { merge: true },
+  );
+}
