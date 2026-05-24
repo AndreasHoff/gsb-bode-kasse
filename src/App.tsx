@@ -294,7 +294,7 @@ function App() {
   const primaryMenuItems: Array<{ tab: Tab; label: string; emoji: string }> = [
     { tab: "overview", label: "Hold", emoji: "🏆" },
     { tab: "personal", label: "Mine", emoji: "👤" },
-    { tab: "fine-rules", label: "Bøder", emoji: "📋" },
+    { tab: "fine-rules", label: "Evangeliet", emoji: "📜" },
     { tab: "activity", label: "Historik", emoji: "📊" },
   ];
   const menuItems = [...primaryMenuItems];

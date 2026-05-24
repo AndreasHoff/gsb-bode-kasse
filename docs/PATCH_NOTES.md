@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.12.2 — 2026-05-24
+
+**Feature: Evangeliet (F010)**
+
+- Fanen "Bøder" er omdøbt til "Evangeliet" i bundnavigationen og sidemenuen
+- Evangeliet-siden har fået en skriftrulle-inspireret læsevisning med fulde forklaringer for hver bøde
+- Admins og super-admins kan fortsat oprette, redigere og slette opslag direkte fra Evangeliet
+- Formulartekster er opdateret, så redigering af bøderegler passer til Evangeliet-oplevelsen
+
+---
+
 ## v0.12.1 — 2026-05-24
 
 **Fix: Profil-flow robusthed og performance (F012)**
