@@ -1,4 +1,4 @@
-import { getDoc, getDocs, setDoc } from "firebase/firestore";
+import { getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { usersCol } from "./refs";
 import { userDoc } from "./refs";
 import type { User } from "../../types/domain";
@@ -32,4 +32,12 @@ export async function ensureUserProfile(
 
   await setDoc(userDoc(user.id), user);
   return user;
+}
+
+/** Updates the mutable fields of a user profile (currently: name). */
+export async function updateUserProfile(
+  userId: string,
+  updates: Pick<User, "name">,
+): Promise<void> {
+  await updateDoc(userDoc(userId), { name: updates.name });
 }
