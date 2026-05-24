@@ -290,7 +290,7 @@ function App() {
     { tab: "overview", label: "Hold", emoji: "🏆" },
     { tab: "personal", label: "Mine", emoji: "👤" },
     { tab: "fine-rules", label: "Bøder", emoji: "📋" },
-    { tab: "activity", label: "Aktivitet", emoji: "📊" },
+    { tab: "activity", label: "Historik", emoji: "📊" },
   ];
   const menuItems = [...primaryMenuItems];
 

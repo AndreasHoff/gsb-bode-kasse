@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.11.4 — 2026-05-24
+
+**UI: Historik-layout med faner**
+
+- Fanen "Aktivitet" er omdøbt til "Historik" i navigationen
+- Historik-siden har nu tre filtre under top-navbaren: "Alle", "Bøder" og "Betalinger"
+- Aktivt filter markeres med tema-farvet underline/outline for tydelig visuel status
+- Tom-tilstandstekst skifter nu efter valgt historikfilter
+
+---
+
 ## v0.11.3 — 2026-05-24
 
 **Fix: superAdmin adgang til bøder + automatisk holdtilknytning til GSB**
