@@ -92,8 +92,10 @@ docs/
 | F007 | Activity Log             | Spec complete |
 | F008 | Member Welcome & Auth    | Spec complete |
 | F009 | Navbar med venstre sidemenu | Spec complete |
-| F010 | Evangeliet               | Spec complete |
+| F010 | Bødekatalog              | Spec complete |
 | F011 | Skift farvetema          | Spec complete |
+| F012 | Profil                   | Spec complete |
+| F013 | Evangeliet               | Spec complete |
 
 ---
 
