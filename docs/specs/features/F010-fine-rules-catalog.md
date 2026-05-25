@@ -1,12 +1,12 @@
-# F010 - Evangeliet
+# F010 - Bødekatalog
 
 ## Problem
 
-Holdmedlemmer mangler et samlet sted i appen, hvor de kan læse holdets bøderegler og forklaringer i en behagelig, læsbar form. Admins mangler samtidig en enkel måde at vedligeholde indholdet direkte i appen.
+Holdmedlemmer har ingen oversigt over, hvilke bøder der eksisterer og hvad de koster. Admins har heller ingen selvbetjeningsvisning til at administrere bødetyperne.
 
 ## Goal
 
-Alle teammedlemmer kan læse holdets aktive bøderegler og forklaringer i “Evangeliet”. Admins og super-admins kan oprette, redigere og slette opslag direkte i appen.
+Alle teammedlemmer kan se en liste over holdets aktive bødetyper. Admins og superAdmins kan oprette, redigere og slette bødetyper direkte i appen.
 
 ## Actors
 
@@ -21,14 +21,14 @@ Alle teammedlemmer kan læse holdets aktive bøderegler og forklaringer i “Eva
 
 ## Flow
 
-1. Brugeren trykker på "Evangeliet"-fanen i bundnavigationen.
+1. Brugeren trykker på "Bøder"-fanen i bundnavigationen.
 2. Systemet henter alle aktive `FineRule`-dokumenter for teamet fra Firestore.
-3. Systemet viser en læsevenlig skriftrullevisning med titel, beløb og fuld forklaring for hver bødetype.
-4. Hvis brugeren er admin eller super-admin, vises knapper til at oprette og redigere opslag i Evangeliet.
+3. Systemet viser listen med emoji, titel og beløb for hver bødetype.
+4. Hvis brugeren er admin eller super-admin, vises knapper til at oprette og redigere bødetyper.
 
 **Opret ny bøde (admin/super-admin only):**
 
-5. Admin eller super-admin trykker "+ Nyt opslag".
+5. Admin eller super-admin trykker "+ Ny bøde".
 6. Systemet viser en formular med felterne: Navn, Beløb, Emoji (valgfri), Beskrivelse (valgfri).
 7. Admin eller super-admin udfylder formen og trykker "Gem".
 8. Systemet gemmer den nye `FineRule` og en `rule.created` ActivityLog-entry atomisk i Firestore og viser den opdaterede liste.
@@ -58,10 +58,10 @@ Alle teammedlemmer kan læse holdets aktive bøderegler og forklaringer i “Eva
 
 ## Acceptance Criteria
 
-- Bundnavigationen viser fanen "Evangeliet".
+- Bundnavigationen viser "Bøder"-fanen i stedet for "Giv bøde".
 - Alle teammedlemmer kan se listen over aktive bødetyper.
-- Listen viser emoji (hvis angivet), navn, beløb (formateret med `formatAmount()`) og fuld forklaring uden afkortning.
-- Admins og super-admins ser "+ Nyt opslag"-knap øverst og redigeringsikon på hver bøde.
+- Listen viser emoji (hvis angivet), navn og beløb (formateret med `formatAmount()`).
+- Admins og super-admins ser "+ Ny bøde"-knap øverst og redigeringsikon på hver bøde.
 - Ikke-admins ser ingen admin-kontrolelementer og kan ikke nå opret/rediger-formularen.
 - Admin kan oprette en ny bøde med mindst navn og beløb; `rule.created` ActivityLog-entry oprettes atomisk.
 - Admin kan redigere navn, beløb, emoji og beskrivelse på en eksisterende bøde; `rule.updated` ActivityLog-entry oprettes atomisk.
