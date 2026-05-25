@@ -146,7 +146,7 @@ export default function FineRuleForm({
       >
         <div>
           <label className="block text-sm font-semibold mb-1" htmlFor="fr-title">
-            Navn *
+            Navn på bøde *
           </label>
           <input
             id="fr-title"
@@ -154,7 +154,6 @@ export default function FineRuleForm({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="F.eks. For sent til træning"
             required
           />
         </div>
@@ -181,20 +180,6 @@ export default function FineRuleForm({
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold mb-1" htmlFor="fr-emoji">
-            Emoji (valgfri)
-          </label>
-          <input
-            id="fr-emoji"
-            className="field__input"
-            type="text"
-            value={emoji}
-            onChange={(e) => setEmoji(e.target.value)}
-            placeholder="F.eks. ⏰"
-            maxLength={4}
-          />
-        </div>
 
         <div>
           <label className="block text-sm font-semibold mb-1" htmlFor="fr-desc">
