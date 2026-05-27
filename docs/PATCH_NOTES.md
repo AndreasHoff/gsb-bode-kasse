@@ -4,6 +4,15 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.12.4 — 2026-05-27
+
+**UI: Opstartsvisning opdateret med ny tekst og loading spinner**
+
+- Beskeden ved app-opstart (status `checking`) er ændret fra "Henter konto..." til "Ny version opdateres. Der går lige et par sekunder…"
+- Opstartsvisningen viser nu en tydelig spinner, så brugeren kan se at appen stadig indlæser
+
+---
+
 ## v0.12.3 — 2026-05-25
 
 **Fix: Evangeliet er nu en separat fane — ikke en erstatning af Bøder (F011)**
