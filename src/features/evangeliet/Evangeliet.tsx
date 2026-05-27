@@ -1,4 +1,4 @@
-// Feature: Evangeliet (F011)
+// Feature: Evangeliet (F013)
 // Read-only scroll-style view of the team's fine rules.
 // All members see the rules; no editing or creation from this view.
 
@@ -21,7 +21,13 @@ export default function Evangeliet({ teamId }: Props) {
     setLoading(true);
     setError(null);
     void getFineRules(teamId)
-      .then((all) => setRules(all.filter((r) => r.isActive)))
+      .then((all) =>
+        setRules(
+          all
+            .filter((r) => r.isActive)
+            .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+        ),
+      )
       .catch(() => setError("Kunne ikke hente Evangeliet"))
       .finally(() => setLoading(false));
   }, [teamId]);
