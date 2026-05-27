@@ -4,6 +4,7 @@ import patchNotesMarkdown from "../docs/PATCH_NOTES.md?raw";
 import TeamOverview from "./features/overview/TeamOverview";
 import PersonalOverview from "./features/personal/PersonalOverview";
 import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
+import Evangeliet from "./features/evangeliet/Evangeliet";
 import ActivityLog from "./features/activity/ActivityLog";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
@@ -31,6 +32,7 @@ type Tab =
   | "overview"
   | "personal"
   | "fine-rules"
+  | "evangeliet"
   | "activity"
   | "proposals"
   | "settings"
@@ -295,6 +297,7 @@ function App() {
     { tab: "overview", label: "Hold", emoji: "🏆" },
     { tab: "personal", label: "Mine", emoji: "👤" },
     { tab: "fine-rules", label: "Bøder", emoji: "📋" },
+    { tab: "evangeliet", label: "Evangeliet", emoji: "📜" },
     { tab: "activity", label: "Historik", emoji: "📊" },
   ];
   const menuItems = [...primaryMenuItems];
@@ -408,6 +411,7 @@ function App() {
             isSuperAdmin={isSuperAdmin}
           />
         )}
+        {activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}
         {activeTab === "activity" && <ActivityLog />}
         {activeTab === "proposals" && <Proposals />}
         {activeTab === "settings" && <SettingsPlaceholder />}
