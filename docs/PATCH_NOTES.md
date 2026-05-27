@@ -4,6 +4,29 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.12.3 — 2026-05-25
+
+**Fix: Evangeliet er nu en separat fane — ikke en erstatning af Bøder (F011)**
+
+- Evangeliet er nu sin egen feature under `src/features/evangeliet/`
+- Bundnavigationen har nu 5 faner: Hold, Mine, Bøder, Evangeliet, Historik + Profil
+- Fanen "Bøder" er genoprettet med fuld CRUD-funktionalitet som før
+- Evangeliet er en separat, skriftrulle-inspireret læsevisning af bødetyperne — uden redigerings­muligheder
+- Det eksisterende fine-rules-system er uberørt
+
+---
+
+## v0.12.2 — 2026-05-24
+
+**Feature: Evangeliet (F010)**
+
+- Fanen "Bøder" er omdøbt til "Evangeliet" i bundnavigationen og sidemenuen
+- Evangeliet-siden har fået en skriftrulle-inspireret læsevisning med fulde forklaringer for hver bøde
+- Admins og super-admins kan fortsat oprette, redigere og slette opslag direkte fra Evangeliet
+- Formulartekster er opdateret, så redigering af bøderegler passer til Evangeliet-oplevelsen
+
+---
+
 ## v0.12.1 — 2026-05-24
 
 **Fix: Profil-flow robusthed og performance (F012)**
