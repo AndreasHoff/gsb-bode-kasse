@@ -35,6 +35,28 @@
 	text-align: center;
 }
 
+.startup-loading {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.8rem;
+}
+
+.startup-loading__spinner {
+	width: 2rem;
+	height: 2rem;
+	border-radius: 999px;
+	border: 3px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+	border-top-color: var(--color-primary);
+	animation: startup-spinner 0.8s linear infinite;
+}
+
+@keyframes startup-spinner {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
 .app-page {
 	padding: 1rem;
 }
@@ -345,4 +367,3 @@
 	background: var(--color-status-abandoned-bg);
 	color: var(--color-status-abandoned-text);
 }
-

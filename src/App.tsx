@@ -265,7 +265,10 @@ function App() {
   if (status === "checking") {
     return (
       <div className="app-screen app-screen--center">
-        <p className="status-note">Henter konto...</p>
+        <div className="startup-loading" role="status" aria-live="polite">
+          <span className="startup-loading__spinner" aria-hidden="true" />
+          <p className="status-note">Ny version opdateres. Der går lige et par sekunder…</p>
+        </div>
       </div>
     );
   }
