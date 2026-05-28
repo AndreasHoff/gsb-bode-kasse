@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.13.0 — 2026-05-28
+
+**Feature: Massebøder og rigtig historikvisning**
+
+- Fanen "Giv bøde" understøtter nu tildeling til én eller flere spillere i samme handling
+- Bødetildeling kræver igen en aktiv sæson, så nye bøder altid knyttes korrekt til sæsonen
+- Flowet advarer nu ved mulig dobbelt bøde samme dag for samme spiller og bødetype, med mulighed for eksplicit at fortsætte
+- Historik-fanen henter nu rigtige aktivitetsdata fra Firestore med filtre, pagination og læsbar dansk hændelsestekst
+- Betalingslinjer oprettet under bødetildeling bliver nu også logget eksplicit i aktivitetshistorikken
+
+---
+
 ## v0.12.5 — 2026-05-28
 
 **Dev: Sæsonkrav fjernet midlertidigt fra bødetildeling**

@@ -84,59 +84,85 @@ export async function assignFine(
 export async function assignFineWithPayment(
   data: Omit<Fine, "id" | "createdAt" | "deletedAt">,
   actorId: string,
-): Promise<{ fine: Fine; payment: Payment }> {
-  // TODO(season): re-enable season validation when season management is active
-  // const activeSeason = await getActiveSeason(data.teamId);
-  // if (!activeSeason || activeSeason.id !== data.seasonId) {
-  //   throw new Error("Bøden skal tildeles i en aktiv sæson");
-  // }
+): Promise<{ fines: Fine[]; payments: Payment[] }> {
+  const activeSeason = await getActiveSeason(data.teamId);
+  if (!activeSeason || activeSeason.id !== data.seasonId) {
+    throw new Error("Bøden skal tildeles i en aktiv sæson");
+  }
 
-  const targetUserId = data.assignedTo[0];
-  if (!targetUserId) {
+  const targetUserIds = data.assignedTo.filter(Boolean);
+  if (targetUserIds.length === 0) {
     throw new Error("Bøden mangler modtager");
   }
 
   const batch = writeBatch(db);
 
-  const fineRef = doc(finesCol(data.teamId));
-  const fine: Fine = {
-    id: fineRef.id,
-    ...data,
-    createdAt: new Date().toISOString(),
-  };
-  batch.set(fineRef, fine);
+  const fines: Fine[] = [];
+  const payments: Payment[] = [];
 
-  const paymentRef = doc(paymentsCol(data.teamId));
-  const payment: Payment = {
-    id: paymentRef.id,
-    fineId: fine.id,
-    userId: targetUserId,
-    amount: data.amount,
-    status: "unpaid",
-  };
-  batch.set(paymentRef, payment);
+  for (const targetUserId of targetUserIds) {
+    const createdAt = new Date().toISOString();
 
-  const logRef = doc(activityLogCol(data.teamId));
-  const logEntry: ActivityLog = {
-    id: logRef.id,
-    teamId: data.teamId,
-    actorId,
-    action: "fine.assigned",
-    entityType: "fine",
-    entityId: fine.id,
-    metadata: {
-      title: data.title,
+    const fineRef = doc(finesCol(data.teamId));
+    const fine: Fine = {
+      id: fineRef.id,
+      ...data,
+      assignedTo: [targetUserId],
+      createdAt,
+    };
+    batch.set(fineRef, fine);
+    fines.push(fine);
+
+    const paymentRef = doc(paymentsCol(data.teamId));
+    const payment: Payment = {
+      id: paymentRef.id,
+      fineId: fine.id,
+      userId: targetUserId,
       amount: data.amount,
-      assignedTo: data.assignedTo,
-      seasonId: data.seasonId,
-      paymentId: payment.id,
-    },
-    createdAt: new Date().toISOString(),
-  };
-  batch.set(logRef, logEntry);
+      status: "unpaid",
+    };
+    batch.set(paymentRef, payment);
+    payments.push(payment);
+
+    const paymentLogRef = doc(activityLogCol(data.teamId));
+    const paymentLogEntry: ActivityLog = {
+      id: paymentLogRef.id,
+      teamId: data.teamId,
+      actorId,
+      action: "payment.created",
+      entityType: "payment",
+      entityId: payment.id,
+      metadata: {
+        fineId: fine.id,
+        userId: payment.userId,
+        amount: payment.amount,
+      },
+      createdAt,
+    };
+    batch.set(paymentLogRef, paymentLogEntry);
+
+    const logRef = doc(activityLogCol(data.teamId));
+    const logEntry: ActivityLog = {
+      id: logRef.id,
+      teamId: data.teamId,
+      actorId,
+      action: "fine.assigned",
+      entityType: "fine",
+      entityId: fine.id,
+      metadata: {
+        title: data.title,
+        amount: data.amount,
+        assignedTo: [targetUserId],
+        seasonId: data.seasonId,
+        paymentId: payment.id,
+      },
+      createdAt,
+    };
+    batch.set(logRef, logEntry);
+  }
 
   await batch.commit();
-  return { fine, payment };
+  return { fines, payments };
 }
 
 /**

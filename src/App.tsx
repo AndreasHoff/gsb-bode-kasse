@@ -441,8 +441,17 @@ function App() {
             actorId={userId}
             actorRole={userRole}
             isSuperAdmin={isSuperAdmin}
-            onAssigned={({ fineId, memberName }) => {
-              setLastAssignedFine({ teamId, fineId, memberName });
+            onAssigned={({ fineIds, memberNames }) => {
+              if (fineIds.length === 1 && memberNames.length === 1) {
+                setLastAssignedFine({
+                  teamId,
+                  fineId: fineIds[0],
+                  memberName: memberNames[0],
+                });
+              } else {
+                setLastAssignedFine(null);
+              }
+
               setActiveTab("overview");
             }}
           />
@@ -462,7 +471,7 @@ function App() {
           />
         )}
         {activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}
-        {activeTab === "activity" && <ActivityLog />}
+        {activeTab === "activity" && <ActivityLog teamId={teamId} />}
         {activeTab === "proposals" && <Proposals />}
         {activeTab === "settings" && <SettingsPlaceholder />}
         {activeTab === "profile" && (
