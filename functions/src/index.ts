@@ -7,7 +7,8 @@ initializeApp();
 
 const GITHUB_PAT = defineSecret("GITHUB_PAT");
 const GITHUB_REPO = defineSecret("GITHUB_REPO");
-const PROPOSAL_OWNER_EMAIL = "mchoffn@hotmail.com";
+const PROPOSAL_OWNER_EMAIL =
+  (process.env.PROPOSAL_OWNER_EMAIL ?? "mchoffn@hotmail.com").trim().toLowerCase();
 const GITHUB_PROJECT_OWNER = "AndreasHoff";
 const GITHUB_PROJECT_NUMBER = 5;
 const GITHUB_PROJECT_STATUS_FIELD = "Status";

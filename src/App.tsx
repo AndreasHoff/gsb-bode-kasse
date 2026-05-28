@@ -4,12 +4,14 @@ import patchNotesMarkdown from "../docs/PATCH_NOTES.md?raw";
 import TeamOverview from "./features/overview/TeamOverview";
 import PersonalOverview from "./features/personal/PersonalOverview";
 import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
+import AssignFine from "./features/fines/AssignFine";
 import Evangeliet from "./features/evangeliet/Evangeliet";
 import ActivityLog from "./features/activity/ActivityLog";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
 import BottomNavbar from "./components/BottomNavbar";
+import { canAssignFines } from "./lib/permissions";
 import {
   ensurePersistentAuth,
   onAuthChange,
@@ -23,6 +25,7 @@ import {
   getActiveMembershipsForUser,
   getTeam,
   getTeams,
+  softDeleteFine,
   upsertMembership,
 } from "./lib/firestore";
 import type { Role } from "./types/domain";
@@ -30,6 +33,7 @@ import "./App.css";
 
 type Tab =
   | "overview"
+  | "assign-fine"
   | "personal"
   | "fine-rules"
   | "evangeliet"
@@ -55,6 +59,12 @@ function App() {
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [userId, setUserId] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [lastAssignedFine, setLastAssignedFine] = useState<{
+    teamId: string;
+    fineId: string;
+    memberName: string;
+  } | null>(null);
+  const [isUndoingAssign, setIsUndoingAssign] = useState(false);
   const [colorTheme, setColorTheme] = useState<ColorTheme>(() => getInitialTheme());
   // Holds the name entered during registration so syncUserSession can use it
   // before Firebase Auth's onAuthStateChanged fires (before updateProfile runs).
@@ -210,6 +220,22 @@ function App() {
   }, [teamName]);
   const appVersion = getCurrentVersionFromPatchNotes(patchNotesMarkdown);
 
+  async function handleUndoLastAssignedFine(): Promise<void> {
+    if (!lastAssignedFine || !userId) {
+      return;
+    }
+
+    setIsUndoingAssign(true);
+    try {
+      await softDeleteFine(lastAssignedFine.teamId, lastAssignedFine.fineId, userId);
+      setLastAssignedFine(null);
+    } catch (error) {
+      console.error("[fines] Undo assign failed", error);
+    } finally {
+      setIsUndoingAssign(false);
+    }
+  }
+
   async function handleLoginWithEmail(
     email: string,
     password: string,
@@ -304,6 +330,10 @@ function App() {
     { tab: "activity", label: "Historik", emoji: "📊" },
   ];
   const menuItems = [...primaryMenuItems];
+
+  if (canAssignFines(userRole, isSuperAdmin)) {
+    menuItems.splice(1, 0, { tab: "assign-fine", label: "Giv bøde", emoji: "🎯" });
+  }
 
   menuItems.push({ tab: "profile", label: "Profil", emoji: "🪪" });
 
@@ -405,7 +435,24 @@ function App() {
       {/* Page content */}
       <main className="app-main">
         {activeTab === "overview" && <TeamOverview />}
-        {activeTab === "personal" && <PersonalOverview />}
+        {activeTab === "assign-fine" && (
+          <AssignFine
+            teamId={teamId}
+            actorId={userId}
+            actorRole={userRole}
+            isSuperAdmin={isSuperAdmin}
+            onAssigned={({ fineId, memberName }) => {
+              setLastAssignedFine({ teamId, fineId, memberName });
+              setActiveTab("overview");
+            }}
+          />
+        )}
+        {activeTab === "personal" && (
+          <PersonalOverview
+            teamId={teamId}
+            userId={userId}
+          />
+        )}
         {activeTab === "fine-rules" && (
           <FineRulesCatalog
             teamId={teamId}
@@ -428,6 +475,27 @@ function App() {
           />
         )}
       </main>
+
+      {lastAssignedFine && (
+        <div className="app-main pt-0 pb-2">
+          <div className="app-card app-card--muted p-3 flex items-center justify-between gap-3">
+            <p className="text-xs text-[var(--color-text)]">
+              Bøde tildelt til {lastAssignedFine.memberName}.
+            </p>
+            <button
+              type="button"
+              className="btn-secondary px-3 py-1.5 text-xs"
+              onClick={() => {
+                void handleUndoLastAssignedFine();
+              }}
+              disabled={isUndoingAssign}
+            >
+              {isUndoingAssign ? "Fortryder..." : "Fortryd"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <BottomNavbar
         items={primaryMenuItems}
         activeTab={activeTab}

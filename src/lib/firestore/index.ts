@@ -37,6 +37,7 @@ export {
   getFinesForUser,
   getFine,
   assignFine,
+  assignFineWithPayment,
   softDeleteFine,
   restoreFine,
 } from "./fines";

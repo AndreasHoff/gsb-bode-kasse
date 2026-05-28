@@ -1,4 +1,5 @@
 "use strict";
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.migrateMembershipRoles = exports.approveProposal = exports.updateProposalStatus = exports.exportProposalToGithub = void 0;
 const https_1 = require("firebase-functions/v2/https");
@@ -8,7 +9,7 @@ const firestore_1 = require("firebase-admin/firestore");
 (0, app_1.initializeApp)();
 const GITHUB_PAT = (0, params_1.defineSecret)("GITHUB_PAT");
 const GITHUB_REPO = (0, params_1.defineSecret)("GITHUB_REPO");
-const PROPOSAL_OWNER_EMAIL = "mchoffn@hotmail.com";
+const PROPOSAL_OWNER_EMAIL = ((_a = process.env.PROPOSAL_OWNER_EMAIL) !== null && _a !== void 0 ? _a : "mchoffn@hotmail.com").trim().toLowerCase();
 const GITHUB_PROJECT_OWNER = "AndreasHoff";
 const GITHUB_PROJECT_NUMBER = 5;
 const GITHUB_PROJECT_STATUS_FIELD = "Status";
