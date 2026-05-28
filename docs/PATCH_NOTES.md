@@ -4,6 +4,16 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.13.1 — 2026-05-28
+
+**Fix: robust læsning af Firestore-datoer**
+
+- Appen crasher ikke længere når ældre eller manuelt oprettede Firestore-dokumenter indeholder ISO-datoer i stedet for Firestore Timestamps
+- Konverterlaget accepterer nu både `Timestamp`, `Date` og strengværdier ved læsning af dato-felter
+- Fjerner fejlen `ts.toDate is not a function` ved indlæsning af brugere og relaterede flows
+
+---
+
 ## v0.13.0 — 2026-05-28
 
 **Feature: Massebøder og rigtig historikvisning**

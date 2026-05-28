@@ -24,12 +24,26 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function toIso(ts: Timestamp): string {
-  return ts.toDate().toISOString();
+type TimestampLike = Timestamp | Date | string | { toDate: () => Date };
+
+function toIso(value: TimestampLike): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (value instanceof Timestamp) {
+    return value.toDate().toISOString();
+  }
+
+  return value.toDate().toISOString();
 }
 
-function toIsoOpt(ts: Timestamp | undefined): string | undefined {
-  return ts ? ts.toDate().toISOString() : undefined;
+function toIsoOpt(value: TimestampLike | undefined): string | undefined {
+  return value ? toIso(value) : undefined;
 }
 
 // ---------------------------------------------------------------------------
