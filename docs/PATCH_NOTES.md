@@ -4,6 +4,15 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.12.5 — 2026-05-28
+
+**Dev: Sæsonkrav fjernet midlertidigt fra bødetildeling**
+
+- Bøder kan nu tildeles uden en aktiv sæson — blokerende sæsoncheck er kommenteret ud med `TODO(season)`
+- Gælder kun under udvikling; logikken genindsættes når sæsonstyring er klar
+
+---
+
 ## v0.12.4 — 2026-05-27
 
 **UI: Opstartsvisning opdateret med ny tekst og loading spinner**
