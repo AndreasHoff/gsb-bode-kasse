@@ -8,16 +8,15 @@
 //   4. assignFineWithPayment server-side guard in fines.ts (currently commented out)
 //   5. Remove "dev-no-season" placeholder seasonId
 import { useEffect, useMemo, useState } from "react";
-import type { FineRule, Membership, Role, User } from "../../types/domain";
+import type { FineRule, Membership, Role, Season, User } from "../../types/domain";
 import {
   assignFineWithPayment,
+  getActiveSeason,
+  getFines,
   getFineRules,
   getMemberships,
   getUsers,
 } from "../../lib/firestore";
-// TODO(season): re-enable season-based logic when season management is active
-// import type { Season } from "../../types/domain";
-// import { getActiveSeason } from "../../lib/firestore";
 import { canAssignFines } from "../../lib/permissions";
 import { formatAmount } from "../../lib/utils";
 
@@ -26,8 +25,13 @@ interface AssignFineProps {
   actorId: string;
   actorRole: Role | null;
   isSuperAdmin: boolean;
-  onAssigned: (payload: { fineId: string; memberName: string }) => void;
+  onAssigned: (payload: { fineIds: string[]; memberNames: string[] }) => void;
 }
+
+type DuplicateWarning = {
+  memberNames: string[];
+  ruleTitle: string;
+};
 
 export default function AssignFine({
   teamId,
@@ -39,13 +43,16 @@ export default function AssignFine({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // TODO(season): re-enable season state when season management is active
-  // const [activeSeason, setActiveSeason] = useState<Season | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [activeSeason, setActiveSeason] = useState<Season | null>(null);
   const [rules, setRules] = useState<FineRule[]>([]);
   const [members, setMembers] = useState<User[]>([]);
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateWarning | null>(null);
 
+  const [mode, setMode] = useState<"single" | "multiple">("single");
   const [selectedRuleId, setSelectedRuleId] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
 
   const hasPermission = canAssignFines(actorRole, isSuperAdmin);
@@ -64,8 +71,8 @@ export default function AssignFine({
       setError(null);
 
       try {
-        const [allRules, memberships, users] = await Promise.all([
-          // TODO(season): add getActiveSeason(teamId) here when season management is active
+        const [season, allRules, memberships, users] = await Promise.all([
+          getActiveSeason(teamId),
           getFineRules(teamId),
           getMemberships(teamId),
           getUsers(),
@@ -75,7 +82,7 @@ export default function AssignFine({
           return;
         }
 
-        // TODO(season): setActiveSeason(season) when season management is active
+        setActiveSeason(season);
         const activeRules = allRules.filter((rule) => rule.isActive);
         setRules(activeRules);
 
@@ -94,6 +101,7 @@ export default function AssignFine({
 
         if (activeUsers.length > 0) {
           setSelectedUserId(activeUsers[0].id);
+          setSelectedUserIds([activeUsers[0].id]);
         }
       } catch (loadError) {
         if (!isActive) {
@@ -122,7 +130,45 @@ export default function AssignFine({
     [rules, selectedRuleId],
   );
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  const selectedTargets = useMemo(() => {
+    if (mode === "single") {
+      const selectedUser = members.find((member) => member.id === selectedUserId);
+      return selectedUser ? [selectedUser] : [];
+    }
+
+    const selectedSet = new Set(selectedUserIds);
+    return members.filter((member) => selectedSet.has(member.id));
+  }, [members, mode, selectedUserId, selectedUserIds]);
+
+  const allSelected = members.length > 0 && selectedUserIds.length === members.length;
+
+  useEffect(() => {
+    setDuplicateWarning(null);
+  }, [mode, selectedRuleId, selectedUserId, selectedUserIds]);
+
+  function handleToggleAllMembers(): void {
+    if (allSelected) {
+      setSelectedUserIds([]);
+      return;
+    }
+
+    setSelectedUserIds(members.map((member) => member.id));
+  }
+
+  function handleToggleMember(memberId: string): void {
+    setSelectedUserIds((current) => {
+      if (current.includes(memberId)) {
+        return current.filter((id) => id !== memberId);
+      }
+
+      return [...current, memberId];
+    });
+  }
+
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+    options?: { overrideDuplicates?: boolean },
+  ): Promise<void> {
     event.preventDefault();
 
     if (!hasPermission) {
@@ -130,39 +176,87 @@ export default function AssignFine({
       return;
     }
 
-    // TODO(season): restore !activeSeason guard when season management is active
-    if (!teamId || !actorId || !selectedRule) {
+    if (!teamId || !actorId || !selectedRule || !activeSeason) {
+      if (!activeSeason) {
+        setError("Ingen aktiv sæson. Opret eller aktiver en sæson først.");
+      }
       return;
     }
 
-    const targetUser = members.find((member) => member.id === selectedUserId);
-    if (!targetUser) {
-      setError("Vælg en gyldig spiller.");
+    if (selectedTargets.length === 0) {
+      setError(
+        mode === "single"
+          ? "Vælg en gyldig spiller."
+          : "Vælg mindst 1 spiller før du kan tildele bøden.",
+      );
       return;
     }
 
     setSubmitting(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
-      const { fine } = await assignFineWithPayment(
+      const selectedIds = selectedTargets.map((member) => member.id);
+
+      if (!options?.overrideDuplicates) {
+        const existingFines = await getFines(teamId);
+        const today = new Date().toISOString().slice(0, 10);
+        const selectedIdSet = new Set(selectedIds);
+        const duplicateMembers = selectedTargets.filter((member) =>
+          existingFines.some((fine) => {
+            const fineDate = fine.createdAt.slice(0, 10);
+            const targetUserId = fine.assignedTo[0];
+
+            return (
+              fineDate === today
+              && fine.fineRuleId === selectedRule.id
+              && targetUserId !== undefined
+              && selectedIdSet.has(targetUserId)
+              && targetUserId === member.id
+            );
+          })
+        );
+
+        if (duplicateMembers.length > 0) {
+          setDuplicateWarning({
+            memberNames: duplicateMembers.map((member) => member.name),
+            ruleTitle: selectedRule.title,
+          });
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      const { fines } = await assignFineWithPayment(
         {
           teamId,
-          // TODO(season): use activeSeason.id when season management is active
-          seasonId: "dev-no-season",
+          seasonId: activeSeason.id,
           fineRuleId: selectedRule.id,
           title: selectedRule.title,
           amount: selectedRule.amount,
-          assignedTo: [targetUser.id],
+          assignedTo: selectedIds,
           assignedBy: actorId,
           note: note.trim() || undefined,
-          isShared: false,
+          isShared: selectedIds.length > 1,
         },
         actorId,
       );
 
       setNote("");
-      onAssigned({ fineId: fine.id, memberName: targetUser.name });
+      if (mode === "multiple") {
+        setSelectedUserIds([]);
+      }
+      setDuplicateWarning(null);
+
+      setSuccessMessage(
+        fines.length === 1 ? "1 bøde blev tildelt." : `${fines.length} bøder blev tildelt.`,
+      );
+
+      onAssigned({
+        fineIds: fines.map((fine) => fine.id),
+        memberNames: selectedTargets.map((member) => member.name),
+      });
     } catch (submitError) {
       const message =
         submitError instanceof Error ? submitError.message : "Ukendt fejl";
@@ -192,8 +286,18 @@ export default function AssignFine({
     );
   }
 
-  // TODO(season): restore season guard when season management is active
-  // if (!activeSeason) { ... }
+  if (!activeSeason) {
+    return (
+      <div className="app-page">
+        <h1 className="app-title">Giv bøde</h1>
+        <div className="empty-state mt-6">
+          <p className="text-4xl mb-3">📅</p>
+          <p className="text-sm font-semibold">Ingen aktiv sæson</p>
+          <p className="text-xs mt-2">Opret eller aktiver en sæson før du kan tildele bøder.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (rules.length === 0) {
     return (
@@ -224,7 +328,7 @@ export default function AssignFine({
   return (
     <div className="app-page pb-8">
       <h1 className="app-title">Giv bøde</h1>
-      <p className="app-subtitle mb-6">Tildel en bøde til én spiller</p>
+      <p className="app-subtitle mb-6">Tildel en bøde til én eller flere spillere</p>
 
       <form
         onSubmit={(event) => {
@@ -232,6 +336,28 @@ export default function AssignFine({
         }}
         className="app-card p-4 flex flex-col gap-4"
       >
+        <div>
+          <p className="block text-sm font-semibold mb-2">Tildeling</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={`btn-secondary ${mode === "single" ? "ring-2 ring-[var(--color-primary)]" : ""}`}
+              onClick={() => setMode("single")}
+              disabled={submitting}
+            >
+              Én spiller
+            </button>
+            <button
+              type="button"
+              className={`btn-secondary ${mode === "multiple" ? "ring-2 ring-[var(--color-primary)]" : ""}`}
+              onClick={() => setMode("multiple")}
+              disabled={submitting}
+            >
+              Flere spillere
+            </button>
+          </div>
+        </div>
+
         <div>
           <label htmlFor="assign-rule" className="block text-sm font-semibold mb-1">
             Bødetype
@@ -252,24 +378,66 @@ export default function AssignFine({
           </select>
         </div>
 
-        <div>
-          <label htmlFor="assign-member" className="block text-sm font-semibold mb-1">
-            Spiller
-          </label>
-          <select
-            id="assign-member"
-            className="field__input"
-            value={selectedUserId}
-            onChange={(event) => setSelectedUserId(event.target.value)}
-            disabled={submitting}
-          >
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {mode === "single" && (
+          <div>
+            <label htmlFor="assign-member" className="block text-sm font-semibold mb-1">
+              Spiller
+            </label>
+            <select
+              id="assign-member"
+              className="field__input"
+              value={selectedUserId}
+              onChange={(event) => {
+                const value = event.target.value;
+                setSelectedUserId(value);
+                setSelectedUserIds(value ? [value] : []);
+              }}
+              disabled={submitting}
+            >
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {mode === "multiple" && (
+          <div>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="block text-sm font-semibold">Spillere</p>
+              <button
+                type="button"
+                className="btn-secondary px-3 py-1.5 text-xs"
+                onClick={handleToggleAllMembers}
+                disabled={submitting || members.length === 0}
+              >
+                {allSelected ? "Fjern alle" : "Vælg alle"}
+              </button>
+            </div>
+
+            <div className="max-h-64 overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-border)] divide-y divide-[var(--color-border)]">
+              {members.map((member) => {
+                const checked = selectedUserIds.includes(member.id);
+                return (
+                  <label
+                    key={member.id}
+                    className="flex items-center gap-3 px-3 py-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => handleToggleMember(member.id)}
+                      disabled={submitting}
+                    />
+                    <span>{member.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div>
           <label htmlFor="assign-note" className="block text-sm font-semibold mb-1">
@@ -286,10 +454,45 @@ export default function AssignFine({
           />
         </div>
 
+        <div className="app-card app-card--muted p-3">
+          <p className="text-xs text-[var(--color-text-muted)]">Klar til tildeling</p>
+          <p className="text-sm font-semibold mt-1">
+            {selectedTargets.length === 1
+              ? "1 spiller valgt"
+              : `${selectedTargets.length} spillere valgt`}
+          </p>
+        </div>
+
+        {duplicateWarning && (
+          <div className="app-card border border-amber-300 bg-amber-50 p-3 text-amber-950">
+            <p className="text-sm font-semibold">Mulig dobbelt bøde fundet</p>
+            <p className="text-xs mt-1">
+              {duplicateWarning.memberNames.join(", ")} har allerede fået “{duplicateWarning.ruleTitle}” i dag.
+            </p>
+            <button
+              type="button"
+              className="btn-secondary mt-3 w-full"
+              disabled={submitting}
+              onClick={(event) => {
+                void handleSubmit(event as unknown as React.FormEvent<HTMLFormElement>, {
+                  overrideDuplicates: true,
+                });
+              }}
+            >
+              Tildel alligevel
+            </button>
+          </div>
+        )}
+
         {error && <p className="status-error">{error}</p>}
+        {successMessage && <p className="status-note">{successMessage}</p>}
 
         <button type="submit" className="btn-primary w-full" disabled={submitting}>
-          {submitting ? "Tildeler..." : "Tildel bøde"}
+          {submitting
+            ? "Tildeler..."
+            : selectedTargets.length === 1
+              ? "Tildel bøde"
+              : `Tildel bøde til ${selectedTargets.length} spillere`}
         </button>
       </form>
     </div>

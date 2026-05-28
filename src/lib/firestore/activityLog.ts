@@ -1,4 +1,13 @@
-import { doc, setDoc } from "firebase/firestore";
+import {
+  documentId,
+  doc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  setDoc,
+  startAfter,
+} from "firebase/firestore";
 import { activityLogCol } from "./refs";
 import type { ActivityLog } from "../../types/domain";
 
@@ -7,6 +16,7 @@ export type ActivityLogAction =
   | "fine.assigned"
   | "fine.deleted"
   | "fine.restored"
+  | "payment.created"
   | "payment.initiated"
   | "payment.approved"
   | "payment.disputed"
@@ -25,6 +35,11 @@ export type LogActivityInput = {
   entityType: string;
   entityId: string;
   metadata?: Record<string, unknown>;
+};
+
+export type ActivityLogCursor = {
+  createdAt: string;
+  id: string;
 };
 
 /**
@@ -47,4 +62,37 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
     createdAt: new Date().toISOString(),
   };
   await setDoc(docRef, entry);
+}
+
+export async function getActivityLogEntries(
+  teamId: string,
+  pageSize = 20,
+  cursor?: ActivityLogCursor,
+): Promise<{ entries: ActivityLog[]; cursor: ActivityLogCursor | null; hasMore: boolean }> {
+  const baseQuery = query(
+    activityLogCol(teamId),
+    orderBy("createdAt", "desc"),
+    orderBy(documentId(), "desc"),
+    limit(pageSize),
+  );
+
+  const pagedQuery = cursor
+    ? query(
+      activityLogCol(teamId),
+      orderBy("createdAt", "desc"),
+      orderBy(documentId(), "desc"),
+      startAfter(cursor.createdAt, cursor.id),
+      limit(pageSize),
+    )
+    : baseQuery;
+
+  const snap = await getDocs(pagedQuery);
+  const entries = snap.docs.map((docSnap) => docSnap.data());
+  const lastDoc = snap.docs[snap.docs.length - 1];
+
+  return {
+    entries,
+    cursor: lastDoc ? { createdAt: lastDoc.data().createdAt, id: lastDoc.id } : null,
+    hasMore: entries.length === pageSize,
+  };
 }

@@ -1,8 +1,8 @@
 // Public API for the Firestore data access layer.
 // Features import from here — never path-walk into subfiles.
 
-export type { ActivityLogAction, LogActivityInput } from "./activityLog";
-export { logActivity } from "./activityLog";
+export type { ActivityLogAction, LogActivityInput, ActivityLogCursor } from "./activityLog";
+export { logActivity, getActivityLogEntries } from "./activityLog";
 
 export { getTeam, createTeam, getTeams } from "./teams";
 
