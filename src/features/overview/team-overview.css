@@ -1,0 +1,179 @@
+/* Bødekasse Saldo header card */
+.team-saldo-card {
+	padding: 1.5rem 1.25rem;
+	border-radius: 1.25rem;
+	border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+	background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-muted) 60%);
+	margin-bottom: 1rem;
+	text-align: center;
+}
+
+.team-saldo-card__label {
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--color-text-muted);
+	margin-bottom: 0.35rem;
+}
+
+.team-saldo-card__value {
+	font-size: 2rem;
+	font-weight: 800;
+	color: var(--color-primary);
+	line-height: 1.1;
+}
+
+/* 3-column stat cards */
+.team-stats {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 0.6rem;
+	margin-bottom: 1.5rem;
+}
+
+.team-stat-card {
+	padding: 0.85rem 0.65rem;
+	border-radius: 1rem;
+	border: 1px solid var(--color-border);
+	background: color-mix(in srgb, var(--color-surface-muted) 52%, transparent);
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+
+.team-stat-card--paid {
+	border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
+.team-stat-card--owed {
+	border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+
+.team-stat-card__emoji {
+	font-size: 1rem;
+	margin-bottom: 0.1rem;
+}
+
+.team-stat-card__label {
+	font-size: 0.65rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--color-text-muted);
+}
+
+.team-stat-card__value {
+	font-size: 1rem;
+	font-weight: 800;
+	line-height: 1.1;
+	color: var(--color-text);
+}
+
+.team-stat-card--paid .team-stat-card__value {
+	color: var(--color-primary);
+}
+
+.team-stat-card--owed .team-stat-card__value {
+	color: var(--color-accent);
+}
+
+/* Member list */
+.team-member-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.team-member-row {
+	width: 100%;
+	text-align: left;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.75rem 0.9rem;
+	border-radius: 1rem;
+	border: 1px solid var(--color-border);
+	background: color-mix(in srgb, var(--color-surface-muted) 72%, transparent);
+	cursor: pointer;
+	transition: opacity 0.15s;
+	font-family: inherit;
+}
+
+.team-member-row:active {
+	opacity: 0.75;
+}
+
+.team-member-row__left {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	min-width: 0;
+	flex: 1;
+}
+
+.team-member-avatar {
+	width: 2.1rem;
+	height: 2.1rem;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface-muted));
+	border: 1.5px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.72rem;
+	font-weight: 700;
+	color: var(--color-primary);
+	flex-shrink: 0;
+}
+
+.team-member-info {
+	min-width: 0;
+}
+
+.team-member-info__name {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--color-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.team-member-info__role {
+	font-size: 0.68rem;
+	color: var(--color-text-muted);
+	margin-top: 0.1rem;
+}
+
+.team-member-row__right {
+	text-align: right;
+	flex-shrink: 0;
+}
+
+.team-member-saldo {
+	font-size: 0.88rem;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.team-member-saldo--owed {
+	color: var(--color-accent);
+}
+
+.team-member-saldo--paid {
+	color: var(--color-primary);
+}
+
+.team-member-saldo--zero {
+	font-size: 0.78rem;
+	color: var(--color-text-muted);
+	font-weight: 500;
+}
+
+.team-member-saldo__sub {
+	font-size: 0.63rem;
+	color: var(--color-text-muted);
+	margin-top: 0.05rem;
+}
