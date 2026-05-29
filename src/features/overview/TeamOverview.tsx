@@ -38,42 +38,8 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
   const [totalIssued, setTotalIssued] = useState(0);
   const [totalOwed, setTotalOwed] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
-  const [pendingCount, setPendingCount] = useState(0);
 
   const loadData = useCallback(async () => {
-    // Demo mode: render deterministic sample data when URL contains ?demo=1
-    const demoMode =
-      typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search).get("demo") === "1";
-
-    if (demoMode) {
-      const now = new Date().toISOString();
-      const demoUsers = [
-        { id: "u1", name: "Anna Hansen", email: "anna@example.com", createdAt: now },
-        { id: "u2", name: "Mikkel Jensen", email: "mikkel@example.com", createdAt: now },
-        { id: "u3", name: "Jonas Sørensen", email: "jonas@example.com", createdAt: now },
-        { id: "u4", name: "Laura Møller", email: "laura@example.com", createdAt: now },
-        { id: "u5", name: "Peter Larsen", email: "peter@example.com", createdAt: now },
-      ];
-
-      const demoStats: MemberStat[] = [
-        { user: demoUsers[0], totalDebt: 520, paidAmount: 0, role: "member", hasPending: true },
-        { user: demoUsers[1], totalDebt: 310, paidAmount: 0, role: "admin", hasPending: true },
-        { user: demoUsers[2], totalDebt: 120, paidAmount: 0, role: "member" },
-        { user: demoUsers[3], totalDebt: 0, paidAmount: 200, role: "member" },
-        { user: demoUsers[4], totalDebt: 0, paidAmount: 0, role: "member" },
-      ];
-
-      setMemberStats(demoStats);
-      setTotalIssued(1150);
-      setTotalOwed(950);
-      setTotalPaid(200);
-      setPendingCount(2);
-      setNoSeason(false);
-      setIsLoading(false);
-      return;
-    }
-
     if (!teamId) {
       setIsLoading(false);
       return;
@@ -126,9 +92,6 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       let aggOwed = 0;
       let aggPaid = 0;
 
-      let pendingCounter = 0;
-      let disputedCounter = 0;
-
       for (const payment of payments) {
         if (!seasonFineIds.has(payment.fineId)) continue;
 
@@ -147,12 +110,10 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
         }
 
         if (payment.status === "pending") {
-          pendingCounter += payment.amount;
           if (acc) acc.hasPending = true;
         }
 
         if (payment.status === "disputed") {
-          disputedCounter += payment.amount;
           if (acc) acc.hasDisputed = true;
         }
 
@@ -180,8 +141,6 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
           hasDisputed: !!acc.hasDisputed,
         };
       });
-
-      setPendingCount(pendingCounter);
 
       setMemberStats(stats);
     } catch (error) {

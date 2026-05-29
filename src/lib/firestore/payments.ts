@@ -17,6 +17,15 @@ export async function getPaymentsForUser(
   return snap.docs.map((d) => d.data());
 }
 
+/**
+ * Returns all payments for a team with status "pending".
+ */
+export async function getPendingPayments(teamId: string): Promise<Payment[]> {
+  const q = query(paymentsCol(teamId), where("status", "==", "pending"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data());
+}
+
 export async function getPayment(
   teamId: string,
   paymentId: string,

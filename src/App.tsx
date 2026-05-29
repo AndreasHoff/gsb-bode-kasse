@@ -11,7 +11,8 @@ import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
 import BottomNavbar from "./components/BottomNavbar";
-import { canAssignFines } from "./lib/permissions";
+import { canAssignFines, canApprovePayments } from "./lib/permissions";
+import AdminApproval from "./features/payments/AdminApproval";
 import {
   ensurePersistentAuth,
   onAuthChange,
@@ -47,22 +48,18 @@ type ColorTheme = "green" | "violet";
 const THEME_STORAGE_KEY = "gsb-color-theme";
 
 function App() {
-  const demoMode =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("demo") === "1";
-
-  const [activeTab, setActiveTab] = useState<Tab>(demoMode ? "overview" : "personal");
+  const [activeTab, setActiveTab] = useState<Tab>("personal");
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
-  const [status, setStatus] = useState<AppStatus>(demoMode ? "ready" : "checking");
+  const [status, setStatus] = useState<AppStatus>("checking");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [teamName, setTeamName] = useState("");
-  const [teamId, setTeamId] = useState(demoMode ? "demo-team" : "");
-  const [userRole, setUserRole] = useState<Role | null>(demoMode ? "admin" : null);
-  const [userId, setUserId] = useState(demoMode ? "demo-user" : "");
-  const [isSuperAdmin, setIsSuperAdmin] = useState(demoMode ? true : false);
+  const [teamId, setTeamId] = useState("");
+  const [userRole, setUserRole] = useState<Role | null>(null);
+  const [userId, setUserId] = useState("");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [viewingMemberId, setViewingMemberId] = useState("");
   const [viewingMemberName, setViewingMemberName] = useState("");
   const [lastAssignedFine, setLastAssignedFine] = useState<{
@@ -343,10 +340,13 @@ function App() {
 
   menuItems.push({ tab: "profile", label: "Profil", emoji: "🪪" });
 
+  if (canApprovePayments(userRole, isSuperAdmin)) {
+    menuItems.push({ tab: "settings", label: "Indstillinger", emoji: "⚙️" });
+  }
+
   if (isSuperAdmin) {
     menuItems.push(
       { tab: "proposals", label: "Idéforslag", emoji: "💡" },
-      { tab: "settings", label: "Indstillinger", emoji: "⚙️" },
     );
   }
 
@@ -496,7 +496,18 @@ function App() {
         {activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}
         {activeTab === "activity" && <ActivityLog teamId={teamId} />}
         {activeTab === "proposals" && <Proposals />}
-        {activeTab === "settings" && <SettingsPlaceholder />}
+        {activeTab === "settings" && (
+          canApprovePayments(userRole, isSuperAdmin) ? (
+            <AdminApproval
+              teamId={teamId}
+              actorId={userId}
+              userRole={userRole}
+              isSuperAdmin={isSuperAdmin}
+            />
+          ) : (
+            <SettingsPlaceholder />
+          )
+        )}
         {activeTab === "profile" && (
           <UserProfile
             userId={userId}
