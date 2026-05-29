@@ -47,18 +47,22 @@ type ColorTheme = "green" | "violet";
 const THEME_STORAGE_KEY = "gsb-color-theme";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<Tab>("personal");
+  const demoMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("demo") === "1";
+
+  const [activeTab, setActiveTab] = useState<Tab>(demoMode ? "overview" : "personal");
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
-  const [status, setStatus] = useState<AppStatus>("checking");
+  const [status, setStatus] = useState<AppStatus>(demoMode ? "ready" : "checking");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [teamName, setTeamName] = useState("");
-  const [teamId, setTeamId] = useState("");
-  const [userRole, setUserRole] = useState<Role | null>(null);
-  const [userId, setUserId] = useState("");
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [teamId, setTeamId] = useState(demoMode ? "demo-team" : "");
+  const [userRole, setUserRole] = useState<Role | null>(demoMode ? "admin" : null);
+  const [userId, setUserId] = useState(demoMode ? "demo-user" : "");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(demoMode ? true : false);
   const [viewingMemberId, setViewingMemberId] = useState("");
   const [viewingMemberName, setViewingMemberName] = useState("");
   const [lastAssignedFine, setLastAssignedFine] = useState<{
@@ -443,6 +447,9 @@ function App() {
         {activeTab === "overview" && (
           <TeamOverview
             teamId={teamId}
+            userRole={userRole}
+            isSuperAdmin={isSuperAdmin}
+            onOpenAdminApprovals={() => setActiveTab("settings")}
             onMemberSelect={(memberId, memberName) => {
               setViewingMemberId(memberId);
               setViewingMemberName(memberName);

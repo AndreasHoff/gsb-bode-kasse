@@ -7,12 +7,15 @@ import {
   getUsers,
 } from "../../lib/firestore";
 import { formatAmount } from "../../lib/utils";
-import type { Membership, User } from "../../types/domain";
+import type { Membership, User, Role } from "../../types/domain";
 import "./team-overview.css";
 
 interface TeamOverviewProps {
   teamId: string;
   onMemberSelect: (memberId: string, memberName: string) => void;
+  userRole?: Role | null;
+  isSuperAdmin?: boolean;
+  onOpenAdminApprovals?: () => void;
 }
 
 type MemberRole = "super-admin" | "admin" | "member";
@@ -22,6 +25,8 @@ type MemberStat = {
   totalDebt: number;
   paidAmount: number;
   role: MemberRole;
+  hasPending?: boolean;
+  hasDisputed?: boolean;
 };
 
 export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewProps) {
@@ -33,8 +38,42 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
   const [totalIssued, setTotalIssued] = useState(0);
   const [totalOwed, setTotalOwed] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const loadData = useCallback(async () => {
+    // Demo mode: render deterministic sample data when URL contains ?demo=1
+    const demoMode =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("demo") === "1";
+
+    if (demoMode) {
+      const now = new Date().toISOString();
+      const demoUsers = [
+        { id: "u1", name: "Anna Hansen", email: "anna@example.com", createdAt: now },
+        { id: "u2", name: "Mikkel Jensen", email: "mikkel@example.com", createdAt: now },
+        { id: "u3", name: "Jonas Sørensen", email: "jonas@example.com", createdAt: now },
+        { id: "u4", name: "Laura Møller", email: "laura@example.com", createdAt: now },
+        { id: "u5", name: "Peter Larsen", email: "peter@example.com", createdAt: now },
+      ];
+
+      const demoStats: MemberStat[] = [
+        { user: demoUsers[0], totalDebt: 520, paidAmount: 0, role: "member", hasPending: true },
+        { user: demoUsers[1], totalDebt: 310, paidAmount: 0, role: "admin", hasPending: true },
+        { user: demoUsers[2], totalDebt: 120, paidAmount: 0, role: "member" },
+        { user: demoUsers[3], totalDebt: 0, paidAmount: 200, role: "member" },
+        { user: demoUsers[4], totalDebt: 0, paidAmount: 0, role: "member" },
+      ];
+
+      setMemberStats(demoStats);
+      setTotalIssued(1150);
+      setTotalOwed(950);
+      setTotalPaid(200);
+      setPendingCount(2);
+      setNoSeason(false);
+      setIsLoading(false);
+      return;
+    }
+
     if (!teamId) {
       setIsLoading(false);
       return;
@@ -87,6 +126,9 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       let aggOwed = 0;
       let aggPaid = 0;
 
+      let pendingCounter = 0;
+      let disputedCounter = 0;
+
       for (const payment of payments) {
         if (!seasonFineIds.has(payment.fineId)) continue;
 
@@ -103,6 +145,17 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
           aggOwed += payment.amount;
           if (acc) acc.debt += payment.amount;
         }
+
+        if (payment.status === "pending") {
+          pendingCounter += payment.amount;
+          if (acc) acc.hasPending = true;
+        }
+
+        if (payment.status === "disputed") {
+          disputedCounter += payment.amount;
+          if (acc) acc.hasDisputed = true;
+        }
+
         aggIssued += payment.amount;
       }
 
@@ -111,7 +164,7 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       setTotalPaid(aggPaid);
 
       const stats: MemberStat[] = users.map((user) => {
-        const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0 };
+        const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0, hasPending: false, hasDisputed: false } as any;
         const membership = membershipByUserId.get(user.id);
         const role: MemberRole = user.isSuperAdmin
           ? "super-admin"
@@ -123,8 +176,12 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
           totalDebt: acc.debt,
           paidAmount: acc.paid,
           role,
+          hasPending: !!acc.hasPending,
+          hasDisputed: !!acc.hasDisputed,
         };
       });
+
+      setPendingCount(pendingCounter);
 
       setMemberStats(stats);
     } catch (error) {
