@@ -1,0 +1,52 @@
+.admin-approval-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.admin-approval-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.admin-approval-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-approval-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-approval-fine {
+  color: var(--color-text-muted, #666);
+  font-size: 0.85rem;
+}
+
+.admin-approval-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-approval-amount {
+  font-weight: 600;
+}
+
+.admin-approval-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.admin-approval-time {
+  color: var(--color-text-muted, #666);
+  font-size: 0.8rem;
+}

@@ -7,12 +7,15 @@ import {
   getUsers,
 } from "../../lib/firestore";
 import { formatAmount } from "../../lib/utils";
-import type { Membership, User } from "../../types/domain";
+import type { Membership, User, Role } from "../../types/domain";
 import "./team-overview.css";
 
 interface TeamOverviewProps {
   teamId: string;
   onMemberSelect: (memberId: string, memberName: string) => void;
+  userRole?: Role | null;
+  isSuperAdmin?: boolean;
+  onOpenAdminApprovals?: () => void;
 }
 
 type MemberRole = "super-admin" | "admin" | "member";
@@ -22,6 +25,8 @@ type MemberStat = {
   totalDebt: number;
   paidAmount: number;
   role: MemberRole;
+  hasPending?: boolean;
+  hasDisputed?: boolean;
 };
 
 export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewProps) {
@@ -103,6 +108,15 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
           aggOwed += payment.amount;
           if (acc) acc.debt += payment.amount;
         }
+
+        if (payment.status === "pending") {
+          if (acc) acc.hasPending = true;
+        }
+
+        if (payment.status === "disputed") {
+          if (acc) acc.hasDisputed = true;
+        }
+
         aggIssued += payment.amount;
       }
 
@@ -111,7 +125,7 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       setTotalPaid(aggPaid);
 
       const stats: MemberStat[] = users.map((user) => {
-        const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0 };
+        const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0, hasPending: false, hasDisputed: false } as any;
         const membership = membershipByUserId.get(user.id);
         const role: MemberRole = user.isSuperAdmin
           ? "super-admin"
@@ -123,6 +137,8 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
           totalDebt: acc.debt,
           paidAmount: acc.paid,
           role,
+          hasPending: !!acc.hasPending,
+          hasDisputed: !!acc.hasDisputed,
         };
       });
 
