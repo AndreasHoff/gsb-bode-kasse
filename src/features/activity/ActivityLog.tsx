@@ -175,6 +175,7 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
                         key={entry.id}
                         entry={entry}
                         actor={usersById.get(entry.actorId) ?? null}
+                        usersById={usersById}
                       />
                     ))}
                   </div>
@@ -204,12 +205,14 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
 function ActivityRow({
   entry,
   actor,
+  usersById,
 }: {
   entry: ActivityLogEntry;
   actor: User | null;
+  usersById: Map<string, User>;
 }) {
   const icon = getActionIcon(entry.action);
-  const text = getActionText(entry, actor);
+  const text = getActionText(entry, actor, usersById);
 
   return (
     <article className="app-card p-3">
@@ -263,22 +266,37 @@ function getActionIcon(action: string): string {
   return "📌";
 }
 
-function getActionText(entry: ActivityLogEntry, actor: User | null): string {
+function getActionText(
+  entry: ActivityLogEntry,
+  actor: User | null,
+  usersById: Map<string, User>,
+): string {
   const actorName = actor?.name ?? "En bruger";
   const metadata = entry.metadata ?? {};
   const title = toStringValue(metadata.title) ?? "en bøde";
   const amount = toNumberValue(metadata.amount);
+  const fmt = amount !== null ? ` (${formatAmount(amount)})` : "";
+
+  function resolveUserId(v: unknown): string | null {
+    return typeof v === "string" ? (usersById.get(v)?.name ?? null) : null;
+  }
 
   if (entry.action === "fine.assigned") {
-    return `${actorName} tildelte ${title}${amount !== null ? ` (${formatAmount(amount)})` : ""}.`;
+    const assignedTo = metadata.assignedTo;
+    const recipientIds = Array.isArray(assignedTo) ? (assignedTo as string[]) : [];
+    const recipientNames = recipientIds
+      .map((id) => usersById.get(id)?.name ?? "en spiller")
+      .join(", ");
+    const toText = recipientIds.length > 0 ? ` til ${recipientNames}` : "";
+    return `${actorName} tildelte ${title}${toText}${fmt}.`;
   }
 
   if (entry.action === "fine.deleted") {
-    return `${actorName} slettede ${title}${amount !== null ? ` (${formatAmount(amount)})` : ""}.`;
+    return `${actorName} slettede ${title}${fmt}.`;
   }
 
   if (entry.action === "fine.restored") {
-    return `${actorName} gendannede ${title}${amount !== null ? ` (${formatAmount(amount)})` : ""}.`;
+    return `${actorName} gendannede ${title}${fmt}.`;
   }
 
   if (entry.action === "payment.created") {
@@ -290,11 +308,15 @@ function getActionText(entry: ActivityLogEntry, actor: User | null): string {
   }
 
   if (entry.action === "payment.approved") {
-    return `${actorName} godkendte en betaling${amount !== null ? ` på ${formatAmount(amount)}` : ""}.`;
+    const payerName = resolveUserId(metadata.userId);
+    const payerText = payerName ? `${payerName}s betaling` : "en betaling";
+    return `${actorName} godkendte ${payerText}${amount !== null ? ` – ${formatAmount(amount)}` : ""}.`;
   }
 
   if (entry.action === "payment.disputed") {
-    return `${actorName} markerede en betaling som omtvistet.`;
+    const payerName = resolveUserId(metadata.userId);
+    const payerText = payerName ? `${payerName}s betaling` : "en betaling";
+    return `${actorName} markerede ${payerText} som omtvistet.`;
   }
 
   if (entry.action === "season.created") {

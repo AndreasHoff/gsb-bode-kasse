@@ -13,6 +13,8 @@ import { buildMobilePayDeepLink, formatAmount, formatRelativeTime } from "../../
 interface PersonalOverviewProps {
   teamId: string;
   userId: string;
+  /** When set, renders in viewer mode (read-only, no pay buttons) showing this person's name */
+  viewerName?: string;
 }
 
 type FineWithPayment = {
@@ -22,7 +24,8 @@ type FineWithPayment = {
   effectiveStatus: PaymentStatus;
 };
 
-export default function PersonalOverview({ teamId, userId }: PersonalOverviewProps) {
+export default function PersonalOverview({ teamId, userId, viewerName }: PersonalOverviewProps) {
+  const isViewerMode = !!viewerName;
   const [loading, setLoading] = useState(true);
   const [payingFineId, setPayingFineId] = useState<string | null>(null);
   const [isPayingAll, setIsPayingAll] = useState(false);
@@ -81,14 +84,14 @@ export default function PersonalOverview({ teamId, userId }: PersonalOverviewPro
         .sort((a, b) => b.fine.createdAt.localeCompare(a.fine.createdAt));
 
       setFineRows(rows);
-      setMobilePayRecipient(team?.mobilePayRecipient?.trim() || null);
+      setMobilePayRecipient(isViewerMode ? null : (team?.mobilePayRecipient?.trim() || null));
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : "Ukendt fejl";
       setError(`Kunne ikke hente dine bøder (${message}).`);
     } finally {
       setLoading(false);
     }
-  }, [teamId, userId]);
+  }, [teamId, userId, viewerName]);
 
   useEffect(() => {
     void loadData();
@@ -170,7 +173,7 @@ export default function PersonalOverview({ teamId, userId }: PersonalOverviewPro
   }
 
   async function handlePaySingle(row: FineWithPayment): Promise<void> {
-    if (!row.payment || row.effectiveStatus !== "unpaid") {
+    if (isViewerMode || !row.payment || row.effectiveStatus !== "unpaid") {
       return;
     }
 
@@ -190,7 +193,7 @@ export default function PersonalOverview({ teamId, userId }: PersonalOverviewPro
   }
 
   async function handlePayAll(): Promise<void> {
-    if (!canPay) {
+    if (isViewerMode || !canPay) {
       return;
     }
 
@@ -222,8 +225,8 @@ export default function PersonalOverview({ teamId, userId }: PersonalOverviewPro
 
   return (
     <div className="app-page pb-8">
-      <h1 className="app-title">Mine bøder</h1>
-      <p className="app-subtitle mb-6">Aktiv sæson</p>
+      <h1 className="app-title">{isViewerMode ? viewerName : "Mine bøder"}</h1>
+      <p className="app-subtitle mb-6">{isViewerMode ? "Udestående bøder" : "Aktiv sæson"}</p>
 
       <div className="app-card app-card--muted mb-4 p-5 text-center">
         <p className="text-sm font-medium text-[var(--color-text-muted)]">Udestående</p>
@@ -232,18 +235,20 @@ export default function PersonalOverview({ teamId, userId }: PersonalOverviewPro
         </p>
       </div>
 
-      <button
-        type="button"
-        className="btn-primary w-full mb-6"
-        onClick={() => {
-          void handlePayAll();
-        }}
-        disabled={!canPay || isPayingAll || loading}
-      >
-        {isPayingAll ? "Starter betaling..." : "Betal alle"}
-      </button>
+      {!isViewerMode && (
+        <button
+          type="button"
+          className="btn-primary w-full mb-6"
+          onClick={() => {
+            void handlePayAll();
+          }}
+          disabled={!canPay || isPayingAll || loading}
+        >
+          {isPayingAll ? "Starter betaling..." : "Betal alle"}
+        </button>
+      )}
 
-      {!loading && unpaidTotal > 0 && !mobilePayRecipient && (
+      {!isViewerMode && !loading && unpaidTotal > 0 && !mobilePayRecipient && (
         <p className="status-note mb-4">
           Holdets MobilePay-modtager mangler. Kontakt en admin.
         </p>
@@ -256,7 +261,11 @@ export default function PersonalOverview({ teamId, userId }: PersonalOverviewPro
       {!loading && fineRows.length === 0 && (
         <div className="empty-state py-8">
           <p className="text-4xl mb-3">✅</p>
-          <p className="text-sm">Du har ingen bøder i aktiv sæson.</p>
+          <p className="text-sm">
+            {isViewerMode
+              ? `${viewerName} har ingen bøder i aktiv sæson.`
+              : "Du har ingen bøder i aktiv sæson."}
+          </p>
         </div>
       )}
 
@@ -276,8 +285,8 @@ export default function PersonalOverview({ teamId, userId }: PersonalOverviewPro
                 key={row.fine.id}
                 row={row}
                 actionLabel={payingFineId === row.fine.id ? "Starter..." : "Betal"}
-                actionDisabled={!mobilePayRecipient || payingFineId === row.fine.id || isPayingAll}
-                onAction={() => {
+                actionDisabled={isViewerMode || !mobilePayRecipient || payingFineId === row.fine.id || isPayingAll}
+                onAction={isViewerMode ? undefined : () => {
                   void handlePaySingle(row);
                 }}
               />
