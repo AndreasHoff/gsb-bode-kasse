@@ -59,6 +59,8 @@ function App() {
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [userId, setUserId] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [viewingMemberId, setViewingMemberId] = useState("");
+  const [viewingMemberName, setViewingMemberName] = useState("");
   const [lastAssignedFine, setLastAssignedFine] = useState<{
     teamId: string;
     fineId: string;
@@ -366,6 +368,10 @@ function App() {
                 key={item.tab}
                 type="button"
                 onClick={() => {
+                  if (item.tab === "personal") {
+                    setViewingMemberId("");
+                    setViewingMemberName("");
+                  }
                   setActiveTab(item.tab);
                   setIsSideMenuOpen(false);
                 }}
@@ -434,7 +440,16 @@ function App() {
 
       {/* Page content */}
       <main className="app-main">
-        {activeTab === "overview" && <TeamOverview />}
+        {activeTab === "overview" && (
+          <TeamOverview
+            teamId={teamId}
+            onMemberSelect={(memberId, memberName) => {
+              setViewingMemberId(memberId);
+              setViewingMemberName(memberName);
+              setActiveTab("personal");
+            }}
+          />
+        )}
         {activeTab === "assign-fine" && (
           <AssignFine
             teamId={teamId}
@@ -459,7 +474,8 @@ function App() {
         {activeTab === "personal" && (
           <PersonalOverview
             teamId={teamId}
-            userId={userId}
+            userId={viewingMemberId || userId}
+            viewerName={viewingMemberId && viewingMemberId !== userId ? viewingMemberName : undefined}
           />
         )}
         {activeTab === "fine-rules" && (
@@ -508,7 +524,13 @@ function App() {
       <BottomNavbar
         items={primaryMenuItems}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          if (tab === "personal") {
+            setViewingMemberId("");
+            setViewingMemberName("");
+          }
+          setActiveTab(tab);
+        }}
       />
     </div>
   );

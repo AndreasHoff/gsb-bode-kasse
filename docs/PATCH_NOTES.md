@@ -4,6 +4,21 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.14.0 — 2026-05-29
+
+**Feature: Holdoversigt med gældsrækkefølge og visning af andres bøder**
+
+- Holdoversigten viser nu alle spillere sorteret efter udestående gæld (højest øverst)
+- Hvert række viser total gæld, antal bøder samt indikatorer for afventende (⏳) og omtvistede (⚠️) betalinger
+- Fejrer med konfetti-tilstand når alle skylder 0 kr., og viser en fejlbesked når der ingen aktiv sæson er
+- De seneste 10 aktivitetshændelser vises som et feed under rangordningen
+- Tryk på en spiller åbner deres bødeoversigt i læsetilstand (ingen betalingsknapper)
+- Aktivitetslog-tekster inkluderer nu modtagernavn ved bødetildeling og betalers navn ved godkendelse/omtvistelse
+- Rettelse: omtvistede betalinger tælles nu korrekt med i det udestående beløb
+- Rettelse: Firestore-regler tillader nu et medlem at overføre sin egen betaling fra `unpaid` → `pending` (MobilePay-initiering)
+
+---
+
 ## v0.13.1 — 2026-05-28
 
 **Fix: robust læsning af Firestore-datoer**
