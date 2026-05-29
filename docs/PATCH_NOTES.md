@@ -4,6 +4,19 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.16.0 — 2026-05-29
+
+**Feature: Admin-godkendelse af betalinger + release-klargøring af Hold-flow**
+
+- Ny admin-visning til godkendelse af betalinger med handlingerne **Godkend** og **Underkend**
+- Firestore betalingsflow udvidet med query for ventende betalinger samt opdateringer til godkendelsesflowet
+- Adgangsstyring rettet, så brugere med godkendelsesrettighed kan se indstillingsvejen til admin-godkendelse
+- Tilføjet test-setup med Vitest + Testing Library og nye tests for admin-godkendelsesflowet
+- Tilføjet tilgængelighedsforbedringer i admin-godkendelsesvisningen (status/alert-roller og semantisk liste)
+- Fjernet midlertidige demo-kodeveje fra appens production-flow
+
+---
+
 ## v0.15.0 — 2026-05-29
 
 **Feature: Nyt layout og indhold på Hold-visning**

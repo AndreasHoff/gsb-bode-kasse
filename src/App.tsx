@@ -11,7 +11,8 @@ import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
 import BottomNavbar from "./components/BottomNavbar";
-import { canAssignFines } from "./lib/permissions";
+import { canAssignFines, canApprovePayments } from "./lib/permissions";
+import AdminApproval from "./features/payments/AdminApproval";
 import {
   ensurePersistentAuth,
   onAuthChange,
@@ -339,10 +340,13 @@ function App() {
 
   menuItems.push({ tab: "profile", label: "Profil", emoji: "🪪" });
 
+  if (canApprovePayments(userRole, isSuperAdmin)) {
+    menuItems.push({ tab: "settings", label: "Indstillinger", emoji: "⚙️" });
+  }
+
   if (isSuperAdmin) {
     menuItems.push(
       { tab: "proposals", label: "Idéforslag", emoji: "💡" },
-      { tab: "settings", label: "Indstillinger", emoji: "⚙️" },
     );
   }
 
@@ -443,6 +447,9 @@ function App() {
         {activeTab === "overview" && (
           <TeamOverview
             teamId={teamId}
+            userRole={userRole}
+            isSuperAdmin={isSuperAdmin}
+            onOpenAdminApprovals={() => setActiveTab("settings")}
             onMemberSelect={(memberId, memberName) => {
               setViewingMemberId(memberId);
               setViewingMemberName(memberName);
@@ -489,7 +496,18 @@ function App() {
         {activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}
         {activeTab === "activity" && <ActivityLog teamId={teamId} />}
         {activeTab === "proposals" && <Proposals />}
-        {activeTab === "settings" && <SettingsPlaceholder />}
+        {activeTab === "settings" && (
+          canApprovePayments(userRole, isSuperAdmin) ? (
+            <AdminApproval
+              teamId={teamId}
+              actorId={userId}
+              userRole={userRole}
+              isSuperAdmin={isSuperAdmin}
+            />
+          ) : (
+            <SettingsPlaceholder />
+          )
+        )}
         {activeTab === "profile" && (
           <UserProfile
             userId={userId}
