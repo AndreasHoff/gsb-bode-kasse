@@ -1,25 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getActiveSeason,
-  getActivityLogEntries,
   getFines,
+  getMemberships,
   getPayments,
   getUsers,
 } from "../../lib/firestore";
-import { formatAmount, formatRelativeTime } from "../../lib/utils";
-import type { ActivityLog, User } from "../../types/domain";
+import { formatAmount } from "../../lib/utils";
+import type { Membership, User } from "../../types/domain";
+import "./team-overview.css";
 
 interface TeamOverviewProps {
   teamId: string;
   onMemberSelect: (memberId: string, memberName: string) => void;
 }
 
-type MemberDebt = {
+type MemberRole = "super-admin" | "admin" | "member";
+
+type MemberStat = {
   user: User;
   totalDebt: number;
-  unpaidCount: number;
-  hasPending: boolean;
-  hasDisputed: boolean;
+  paidAmount: number;
+  role: MemberRole;
 };
 
 export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewProps) {
@@ -27,9 +29,10 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [noSeason, setNoSeason] = useState(false);
   const [seasonName, setSeasonName] = useState("");
-  const [memberDebts, setMemberDebts] = useState<MemberDebt[]>([]);
-  const [activityEntries, setActivityEntries] = useState<ActivityLog[]>([]);
-  const [usersById, setUsersById] = useState<Map<string, User>>(new Map());
+  const [memberStats, setMemberStats] = useState<MemberStat[]>([]);
+  const [totalIssued, setTotalIssued] = useState(0);
+  const [totalOwed, setTotalOwed] = useState(0);
+  const [totalPaid, setTotalPaid] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!teamId) {
@@ -41,22 +44,20 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
     setErrorMessage(null);
 
     try {
-      const [season, users, activityPage] = await Promise.all([
+      const [season, users, memberships] = await Promise.all([
         getActiveSeason(teamId),
         getUsers(),
-        getActivityLogEntries(teamId, 10),
+        getMemberships(teamId),
       ]);
 
-      const userMap = new Map<string, User>();
-      for (const user of users) {
-        userMap.set(user.id, user);
+      const membershipByUserId = new Map<string, Membership>();
+      for (const m of memberships) {
+        membershipByUserId.set(m.userId, m);
       }
-      setUsersById(userMap);
-      setActivityEntries(activityPage.entries);
 
       if (!season) {
         setNoSeason(true);
-        setMemberDebts([]);
+        setMemberStats([]);
         setIsLoading(false);
         return;
       }
@@ -76,46 +77,56 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
         }
       }
 
-      type DebtAcc = { total: number; unpaidFineIds: Set<string>; hasPending: boolean; hasDisputed: boolean };
-      const debtByUser = new Map<string, DebtAcc>();
+      type UserAcc = { debt: number; paid: number };
+      const accByUser = new Map<string, UserAcc>();
       for (const user of users) {
-        debtByUser.set(user.id, { total: 0, unpaidFineIds: new Set(), hasPending: false, hasDisputed: false });
+        accByUser.set(user.id, { debt: 0, paid: 0 });
       }
+
+      let aggIssued = 0;
+      let aggOwed = 0;
+      let aggPaid = 0;
 
       for (const payment of payments) {
         if (!seasonFineIds.has(payment.fineId)) continue;
-        if (
-          payment.status !== "unpaid" &&
-          payment.status !== "pending" &&
-          payment.status !== "disputed"
-        ) continue;
 
-        const acc = debtByUser.get(payment.userId);
-        if (!acc) continue;
+        const acc = accByUser.get(payment.userId);
 
-        acc.total += payment.amount;
-        acc.unpaidFineIds.add(payment.fineId);
-        if (payment.status === "pending") acc.hasPending = true;
-        if (payment.status === "disputed") acc.hasDisputed = true;
+        if (payment.status === "approved") {
+          aggPaid += payment.amount;
+          if (acc) acc.paid += payment.amount;
+        } else if (
+          payment.status === "unpaid" ||
+          payment.status === "pending" ||
+          payment.status === "disputed"
+        ) {
+          aggOwed += payment.amount;
+          if (acc) acc.debt += payment.amount;
+        }
+        aggIssued += payment.amount;
       }
 
-      const debts: MemberDebt[] = users.map((user) => {
-        const acc = debtByUser.get(user.id) ?? {
-          total: 0,
-          unpaidFineIds: new Set<string>(),
-          hasPending: false,
-          hasDisputed: false,
-        };
+      setTotalIssued(aggIssued);
+      setTotalOwed(aggOwed);
+      setTotalPaid(aggPaid);
+
+      const stats: MemberStat[] = users.map((user) => {
+        const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0 };
+        const membership = membershipByUserId.get(user.id);
+        const role: MemberRole = user.isSuperAdmin
+          ? "super-admin"
+          : membership?.role === "admin"
+            ? "admin"
+            : "member";
         return {
           user,
-          totalDebt: acc.total,
-          unpaidCount: acc.unpaidFineIds.size,
-          hasPending: acc.hasPending,
-          hasDisputed: acc.hasDisputed,
+          totalDebt: acc.debt,
+          paidAmount: acc.paid,
+          role,
         };
       });
 
-      setMemberDebts(debts);
+      setMemberStats(stats);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Ukendt fejl";
       setErrorMessage(`Kunne ikke hente holdoversigt (${message}).`);
@@ -129,13 +140,8 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
   }, [loadData]);
 
   const sortedMembers = useMemo(
-    () => [...memberDebts].sort((a, b) => b.totalDebt - a.totalDebt),
-    [memberDebts],
-  );
-
-  const allZeroDebt = useMemo(
-    () => sortedMembers.length > 0 && sortedMembers.every((m) => m.totalDebt === 0),
-    [sortedMembers],
+    () => [...memberStats].sort((a, b) => b.totalDebt - a.totalDebt),
+    [memberStats],
   );
 
   return (
@@ -166,180 +172,88 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
 
       {!isLoading && !errorMessage && !noSeason && sortedMembers.length > 0 && (
         <>
-          {allZeroDebt && (
-            <div className="text-center py-4 mb-4 rounded-xl bg-[color-mix(in_srgb,var(--color-primary)_8%,transparent)] border border-[var(--color-border)]">
-              <p className="text-2xl mb-1">🎉</p>
-              <p className="text-sm font-semibold text-[var(--color-text)]">
-                Alle er i det grønne!
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                Ingen udestående bøder på holdet.
-              </p>
-            </div>
-          )}
+          {/* Bødekasse Saldo header card */}
+          <div className="team-saldo-card">
+            <p className="team-saldo-card__label">Bødekasse Saldo</p>
+            <p className="team-saldo-card__value">{formatAmount(totalPaid)}</p>
+          </div>
 
-          <section aria-label="Gældsrangordning">
-            <ul className="space-y-2">
-              {sortedMembers.map((item, index) => (
-                <li key={item.user.id}>
-                  <button
-                    type="button"
-                    className="w-full text-left rounded-xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-muted)_72%,transparent)] px-3 py-3 active:opacity-80 transition-opacity"
-                    onClick={() => onMemberSelect(item.user.id, item.user.name)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-[var(--color-text-muted)] w-5 text-center font-mono shrink-0">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                          {item.user.name}
-                        </p>
-                        {item.unpaidCount > 0 && (
-                          <p className="text-xs text-[var(--color-text-muted)]">
-                            {item.unpaidCount}{" "}
-                            {item.unpaidCount === 1 ? "bøde" : "bøder"}
-                            {item.hasPending && " ⏳"}
-                            {item.hasDisputed && " ⚠️"}
-                          </p>
-                        )}
+          {/* 3 stat cards */}
+          <div className="team-stats">
+            <div className="team-stat-card">
+              <span className="team-stat-card__emoji">📋</span>
+              <span className="team-stat-card__label">Udstedt bøder</span>
+              <span className="team-stat-card__value">{formatAmount(totalIssued)}</span>
+            </div>
+            <div className="team-stat-card team-stat-card--owed">
+              <span className="team-stat-card__emoji">⏳</span>
+              <span className="team-stat-card__label">Skyldigt</span>
+              <span className="team-stat-card__value">{formatAmount(totalOwed)}</span>
+            </div>
+            <div className="team-stat-card team-stat-card--paid">
+              <span className="team-stat-card__emoji">✅</span>
+              <span className="team-stat-card__label">Indbetalt</span>
+              <span className="team-stat-card__value">{formatAmount(totalPaid)}</span>
+            </div>
+          </div>
+
+          {/* Member list */}
+          <section aria-label="Holdoversigt">
+            <ul className="team-member-list">
+              {sortedMembers.map((item) => {
+                const initials = item.user.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2);
+                const roleLabel =
+                  item.role === "super-admin"
+                    ? "Super Admin"
+                    : item.role === "admin"
+                      ? "Admin"
+                      : "Medlem";
+                return (
+                  <li key={item.user.id}>
+                    <button
+                      type="button"
+                      className="team-member-row"
+                      onClick={() => onMemberSelect(item.user.id, item.user.name)}
+                    >
+                      <div className="team-member-row__left">
+                        <div className="team-member-avatar">{initials || "👤"}</div>
+                        <div className="team-member-info">
+                          <p className="team-member-info__name">{item.user.name}</p>
+                          <p className="team-member-info__role">{roleLabel}</p>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="team-member-row__right">
                         {item.totalDebt > 0 ? (
-                          <p className="text-base font-bold text-[var(--color-primary)]">
-                            {formatAmount(item.totalDebt)}
-                          </p>
+                          <>
+                            <p className="team-member-saldo team-member-saldo--owed">
+                              {formatAmount(item.totalDebt)}
+                            </p>
+                            <p className="team-member-saldo__sub">skylder</p>
+                          </>
+                        ) : item.paidAmount > 0 ? (
+                          <>
+                            <p className="team-member-saldo team-member-saldo--paid">
+                              {formatAmount(item.paidAmount)}
+                            </p>
+                            <p className="team-member-saldo__sub">betalt ✓</p>
+                          </>
                         ) : (
-                          <p className="text-xs text-[var(--color-text-muted)]">0 kr.</p>
+                          <p className="team-member-saldo team-member-saldo--zero">0 kr.</p>
                         )}
                       </div>
-                    </div>
-                  </button>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </section>
-
-          {activityEntries.length > 0 && (
-            <section className="mt-6" aria-label="Seneste aktivitet">
-              <h2 className="text-sm font-semibold text-[var(--color-text)] mb-3">
-                Seneste aktivitet
-              </h2>
-              <ul className="space-y-2">
-                {activityEntries.map((entry) => (
-                  <li key={entry.id} className="app-card p-3">
-                    <div className="flex items-start gap-3">
-                      <div className="h-7 w-7 rounded-full bg-[color-mix(in_srgb,var(--color-primary)_16%,transparent)] flex items-center justify-center text-xs shrink-0">
-                        {getActionIcon(entry.action)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs text-[var(--color-text)]">
-                          {getActionText(entry, usersById.get(entry.actorId) ?? null, usersById)}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          {formatActivityTime(entry.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
         </>
       )}
     </div>
   );
-}
-
-function formatActivityTime(createdAt: string): string {
-  const created = new Date(createdAt);
-  const diffMs = Date.now() - created.getTime();
-  if (diffMs < 3_600_000) {
-    return formatRelativeTime(createdAt);
-  }
-  return created.toLocaleString("da-DK", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function getActionIcon(action: string): string {
-  if (action === "fine.assigned") return "🎯";
-  if (action === "fine.deleted") return "🗑️";
-  if (action === "fine.restored") return "↩️";
-  if (action === "payment.created") return "🧾";
-  if (action === "payment.initiated") return "💸";
-  if (action === "payment.approved") return "✅";
-  if (action === "payment.disputed") return "⚠️";
-  if (action === "season.created") return "📅";
-  if (action === "season.closed") return "🏁";
-  if (action === "member.added") return "➕";
-  if (action === "member.roleChanged") return "🛡️";
-  if (action === "rule.created") return "📋";
-  if (action === "rule.updated") return "✏️";
-  if (action === "rule.deactivated") return "⏸️";
-  return "📌";
-}
-
-function getActionText(entry: ActivityLog, actor: User | null, usersById: Map<string, User>): string {
-  const actorName = actor?.name ?? "En bruger";
-  const metadata = entry.metadata ?? {};
-
-  function toStr(v: unknown): string | null {
-    return typeof v === "string" && v.trim().length > 0 ? v : null;
-  }
-
-  function toNum(v: unknown): number | null {
-    return typeof v === "number" && Number.isFinite(v) ? v : null;
-  }
-
-  const title = toStr(metadata.title) ?? "en bøde";
-  const amount = toNum(metadata.amount);
-  const fmt = amount !== null ? ` (${formatAmount(amount)})` : "";
-
-  if (entry.action === "fine.assigned") {
-    const assignedTo = metadata.assignedTo;
-    const recipientIds = Array.isArray(assignedTo) ? (assignedTo as string[]) : [];
-    const recipientNames = recipientIds
-      .map((id) => usersById.get(id)?.name ?? "en spiller")
-      .join(", ");
-    const toText = recipientIds.length > 0 ? ` til ${recipientNames}` : "";
-    return `${actorName} tildelte ${title}${toText}${fmt}.`;
-  }
-  if (entry.action === "fine.deleted") return `${actorName} slettede ${title}${fmt}.`;
-  if (entry.action === "fine.restored") return `${actorName} gendannede ${title}${fmt}.`;
-  if (entry.action === "payment.created") {
-    return `${actorName} oprettede en betalingslinje${amount !== null ? ` på ${formatAmount(amount)}` : ""}.`;
-  }
-  if (entry.action === "payment.disputed") {
-    const payerName =
-      typeof metadata.userId === "string"
-        ? (usersById.get(metadata.userId as string)?.name ?? null)
-        : null;
-    const payerText = payerName ? `${payerName}s betaling` : "en betaling";
-    return `${actorName} markerede ${payerText} som omtvistet.`;
-  }
-  if (entry.action === "payment.initiated")
-    return `${actorName} har sendt en betaling${amount !== null ? ` på ${formatAmount(amount)}` : ""}.`;
-  if (entry.action === "payment.approved") {
-    const payerName =
-      typeof metadata.userId === "string"
-        ? (usersById.get(metadata.userId as string)?.name ?? null)
-        : null;
-    const payerText = payerName ? `${payerName}s betaling` : "en betaling";
-    return `${actorName} godkendte ${payerText}${amount !== null ? ` – ${formatAmount(amount)}` : ""}.`;
-  }
-  if (entry.action === "season.created") return `${actorName} oprettede en ny sæson.`;
-  if (entry.action === "season.closed") return `${actorName} lukkede den aktive sæson.`;
-  if (entry.action === "rule.created")
-    return `${actorName} oprettede bødetypen ${title}.`;
-  if (entry.action === "rule.updated")
-    return `${actorName} opdaterede bødetypen ${title}.`;
-  if (entry.action === "rule.deactivated")
-    return `${actorName} deaktiverede bødetypen ${title}.`;
-  return `${actorName} udførte en handling.`;
 }
