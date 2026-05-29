@@ -4,6 +4,20 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.15.0 — 2026-05-29
+
+**Feature: Nyt layout og indhold på Hold-visning**
+
+- Hold-siden har fået et nyt layout inspireret af Profil-visningen
+- Nyt header-card øverst viser "Bødekasse Saldo" med det samlede indbetalte beløb for sæsonen
+- Tre detaljekort viser henholdsvis Udstedt bøder, Skyldigt og Indbetalt for holdet
+- Fuldstændig medlemsliste erstatter den tidligere rangordning; hvert element viser profilbillede-pladsholder, navn og rolle (Medlem, Admin, Super Admin)
+- Saldo-kolonnen differentierer tydeligt: orange for udestående beløb, grøn for betalt og dæmpet grå for nul
+- Alle beløb beregnes fra Firestore (betalinger og bøder for den aktive sæson)
+- Fjernet aktivitetsfeed fra Hold-visningen i overensstemmelse med de nye designkrav
+
+---
+
 ## v0.14.0 — 2026-05-29
 
 **Feature: Holdoversigt med gældsrækkefølge og visning af andres bøder**
