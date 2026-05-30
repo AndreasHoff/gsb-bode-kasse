@@ -1,10 +1,3 @@
----
-status: implemented
-implemented_date: 2026-05-30
-implemented_by: Team
-note: "Moved to docs/specs/done/ to mark as implemented."
----
-
 # F016 - Bulk Member Fine Operations
 
 ## Problem
@@ -17,3 +10,9 @@ Provide bulk selection and operations with clear undo and confirmation steps.
 - Bulk assign/remove works
 - Progress shown for long-running operations
 - Actions recorded in ActivityLog
+
+<!-- TODO: Partially implemented — `AssignFine` bulk-assign exists (see `src/features/fines/AssignFine.tsx`) and `src/lib/firestore/fines.ts` contains helpers, but missing:
+- Bulk-remove/adjust helpers and atomic undo semantics
+- Progress UI for long operations
+- Tests covering bulk-remove/adjust and undo
+--> 

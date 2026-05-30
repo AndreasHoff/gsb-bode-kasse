@@ -1,10 +1,3 @@
----
-status: implemented
-implemented_date: 2026-05-30
-implemented_by: Team
-note: "Moved to docs/specs/done/ to mark as implemented."
----
-
 # F018 - UI Polish & Podium Badges
 
 ## Problem
@@ -16,3 +9,5 @@ Polish UI elements and add podium badges for top 3 members by debt cleared or co
 ## Acceptance Criteria
 - Badges display correctly on Team Overview
 - Visual polish applied consistently
+
+<!-- TODO: Not implemented — add podium badges rendering and styles in `src/features/overview/TeamOverview.tsx` and supporting CSS. -->
