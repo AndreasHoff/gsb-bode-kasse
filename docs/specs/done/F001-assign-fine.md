@@ -1,3 +1,10 @@
+---
+status: implemented
+implemented_date: 2026-05-30
+implemented_by: Team
+note: "Moved to docs/specs/done/ to mark as implemented."
+---
+
 # F001 - Assign Fine to Single User
 
 ## Problem
