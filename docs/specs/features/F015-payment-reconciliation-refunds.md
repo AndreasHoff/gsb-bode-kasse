@@ -1,10 +1,3 @@
----
-status: implemented
-implemented_date: 2026-05-30
-implemented_by: Team
-note: "Moved to docs/specs/done/ to mark as implemented."
----
-
 # F015 - Payment Reconciliation & Refunds
 
 ## Problem
@@ -17,3 +10,5 @@ Allow admins to mark payments as reconciled or issue refunds (manual), with audi
 - Reconciliation workflow available to admins
 - Refunds create `payment.refunded` activity entries
 - Financial records updated appropriately
+
+<!-- TODO: Not implemented in code — implement refund/reconcile helpers in `src/lib/firestore/payments.ts` and add admin UI. -->
