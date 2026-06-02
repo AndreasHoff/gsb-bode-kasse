@@ -4,6 +4,20 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.17.0 — 2. juni 2026
+
+**Feature: Bulk-operationer og forbedret versionsdetektion**
+
+- Bulk-operationer til bødetildeling med fremskridtsvisning for lang-kørende operationer
+- Ny `bulkSoftDeleteFines` og `bulkRestoreFines` funktionalitet med batch-support (450 ops/batch)
+- Forbedret fortryd-funktion understøtter nu både enkelt- og bulk-tildeling af bøder
+- Tilføjet genbrugelig `BulkOperationProgress`-komponent med tilgængelighedsattributter
+- Alle bulk-operationer logger til ActivityLog i overensstemmelse med domænereglerne
+- Omfattende test-suite tilføjet (7 tests for bulk-operationer)
+- **Fejlrettelse:** Versionsdetektion bruger nu localStorage til at eliminere falsk "ny version tilgængelig" besked ved hver opdatering — beskeden vises kun ved faktisk versionsskift
+
+---
+
 ## v0.16.0 — 2026-05-29
 
 **Feature: Admin-godkendelse af betalinger + release-klargøring af Hold-flow**

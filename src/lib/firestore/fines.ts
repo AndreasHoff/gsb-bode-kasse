@@ -84,6 +84,7 @@ export async function assignFine(
 export async function assignFineWithPayment(
   data: Omit<Fine, "id" | "createdAt" | "deletedAt">,
   actorId: string,
+  onProgress?: (completed: number, total: number) => void,
 ): Promise<{ fines: Fine[]; payments: Payment[] }> {
   const activeSeason = await getActiveSeason(data.teamId);
   if (!activeSeason || activeSeason.id !== data.seasonId) {
@@ -95,74 +96,93 @@ export async function assignFineWithPayment(
     throw new Error("Bøden mangler modtager");
   }
 
-  const batch = writeBatch(db);
+  const total = targetUserIds.length;
+  const MAX_OPS_PER_BATCH = 450;
+  const OPS_PER_FINE = 4; // fine + payment + payment log + fine log
+  const maxFinesPerBatch = Math.floor(MAX_OPS_PER_BATCH / OPS_PER_FINE);
 
-  const fines: Fine[] = [];
-  const payments: Payment[] = [];
+  const allFines: Fine[] = [];
+  const allPayments: Payment[] = [];
+  let completed = 0;
 
-  for (const targetUserId of targetUserIds) {
-    const createdAt = new Date().toISOString();
+  // Process in batches if needed
+  for (let i = 0; i < targetUserIds.length; i += maxFinesPerBatch) {
+    const batchUserIds = targetUserIds.slice(i, i + maxFinesPerBatch);
+    const batch = writeBatch(db);
 
-    const fineRef = doc(finesCol(data.teamId));
-    const fine: Fine = {
-      id: fineRef.id,
-      ...data,
-      assignedTo: [targetUserId],
-      createdAt,
-    };
-    batch.set(fineRef, fine);
-    fines.push(fine);
+    const fines: Fine[] = [];
+    const payments: Payment[] = [];
 
-    const paymentRef = doc(paymentsCol(data.teamId));
-    const payment: Payment = {
-      id: paymentRef.id,
-      fineId: fine.id,
-      userId: targetUserId,
-      amount: data.amount,
-      status: "unpaid",
-    };
-    batch.set(paymentRef, payment);
-    payments.push(payment);
+    for (const targetUserId of batchUserIds) {
+      const createdAt = new Date().toISOString();
 
-    const paymentLogRef = doc(activityLogCol(data.teamId));
-    const paymentLogEntry: ActivityLog = {
-      id: paymentLogRef.id,
-      teamId: data.teamId,
-      actorId,
-      action: "payment.created",
-      entityType: "payment",
-      entityId: payment.id,
-      metadata: {
-        fineId: fine.id,
-        userId: payment.userId,
-        amount: payment.amount,
-      },
-      createdAt,
-    };
-    batch.set(paymentLogRef, paymentLogEntry);
-
-    const logRef = doc(activityLogCol(data.teamId));
-    const logEntry: ActivityLog = {
-      id: logRef.id,
-      teamId: data.teamId,
-      actorId,
-      action: "fine.assigned",
-      entityType: "fine",
-      entityId: fine.id,
-      metadata: {
-        title: data.title,
-        amount: data.amount,
+      const fineRef = doc(finesCol(data.teamId));
+      const fine: Fine = {
+        id: fineRef.id,
+        ...data,
         assignedTo: [targetUserId],
-        seasonId: data.seasonId,
-        paymentId: payment.id,
-      },
-      createdAt,
-    };
-    batch.set(logRef, logEntry);
+        createdAt,
+      };
+      batch.set(fineRef, fine);
+      fines.push(fine);
+
+      const paymentRef = doc(paymentsCol(data.teamId));
+      const payment: Payment = {
+        id: paymentRef.id,
+        fineId: fine.id,
+        userId: targetUserId,
+        amount: data.amount,
+        status: "unpaid",
+      };
+      batch.set(paymentRef, payment);
+      payments.push(payment);
+
+      const paymentLogRef = doc(activityLogCol(data.teamId));
+      const paymentLogEntry: ActivityLog = {
+        id: paymentLogRef.id,
+        teamId: data.teamId,
+        actorId,
+        action: "payment.created",
+        entityType: "payment",
+        entityId: payment.id,
+        metadata: {
+          fineId: fine.id,
+          userId: payment.userId,
+          amount: payment.amount,
+        },
+        createdAt,
+      };
+      batch.set(paymentLogRef, paymentLogEntry);
+
+      const logRef = doc(activityLogCol(data.teamId));
+      const logEntry: ActivityLog = {
+        id: logRef.id,
+        teamId: data.teamId,
+        actorId,
+        action: "fine.assigned",
+        entityType: "fine",
+        entityId: fine.id,
+        metadata: {
+          title: data.title,
+          amount: data.amount,
+          assignedTo: [targetUserId],
+          seasonId: data.seasonId,
+          paymentId: payment.id,
+        },
+        createdAt,
+      };
+      batch.set(logRef, logEntry);
+    }
+
+    await batch.commit();
+    
+    allFines.push(...fines);
+    allPayments.push(...payments);
+    completed += batchUserIds.length;
+    onProgress?.(completed, total);
   }
 
-  await batch.commit();
-  return { fines, payments };
+  return { fines: allFines, payments: allPayments };
 }
 
 /**
@@ -235,4 +255,173 @@ export async function restoreFine(
   batch.set(logRef, logEntry);
 
   await batch.commit();
+}
+
+/**
+ * Bulk soft-delete multiple fines with progress tracking.
+ * Batches are committed in chunks of 450 operations (safe limit for Firestore).
+ * Returns successfully deleted fine IDs.
+ */
+export async function bulkSoftDeleteFines(
+  teamId: string,
+  fineIds: string[],
+  actorId: string,
+  onProgress?: (completed: number, total: number) => void,
+): Promise<{ deletedIds: string[]; errors: Array<{ fineId: string; error: string }> }> {
+  const deletedIds: string[] = [];
+  const errors: Array<{ fineId: string; error: string }> = [];
+  const total = fineIds.length;
+  const MAX_OPS_PER_BATCH = 450;
+
+  let batch = writeBatch(db);
+  let opsInBatch = 0;
+  let completedCount = 0;
+
+  for (const fineId of fineIds) {
+    try {
+      const existing = await getFine(teamId, fineId);
+      if (!existing) {
+        errors.push({ fineId, error: "Bøde ikke fundet" });
+        completedCount++;
+        onProgress?.(completedCount, total);
+        continue;
+      }
+
+      if (existing.deletedAt) {
+        errors.push({ fineId, error: "Bøde allerede slettet" });
+        completedCount++;
+        onProgress?.(completedCount, total);
+        continue;
+      }
+
+      const createdAt = new Date().toISOString();
+      const fRef = fineDoc(teamId, fineId);
+      const deleted: Fine = { ...existing, deletedAt: createdAt };
+      batch.set(fRef, deleted);
+      opsInBatch++;
+
+      const logRef = doc(activityLogCol(teamId));
+      const logEntry: ActivityLog = {
+        id: logRef.id,
+        teamId,
+        actorId,
+        action: "fine.deleted",
+        entityType: "fine",
+        entityId: fineId,
+        metadata: { title: existing.title, amount: existing.amount },
+        createdAt,
+      };
+      batch.set(logRef, logEntry);
+      opsInBatch++;
+
+      deletedIds.push(fineId);
+
+      // Commit batch when approaching limit
+      if (opsInBatch >= MAX_OPS_PER_BATCH) {
+        await batch.commit();
+        batch = writeBatch(db);
+        opsInBatch = 0;
+      }
+
+      completedCount++;
+      onProgress?.(completedCount, total);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ukendt fejl";
+      errors.push({ fineId, error: message });
+      completedCount++;
+      onProgress?.(completedCount, total);
+    }
+  }
+
+  // Commit remaining operations
+  if (opsInBatch > 0) {
+    await batch.commit();
+  }
+
+  return { deletedIds, errors };
+}
+
+/**
+ * Bulk restore multiple soft-deleted fines with progress tracking.
+ * Returns successfully restored fine IDs.
+ */
+export async function bulkRestoreFines(
+  teamId: string,
+  fineIds: string[],
+  actorId: string,
+  onProgress?: (completed: number, total: number) => void,
+): Promise<{ restoredIds: string[]; errors: Array<{ fineId: string; error: string }> }> {
+  const restoredIds: string[] = [];
+  const errors: Array<{ fineId: string; error: string }> = [];
+  const total = fineIds.length;
+  const MAX_OPS_PER_BATCH = 450;
+
+  let batch = writeBatch(db);
+  let opsInBatch = 0;
+  let completedCount = 0;
+
+  for (const fineId of fineIds) {
+    try {
+      const existing = await getFine(teamId, fineId);
+      if (!existing) {
+        errors.push({ fineId, error: "Bøde ikke fundet" });
+        completedCount++;
+        onProgress?.(completedCount, total);
+        continue;
+      }
+
+      if (!existing.deletedAt) {
+        errors.push({ fineId, error: "Bøde ikke slettet" });
+        completedCount++;
+        onProgress?.(completedCount, total);
+        continue;
+      }
+
+      const createdAt = new Date().toISOString();
+      const fRef = fineDoc(teamId, fineId);
+      const { deletedAt, ...withoutDeleted } = existing;
+      void deletedAt;
+      const restored: Fine = { ...withoutDeleted };
+      batch.set(fRef, restored);
+      opsInBatch++;
+
+      const logRef = doc(activityLogCol(teamId));
+      const logEntry: ActivityLog = {
+        id: logRef.id,
+        teamId,
+        actorId,
+        action: "fine.restored",
+        entityType: "fine",
+        entityId: fineId,
+        metadata: { title: existing.title, amount: existing.amount },
+        createdAt,
+      };
+      batch.set(logRef, logEntry);
+      opsInBatch++;
+
+      restoredIds.push(fineId);
+
+      // Commit batch when approaching limit
+      if (opsInBatch >= MAX_OPS_PER_BATCH) {
+        await batch.commit();
+        batch = writeBatch(db);
+        opsInBatch = 0;
+      }
+
+      completedCount++;
+      onProgress?.(completedCount, total);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ukendt fejl";
+      errors.push({ fineId, error: message });
+      completedCount++;
+      onProgress?.(completedCount, total);
+    }
+  }
+
+  // Commit remaining operations
+  if (opsInBatch > 0) {
+    await batch.commit();
+  }
+
+  return { restoredIds, errors };
 }

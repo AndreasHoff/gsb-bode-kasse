@@ -19,6 +19,7 @@ import {
 } from "../../lib/firestore";
 import { canAssignFines } from "../../lib/permissions";
 import { formatAmount } from "../../lib/utils";
+import BulkOperationProgress from "../../components/BulkOperationProgress";
 
 interface AssignFineProps {
   teamId: string;
@@ -54,6 +55,9 @@ export default function AssignFine({
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
+  const [assignProgress, setAssignProgress] = useState<{ completed: number; total: number } | null>(
+    null,
+  );
 
   const hasPermission = canAssignFines(actorRole, isSuperAdmin);
 
@@ -195,6 +199,7 @@ export default function AssignFine({
     setSubmitting(true);
     setError(null);
     setSuccessMessage(null);
+    setAssignProgress(null);
 
     try {
       const selectedIds = selectedTargets.map((member) => member.id);
@@ -241,6 +246,9 @@ export default function AssignFine({
           isShared: selectedIds.length > 1,
         },
         actorId,
+        (completed: number, total: number) => {
+          setAssignProgress({ completed, total });
+        },
       );
 
       setNote("");
@@ -248,6 +256,7 @@ export default function AssignFine({
         setSelectedUserIds([]);
       }
       setDuplicateWarning(null);
+      setAssignProgress(null);
 
       setSuccessMessage(
         fines.length === 1 ? "1 bøde blev tildelt." : `${fines.length} bøder blev tildelt.`,
@@ -483,7 +492,15 @@ export default function AssignFine({
             </button>
           </div>
         )}
+{assignProgress && (
+          <BulkOperationProgress
+            completed={assignProgress.completed}
+            total={assignProgress.total}
+            operation="Tildeler bøder..."
+          />
+        )}
 
+        
         {error && <p className="status-error">{error}</p>}
         {successMessage && <p className="status-note">{successMessage}</p>}
 

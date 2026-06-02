@@ -26,7 +26,7 @@ import {
   getActiveMembershipsForUser,
   getTeam,
   getTeams,
-  softDeleteFine,
+  bulkSoftDeleteFines,
   upsertMembership,
 } from "./lib/firestore";
 import type { Role } from "./types/domain";
@@ -46,6 +46,7 @@ type AppStatus = "checking" | "signed-out" | "ready" | "no-membership";
 type ColorTheme = "green" | "violet";
 
 const THEME_STORAGE_KEY = "gsb-color-theme";
+const APP_VERSION_STORAGE_KEY = "gsb-last-seen-version";
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("personal");
@@ -62,13 +63,14 @@ function App() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [viewingMemberId, setViewingMemberId] = useState("");
   const [viewingMemberName, setViewingMemberName] = useState("");
-  const [lastAssignedFine, setLastAssignedFine] = useState<{
+  const [lastAssignedFines, setLastAssignedFines] = useState<{
     teamId: string;
-    fineId: string;
-    memberName: string;
+    fineIds: string[];
+    memberNames: string[];
   } | null>(null);
   const [isUndoingAssign, setIsUndoingAssign] = useState(false);
   const [colorTheme, setColorTheme] = useState<ColorTheme>(() => getInitialTheme());
+  const [isVersionUpdating, setIsVersionUpdating] = useState(false);
   // Holds the name entered during registration so syncUserSession can use it
   // before Firebase Auth's onAuthStateChanged fires (before updateProfile runs).
   const pendingNameRef = useRef<string | null>(null);
@@ -82,6 +84,14 @@ function App() {
     void setupAuthListener();
 
     async function setupAuthListener(): Promise<void> {
+      // Check if there's a new version available
+      const currentVersion = getCurrentVersionFromPatchNotes(patchNotesMarkdown);
+      const lastSeenVersion = window.localStorage.getItem(APP_VERSION_STORAGE_KEY);
+      const hasNewVersion = lastSeenVersion !== null && lastSeenVersion !== currentVersion;
+      setIsVersionUpdating(hasNewVersion);
+      // Store current version for next time
+      window.localStorage.setItem(APP_VERSION_STORAGE_KEY, currentVersion);
+
       try {
         await ensurePersistentAuth();
       } catch {
@@ -223,15 +233,15 @@ function App() {
   }, [teamName]);
   const appVersion = getCurrentVersionFromPatchNotes(patchNotesMarkdown);
 
-  async function handleUndoLastAssignedFine(): Promise<void> {
-    if (!lastAssignedFine || !userId) {
+  async function handleUndoLastAssignedFines(): Promise<void> {
+    if (!lastAssignedFines || !userId) {
       return;
     }
 
     setIsUndoingAssign(true);
     try {
-      await softDeleteFine(lastAssignedFine.teamId, lastAssignedFine.fineId, userId);
-      setLastAssignedFine(null);
+      await bulkSoftDeleteFines(lastAssignedFines.teamId, lastAssignedFines.fineIds, userId);
+      setLastAssignedFines(null);
     } catch (error) {
       console.error("[fines] Undo assign failed", error);
     } finally {
@@ -294,10 +304,17 @@ function App() {
   if (status === "checking") {
     return (
       <div className="app-screen app-screen--center">
-        <div className="startup-loading" role="status" aria-live="polite">
-          <span className="startup-loading__spinner" aria-hidden="true" />
-          <p className="status-note">Ny version opdateres. Der går lige et par sekunder…</p>
-        </div>
+        {isVersionUpdating && (
+          <div className="startup-loading" role="status" aria-live="polite">
+            <span className="startup-loading__spinner" aria-hidden="true" />
+            <p className="status-note">Ny version opdateres. Der går lige et par sekunder…</p>
+          </div>
+        )}
+        {!isVersionUpdating && (
+          <div className="startup-loading" role="status" aria-live="polite">
+            <span className="startup-loading__spinner" aria-hidden="true" />
+          </div>
+        )}
       </div>
     );
   }
@@ -464,15 +481,11 @@ function App() {
             actorRole={userRole}
             isSuperAdmin={isSuperAdmin}
             onAssigned={({ fineIds, memberNames }) => {
-              if (fineIds.length === 1 && memberNames.length === 1) {
-                setLastAssignedFine({
-                  teamId,
-                  fineId: fineIds[0],
-                  memberName: memberNames[0],
-                });
-              } else {
-                setLastAssignedFine(null);
-              }
+              setLastAssignedFines({
+                teamId,
+                fineIds,
+                memberNames,
+              });
 
               setActiveTab("overview");
             }}
@@ -519,17 +532,19 @@ function App() {
         )}
       </main>
 
-      {lastAssignedFine && (
+      {lastAssignedFines && (
         <div className="app-main pt-0 pb-2">
           <div className="app-card app-card--muted p-3 flex items-center justify-between gap-3">
             <p className="text-xs text-[var(--color-text)]">
-              Bøde tildelt til {lastAssignedFine.memberName}.
+              {lastAssignedFines.fineIds.length === 1
+                ? `Bøde tildelt til ${lastAssignedFines.memberNames[0]}.`
+                : `${lastAssignedFines.fineIds.length} bøder tildelt.`}
             </p>
             <button
               type="button"
               className="btn-secondary px-3 py-1.5 text-xs"
               onClick={() => {
-                void handleUndoLastAssignedFine();
+                void handleUndoLastAssignedFines();
               }}
               disabled={isUndoingAssign}
             >
