@@ -1,10 +1,10 @@
 /* Bødekasse Saldo header card */
 .team-saldo-card {
-	padding: 1.5rem 1.25rem;
+	padding: 1.4rem 1.2rem;
 	border-radius: 1.25rem;
 	border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
 	background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-muted) 60%);
-	margin-bottom: 1rem;
+	margin-bottom: 1.25rem;
 	text-align: center;
 }
 
@@ -28,18 +28,18 @@
 .team-stats {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 0.6rem;
+	gap: 0.65rem;
 	margin-bottom: 1.5rem;
 }
 
 .team-stat-card {
-	padding: 0.85rem 0.65rem;
+	padding: 0.9rem 0.7rem;
 	border-radius: 1rem;
 	border: 1px solid var(--color-border);
 	background: color-mix(in srgb, var(--color-surface-muted) 52%, transparent);
 	display: flex;
 	flex-direction: column;
-	gap: 0.2rem;
+	gap: 0.25rem;
 }
 
 .team-stat-card--paid {
@@ -51,12 +51,12 @@
 }
 
 .team-stat-card__emoji {
-	font-size: 1rem;
+	font-size: 1.05rem;
 	margin-bottom: 0.1rem;
 }
 
 .team-stat-card__label {
-	font-size: 0.65rem;
+	font-size: 0.68rem;
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
@@ -64,7 +64,7 @@
 }
 
 .team-stat-card__value {
-	font-size: 1rem;
+	font-size: 1.05rem;
 	font-weight: 800;
 	line-height: 1.1;
 	color: var(--color-text);
@@ -82,7 +82,7 @@
 .team-member-list {
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
+	gap: 0.65rem;
 }
 
 .team-member-row {
@@ -92,7 +92,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 0.75rem;
-	padding: 0.75rem 0.9rem;
+	padding: 0.85rem 0.95rem;
 	border-radius: 1rem;
 	border: 1px solid var(--color-border);
 	background: color-mix(in srgb, var(--color-surface-muted) 72%, transparent);
@@ -114,15 +114,15 @@
 }
 
 .team-member-avatar {
-	width: 2.1rem;
-	height: 2.1rem;
+	width: 2.2rem;
+	height: 2.2rem;
 	border-radius: 50%;
 	background: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface-muted));
 	border: 1.5px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 0.72rem;
+	font-size: 0.75rem;
 	font-weight: 700;
 	color: var(--color-primary);
 	flex-shrink: 0;
@@ -133,7 +133,7 @@
 }
 
 .team-member-info__name {
-	font-size: 0.85rem;
+	font-size: 0.88rem;
 	font-weight: 600;
 	color: var(--color-text);
 	white-space: nowrap;
@@ -142,7 +142,7 @@
 }
 
 .team-member-info__role {
-	font-size: 0.68rem;
+	font-size: 0.7rem;
 	color: var(--color-text-muted);
 	margin-top: 0.1rem;
 }

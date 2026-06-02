@@ -20,6 +20,7 @@ import {
 import { canAssignFines } from "../../lib/permissions";
 import { formatAmount } from "../../lib/utils";
 import BulkOperationProgress from "../../components/BulkOperationProgress";
+import "./assign-fine.css";
 
 interface AssignFineProps {
   teamId: string;
@@ -279,7 +280,7 @@ export default function AssignFine({
 
   if (!hasPermission) {
     return (
-      <div className="app-page">
+      <div className="assign-fine">
         <h1 className="app-title">Giv bøde</h1>
         <p className="status-error mt-4">Kun admins kan tildele bøder.</p>
       </div>
@@ -288,7 +289,7 @@ export default function AssignFine({
 
   if (loading) {
     return (
-      <div className="app-page">
+      <div className="assign-fine">
         <h1 className="app-title">Giv bøde</h1>
         <p className="status-note mt-4">Henter bødetyper og medlemmer...</p>
       </div>
@@ -297,12 +298,12 @@ export default function AssignFine({
 
   if (!activeSeason) {
     return (
-      <div className="app-page">
+      <div className="assign-fine">
         <h1 className="app-title">Giv bøde</h1>
-        <div className="empty-state mt-6">
-          <p className="text-4xl mb-3">📅</p>
-          <p className="text-sm font-semibold">Ingen aktiv sæson</p>
-          <p className="text-xs mt-2">Opret eller aktiver en sæson før du kan tildele bøder.</p>
+        <div className="empty-state mt-4">
+          <span className="empty-state__emoji">📅</span>
+          <p className="section-heading mb-2">Ingen aktiv sæson</p>
+          <p className="empty-state__text">Opret eller aktiver en sæson før du kan tildele bøder.</p>
         </div>
       </div>
     );
@@ -310,12 +311,12 @@ export default function AssignFine({
 
   if (rules.length === 0) {
     return (
-      <div className="app-page">
+      <div className="assign-fine">
         <h1 className="app-title">Giv bøde</h1>
-        <div className="empty-state mt-6">
-          <p className="text-4xl mb-3">📋</p>
-          <p className="text-sm font-semibold">Ingen aktive bødetyper</p>
-          <p className="text-xs mt-2">Gå til fanen "Bøder" og opret mindst én bødetype.</p>
+        <div className="empty-state mt-4">
+          <span className="empty-state__emoji">📋</span>
+          <p className="section-heading mb-2">Ingen aktive bødetyper</p>
+          <p className="empty-state__text">Gå til fanen "Bøder" og opret mindst én bødetype.</p>
         </div>
       </div>
     );
@@ -323,48 +324,72 @@ export default function AssignFine({
 
   if (members.length === 0) {
     return (
-      <div className="app-page">
+      <div className="assign-fine">
         <h1 className="app-title">Giv bøde</h1>
-        <div className="empty-state mt-6">
-          <p className="text-4xl mb-3">👥</p>
-          <p className="text-sm font-semibold">Ingen aktive medlemmer</p>
-          <p className="text-xs mt-2">Tilføj medlemmer til holdet før du kan tildele bøder.</p>
+        <div className="empty-state mt-4">
+          <span className="empty-state__emoji">👥</span>
+          <p className="section-heading mb-2">Ingen aktive medlemmer</p>
+          <p className="empty-state__text">Tilføj medlemmer til holdet før du kan tildele bøder.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="app-page pb-8">
+    <div className="assign-fine">
       <h1 className="app-title">Giv bøde</h1>
-      <p className="app-subtitle mb-6">Tildel en bøde til én eller flere spillere</p>
+      <p className="app-subtitle mb-4">Tildel en bøde til én eller flere spillere</p>
+
+      {successMessage && (
+        <div className="assign-fine-success">
+          <p className="assign-fine-success__title">✅ Succes!</p>
+          <p className="assign-fine-success__text">{successMessage}</p>
+        </div>
+      )}
+
+      <div className="assign-fine-mode-toggle">
+        <button
+          type="button"
+          className={`assign-fine-mode-btn ${mode === "single" ? "assign-fine-mode-btn--active" : ""}`}
+          onClick={() => setMode("single")}
+          disabled={submitting}
+        >
+          Én spiller
+        </button>
+        <button
+          type="button"
+          className={`assign-fine-mode-btn ${mode === "multiple" ? "assign-fine-mode-btn--active" : ""}`}
+          onClick={() => setMode("multiple")}
+          disabled={submitting}
+        >
+          Flere spillere
+        </button>
+      </div>
 
       <form
         onSubmit={(event) => {
           void handleSubmit(event);
         }}
-        className="app-card p-4 flex flex-col gap-4"
+        className="assign-fine-form"
       >
-        <div>
-          <p className="block text-sm font-semibold mb-2">Tildeling</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className={`btn-secondary ${mode === "single" ? "ring-2 ring-[var(--color-primary)]" : ""}`}
-              onClick={() => setMode("single")}
-              disabled={submitting}
-            >
-              Én spiller
-            </button>
-            <button
-              type="button"
-              className={`btn-secondary ${mode === "multiple" ? "ring-2 ring-[var(--color-primary)]" : ""}`}
-              onClick={() => setMode("multiple")}
-              disabled={submitting}
-            >
-              Flere spillere
-            </button>
-          </div>
+        <div className="form-group">
+          <label htmlFor="assign-rule" className="form-label">
+            Bødetype
+          </label>
+          <select
+            id="assign-rule"
+            className="form-select"
+            value={selectedRuleId}
+            onChange={(event) => setSelectedRuleId(event.target.value)}
+            disabled={submitting}
+          >
+            {rules.map((rule) => (
+              <option key={rule.id} value={rule.id}>
+                {rule.emoji ? `${rule.emoji} ` : ""}
+                {rule.title} ({formatAmount(rule.amount)})
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -388,13 +413,13 @@ export default function AssignFine({
         </div>
 
         {mode === "single" && (
-          <div>
-            <label htmlFor="assign-member" className="block text-sm font-semibold mb-1">
+          <div className="form-group">
+            <label htmlFor="assign-member" className="form-label">
               Spiller
             </label>
             <select
               id="assign-member"
-              className="field__input"
+              className="form-select"
               value={selectedUserId}
               onChange={(event) => {
                 const value = event.target.value;
@@ -414,11 +439,11 @@ export default function AssignFine({
 
         {mode === "multiple" && (
           <div>
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <p className="block text-sm font-semibold">Spillere</p>
+            <div className="assign-fine-multi-header">
+              <p className="assign-fine-multi-label">Spillere</p>
               <button
                 type="button"
-                className="btn-secondary px-3 py-1.5 text-xs"
+                className="btn-secondary btn-small assign-fine-select-all"
                 onClick={handleToggleAllMembers}
                 disabled={submitting || members.length === 0}
               >
@@ -426,35 +451,33 @@ export default function AssignFine({
               </button>
             </div>
 
-            <div className="max-h-64 overflow-y-auto rounded-[var(--radius-card)] border border-[var(--color-border)] divide-y divide-[var(--color-border)]">
+            <div className="assign-fine-members-list">
               {members.map((member) => {
                 const checked = selectedUserIds.includes(member.id);
                 return (
-                  <label
+                  <div
                     key={member.id}
-                    className="flex items-center gap-3 px-3 py-2 text-sm"
+                    className={`assign-fine-member-item ${checked ? "assign-fine-member-item--selected" : ""}`}
+                    onClick={() => handleToggleMember(member.id)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleToggleMember(member.id)}
-                      disabled={submitting}
-                    />
-                    <span>{member.name}</span>
-                  </label>
+                    <div className="assign-fine-checkbox">
+                      {checked && "✓"}
+                    </div>
+                    <span className="assign-fine-member-name">{member.name}</span>
+                  </div>
                 );
               })}
             </div>
           </div>
         )}
 
-        <div>
-          <label htmlFor="assign-note" className="block text-sm font-semibold mb-1">
+        <div className="form-group">
+          <label htmlFor="assign-note" className="form-label">
             Notat (valgfri)
           </label>
           <textarea
             id="assign-note"
-            className="field__input"
+            className="form-textarea"
             rows={3}
             value={note}
             onChange={(event) => setNote(event.target.value)}
@@ -463,13 +486,22 @@ export default function AssignFine({
           />
         </div>
 
-        <div className="app-card app-card--muted p-3">
-          <p className="text-xs text-[var(--color-text-muted)]">Klar til tildeling</p>
-          <p className="text-sm font-semibold mt-1">
-            {selectedTargets.length === 1
-              ? "1 spiller valgt"
-              : `${selectedTargets.length} spillere valgt`}
-          </p>
+        <div className="assign-fine-summary">
+          <p className="assign-fine-summary__title">Klar til tildeling</p>
+          <div className="assign-fine-summary__row">
+            <span className="assign-fine-summary__label">Spillere:</span>
+            <span className="assign-fine-summary__value assign-fine-summary__value--highlight">
+              {selectedTargets.length === 1
+                ? "1 spiller"
+                : `${selectedTargets.length} spillere`}
+            </span>
+          </div>
+          <div className="assign-fine-summary__row">
+            <span className="assign-fine-summary__label">Total:</span>
+            <span className="assign-fine-summary__value">
+              {selectedRule ? formatAmount(selectedRule.amount * selectedTargets.length) : "-"}
+            </span>
+          </div>
         </div>
 
         {duplicateWarning && (
@@ -492,7 +524,8 @@ export default function AssignFine({
             </button>
           </div>
         )}
-{assignProgress && (
+
+        {assignProgress && (
           <BulkOperationProgress
             completed={assignProgress.completed}
             total={assignProgress.total}
@@ -500,11 +533,9 @@ export default function AssignFine({
           />
         )}
 
-        
         {error && <p className="status-error">{error}</p>}
-        {successMessage && <p className="status-note">{successMessage}</p>}
 
-        <button type="submit" className="btn-primary w-full" disabled={submitting}>
+        <button type="submit" className="btn-primary assign-fine-submit" disabled={submitting}>
           {submitting
             ? "Tildeler..."
             : selectedTargets.length === 1

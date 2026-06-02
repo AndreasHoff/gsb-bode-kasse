@@ -1,12 +1,12 @@
 .app-shell {
 	position: relative;
-	overflow: hidden;
 	width: 100%;
 	max-width: 430px;
-	min-height: 100vh;
+	height: 100vh;
 	margin: 0 auto;
 	display: flex;
 	flex-direction: column;
+	overflow: hidden;
 	background:
 		radial-gradient(circle at 12% 8%, var(--color-auth-orb-left) 0%, transparent 28%),
 		radial-gradient(circle at 88% 88%, var(--color-auth-orb-right) 0%, transparent 26%),
@@ -64,13 +64,18 @@
 .app-main {
 	flex: 1;
 	overflow-y: auto;
+	padding-top: 4.5rem;
 	padding-bottom: var(--app-main-bottom-space);
 }
 
 .app-header {
-	position: sticky;
+	position: fixed;
 	top: 0;
-	z-index: 10;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 100%;
+	max-width: 430px;
+	z-index: 20;
 	padding: 0.75rem 1rem;
 	border-bottom: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
 	background: color-mix(in srgb, var(--color-auth-bg-end) 74%, transparent);
@@ -195,7 +200,7 @@
 .app-title {
 	margin: 0;
 	color: var(--color-text);
-	font-size: 1.65rem;
+	font-size: 1.2rem;
 	line-height: 1.15;
 	font-weight: 800;
 }

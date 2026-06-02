@@ -9,6 +9,7 @@ import {
   initiatePayment,
 } from "../../lib/firestore";
 import { buildMobilePayDeepLink, formatAmount, formatRelativeTime } from "../../lib/utils";
+import "./personal-overview.css";
 
 interface PersonalOverviewProps {
   teamId: string;
@@ -135,6 +136,13 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
     [unpaidRows],
   );
 
+  const paidTotal = useMemo(
+    () => paidRows.reduce((sum, row) => sum + row.fine.amount, 0),
+    [paidRows],
+  );
+
+  const totalFinesCount = fineRows.length;
+
   const canPay = unpaidTotal > 0 && !!mobilePayRecipient;
 
   async function startMobilePay(amount: number, comment: string): Promise<void> {
@@ -224,21 +232,38 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
   }
 
   return (
-    <div className="app-page pb-8">
-      <h1 className="app-title">{isViewerMode ? viewerName : "Mine bøder"}</h1>
-      <p className="app-subtitle mb-6">{isViewerMode ? "Udestående bøder" : "Aktiv sæson"}</p>
+    <div className="personal-overview">
+      <h1 className="app-title">{isViewerMode ? viewerName : "Min profil"}</h1>
+      <p className="app-subtitle mb-4">{isViewerMode ? "Udestående bøder" : "Aktiv sæson"}</p>
 
-      <div className="app-card app-card--muted mb-4 p-5 text-center">
-        <p className="text-sm font-medium text-[var(--color-text-muted)]">Udestående</p>
-        <p className="mt-1 text-4xl font-bold text-[var(--color-primary)]">
-          {loading ? "..." : formatAmount(unpaidTotal)}
-        </p>
+      <div className="personal-stats">
+        <div className="personal-stat-card personal-stat-card--total">
+          <span className="personal-stat-card__emoji">📋</span>
+          <span className="personal-stat-card__label">Bøder i alt</span>
+          <span className="personal-stat-card__value">
+            {loading ? "…" : totalFinesCount}
+          </span>
+        </div>
+        <div className="personal-stat-card personal-stat-card--outstanding">
+          <span className="personal-stat-card__emoji">⏳</span>
+          <span className="personal-stat-card__label">Skylder</span>
+          <span className="personal-stat-card__value">
+            {loading ? "…" : formatAmount(unpaidTotal)}
+          </span>
+        </div>
+        <div className="personal-stat-card personal-stat-card--paid">
+          <span className="personal-stat-card__emoji">✅</span>
+          <span className="personal-stat-card__label">Betalt</span>
+          <span className="personal-stat-card__value">
+            {loading ? "…" : formatAmount(paidTotal)}
+          </span>
+        </div>
       </div>
 
       {!isViewerMode && (
         <button
           type="button"
-          className="btn-primary w-full mb-6"
+          className="btn-primary personal-pay-btn"
           onClick={() => {
             void handlePayAll();
           }}
@@ -259,9 +284,9 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       {loading && <p className="status-note">Henter dine bøder...</p>}
 
       {!loading && fineRows.length === 0 && (
-        <div className="empty-state py-8">
-          <p className="text-4xl mb-3">✅</p>
-          <p className="text-sm">
+        <div className="empty-state">
+          <span className="empty-state__emoji">✅</span>
+          <p className="empty-state__text">
             {isViewerMode
               ? `${viewerName} har ingen bøder i aktiv sæson.`
               : "Du har ingen bøder i aktiv sæson."}
@@ -270,16 +295,16 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       )}
 
       {!loading && fineRows.length > 0 && unpaidRows.length === 0 && pendingRows.length === 0 && (
-        <div className="empty-state py-6 mb-4">
-          <p className="text-4xl mb-3">🎉</p>
-          <p className="text-sm">Alt er betalt. Stærkt!</p>
+        <div className="empty-state mb-4">
+          <span className="empty-state__emoji">🎉</span>
+          <p className="empty-state__text">Alt er betalt. Stærkt!</p>
         </div>
       )}
 
       {!loading && unpaidRows.length > 0 && (
-        <section className="mb-6" aria-label="Ubetalte bøder">
-          <h2 className="text-sm font-semibold mb-3">Ubetalte bøder</h2>
-          <div className="space-y-3">
+        <section className="personal-section" aria-label="Ubetalte bøder">
+          <h2 className="personal-section__title">Ubetalte bøder</h2>
+          <div className="item-list">
             {unpaidRows.map((row) => (
               <FineRowCard
                 key={row.fine.id}
@@ -296,9 +321,9 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       )}
 
       {!loading && pendingRows.length > 0 && (
-        <section className="mb-6" aria-label="Afventer godkendelse">
-          <h2 className="text-sm font-semibold mb-3">Afventer godkendelse</h2>
-          <div className="space-y-3">
+        <section className="personal-section" aria-label="Afventer godkendelse">
+          <h2 className="personal-section__title">Afventer godkendelse</h2>
+          <div className="item-list">
             {pendingRows.map((row) => (
               <FineRowCard
                 key={row.fine.id}
@@ -314,14 +339,19 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         <section aria-label="Betalte bøder">
           <button
             type="button"
-            className="btn-secondary w-full text-sm"
+            className="personal-paid-toggle"
             onClick={() => setPaidOpen((open) => !open)}
           >
-            {paidOpen ? "Skjul" : "Vis"} betalte bøder ({paidRows.length})
+            <span className="personal-paid-toggle__text">
+              {paidOpen ? "Skjul" : "Vis"} betalte bøder ({paidRows.length})
+            </span>
+            <span className={`personal-paid-toggle__arrow ${paidOpen ? "personal-paid-toggle__arrow--open" : ""}`}>
+              ▼
+            </span>
           </button>
 
           {paidOpen && (
-            <div className="space-y-3 mt-3">
+            <div className="personal-paid-list">
               {paidRows.map((row) => (
                 <FineRowCard key={row.fine.id} row={row} badge="✅ Betalt" />
               ))}
@@ -349,29 +379,30 @@ function FineRowCard({
   onAction,
 }: FineRowCardProps) {
   return (
-    <article className="app-card p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-[var(--color-text)]">{row.fine.title}</p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">
+    <article className="personal-fine-card">
+      <div className="personal-fine-card__header">
+        <div className="personal-fine-card__info">
+          <p className="personal-fine-card__title">{row.fine.title}</p>
+          <p className="personal-fine-card__meta">
             {formatRelativeTime(row.fine.createdAt)} · Tildelt af {row.assignedByName}
           </p>
-          {row.fine.note && (
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">Notat: {row.fine.note}</p>
-          )}
         </div>
 
-        <p className="text-sm font-bold text-[var(--color-primary)] shrink-0">
+        <p className="personal-fine-card__amount">
           {formatAmount(row.fine.amount)}
         </p>
       </div>
 
-      {badge && <p className="text-xs mt-2 text-[var(--color-text-muted)]">{badge}</p>}
+      {row.fine.note && (
+        <p className="personal-fine-card__note">Notat: {row.fine.note}</p>
+      )}
+
+      {badge && <p className="personal-fine-card__badge">{badge}</p>}
 
       {onAction && (
         <button
           type="button"
-          className="btn-primary mt-3 w-full"
+          className="btn-primary personal-fine-card__action w-full"
           disabled={actionDisabled}
           onClick={onAction}
         >
