@@ -143,7 +143,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
 
   const totalFinesCount = fineRows.length;
 
-  const canPay = unpaidTotal > 0 && !!mobilePayRecipient;
+  const canPay = unpaidTotal > 0;
 
   async function startMobilePay(amount: number, comment: string): Promise<void> {
     const recipient = mobilePayRecipient?.trim();
@@ -275,7 +275,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
 
       {!isViewerMode && !loading && unpaidTotal > 0 && !mobilePayRecipient && (
         <p className="status-note mb-4">
-          Holdets MobilePay-modtager mangler. Kontakt en admin.
+          MobilePay-modtager mangler – betaling registreres og afventer admin-godkendelse.
         </p>
       )}
 
@@ -310,7 +310,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
                 key={row.fine.id}
                 row={row}
                 actionLabel={payingFineId === row.fine.id ? "Starter..." : "Betal"}
-                actionDisabled={isViewerMode || !mobilePayRecipient || payingFineId === row.fine.id || isPayingAll}
+                actionDisabled={isViewerMode || payingFineId === row.fine.id || isPayingAll}
                 onAction={isViewerMode ? undefined : () => {
                   void handlePaySingle(row);
                 }}
