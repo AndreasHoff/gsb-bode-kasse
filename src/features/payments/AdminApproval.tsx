@@ -48,10 +48,11 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
 
   if (!teamId) {
     return (
-      <div className="app-page">
+      <div className="admin-approval">
         <h1 className="app-title">Godkend betalinger</h1>
-        <div className="empty-state">
-          <p>Vælg et hold for at se betalinger.</p>
+        <div className="empty-state mt-4">
+          <span className="empty-state__emoji">🏢</span>
+          <p className="empty-state__text">Vælg et hold for at se betalinger.</p>
         </div>
       </div>
     );
@@ -59,10 +60,11 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
 
   if (!canApprovePayments(userRole ?? null, isSuperAdmin)) {
     return (
-      <div className="app-page">
+      <div className="admin-approval">
         <h1 className="app-title">Godkend betalinger</h1>
-        <div className="empty-state">
-          <p>Du har ikke adgang til at godkende betalinger.</p>
+        <div className="empty-state mt-4">
+          <span className="empty-state__emoji">🔒</span>
+          <p className="empty-state__text">Du har ikke adgang til at godkende betalinger.</p>
         </div>
       </div>
     );
@@ -97,27 +99,23 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
   }
 
   return (
-    <div className="app-page">
+    <div className="admin-approval">
       <h1 className="app-title">Godkend betalinger</h1>
+      <p className="app-subtitle mb-4">Gennemgå og godkend indkomne betalinger</p>
 
-      <p className="app-subtitle mb-4" role="status" aria-live="polite">
-        Ventende betalinger: {items.length}
-      </p>
+      <div className="admin-approval-count">
+        <span className="admin-approval-count__label">Ventende:</span>
+        <span className="admin-approval-count__value">{items.length}</span>
+      </div>
 
-      {loading && (
-        <p className="status-note" role="status" aria-live="polite">
-          Indlæser betalinger…
-        </p>
-      )}
-      {error && (
-        <div className="app-card app-card--muted p-3 mb-3 text-xs text-red-600" role="alert">
-          {error}
-        </div>
-      )}
+      {loading && <p className="status-note">Indlæser betalinger…</p>}
+      
+      {error && <p className="status-error mb-3">{error}</p>}
 
       {items.length === 0 && !loading && (
         <div className="empty-state">
-          <p>Der er ingen betalinger, der venter på godkendelse.</p>
+          <span className="empty-state__emoji">✅</span>
+          <p className="empty-state__text">Der er ingen betalinger, der venter på godkendelse.</p>
         </div>
       )}
 
@@ -125,9 +123,9 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
         {items.map((it) => (
           <li key={it.payment.id} className="app-card admin-approval-item">
             <div className="admin-approval-main">
-              <div className="admin-approval-title">
-                <strong>{it.userName ?? it.payment.userId}</strong>
-                <span className="admin-approval-fine">{it.fineTitle ?? "Bøde"}</span>
+              <div className="admin-approval-info">
+                <p className="admin-approval-name">{it.userName ?? it.payment.userId}</p>
+                <p className="admin-approval-fine">{it.fineTitle ?? "Bøde"}</p>
               </div>
               <div className="admin-approval-meta">
                 <span className="admin-approval-amount">{formatAmount(it.payment.amount)}</span>
@@ -147,7 +145,7 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
               </button>
               <button
                 type="button"
-                className="btn-secondary ml-2"
+                className="btn-secondary"
                 onClick={() => void handleDispute(it.payment.id)}
                 disabled={processingId === it.payment.id}
               >

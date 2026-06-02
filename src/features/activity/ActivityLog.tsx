@@ -119,7 +119,7 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
   }
 
   return (
-    <div className="app-page">
+    <div className="activity-log">
       <h1 className="app-title">Historik</h1>
       <p className="app-subtitle mb-4">Følg bøder og betalinger for aktiv sæson</p>
 

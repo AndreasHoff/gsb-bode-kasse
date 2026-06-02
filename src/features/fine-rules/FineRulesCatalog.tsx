@@ -34,9 +34,9 @@ export default function FineRulesCatalog({
     return (
       <div className="app-page">
         <h1 className="app-title">Bøder</h1>
-        <div className="empty-state mt-6">
-          <p className="text-4xl mb-3">📋</p>
-          <p className="text-sm">Intet hold valgt.</p>
+        <div className="empty-state mt-4">
+          <span className="empty-state__emoji">📋</span>
+          <p className="empty-state__text">Intet hold valgt.</p>
         </div>
       </div>
     );
@@ -101,7 +101,7 @@ function FineRulesList({
 
   return (
     <div className="app-page pb-8">
-      <div className="flex items-start justify-between mb-6 gap-3">
+      <div className="flex items-start justify-between mb-4 gap-3">
         <div>
           <h1 className="app-title">Bøder</h1>
           <p className="app-subtitle">
@@ -111,7 +111,7 @@ function FineRulesList({
         {canManageRules && (
           <button
             type="button"
-            className="btn-primary px-4 py-2 text-sm rounded-2xl shrink-0"
+            className="btn-primary btn-small shrink-0"
             onClick={onNew}
           >
             + Ny bøde
@@ -121,26 +121,20 @@ function FineRulesList({
 
       {error && <p className="status-error mb-4">{error}</p>}
 
-      {loading && (
-        <div className="app-card app-card--muted p-5 text-center">
-          <p className="status-note">Henter bøder...</p>
-        </div>
-      )}
+      {loading && <p className="status-note">Henter bøder...</p>}
 
       {!loading && !error && rules.length === 0 && (
-        <div className="app-card app-card--muted p-6 text-center">
-          <p className="text-4xl mb-3">📋</p>
-          <p className="text-sm font-semibold">Ingen bøder oprettet endnu.</p>
+        <div className="empty-state">
+          <span className="empty-state__emoji">📋</span>
+          <p className="section-heading mb-2">Ingen bøder oprettet endnu.</p>
           {canManageRules && (
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">
-              Tryk "+ Ny bøde" for at oprette den første bødetype.
-            </p>
+            <p className="empty-state__text">Tryk "+ Ny bøde" for at oprette den første bødetype.</p>
           )}
         </div>
       )}
 
       {!loading && rules.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className="item-list">
           {rules.map((rule) => (
             <FineRuleCard
               key={rule.id}

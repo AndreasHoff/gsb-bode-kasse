@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
 import patchNotesMarkdown from "../docs/PATCH_NOTES.md?raw";
 import TeamOverview from "./features/overview/TeamOverview";
-import PersonalOverview from "./features/personal/PersonalOverview";
 import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
 import AssignFine from "./features/fines/AssignFine";
 import Evangeliet from "./features/evangeliet/Evangeliet";
@@ -40,8 +39,7 @@ type Tab =
   | "evangeliet"
   | "activity"
   | "proposals"
-  | "settings"
-  | "profile";
+  | "settings";
 type AppStatus = "checking" | "signed-out" | "ready" | "no-membership";
 type ColorTheme = "green" | "violet";
 
@@ -61,8 +59,6 @@ function App() {
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [userId, setUserId] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [viewingMemberId, setViewingMemberId] = useState("");
-  const [viewingMemberName, setViewingMemberName] = useState("");
   const [lastAssignedFines, setLastAssignedFines] = useState<{
     teamId: string;
     fineIds: string[];
@@ -344,7 +340,7 @@ function App() {
 
   const primaryMenuItems: Array<{ tab: Tab; label: string; emoji: string }> = [
     { tab: "overview", label: "Hold", emoji: "🏆" },
-    { tab: "personal", label: "Mine", emoji: "👤" },
+    { tab: "personal", label: "Profil", emoji: "👤" },
     { tab: "fine-rules", label: "Bøder", emoji: "📋" },
     { tab: "evangeliet", label: "Evangeliet", emoji: "📜" },
     { tab: "activity", label: "Historik", emoji: "📊" },
@@ -354,8 +350,6 @@ function App() {
   if (canAssignFines(userRole, isSuperAdmin)) {
     menuItems.splice(1, 0, { tab: "assign-fine", label: "Giv bøde", emoji: "🎯" });
   }
-
-  menuItems.push({ tab: "profile", label: "Profil", emoji: "🪪" });
 
   if (canApprovePayments(userRole, isSuperAdmin)) {
     menuItems.push({ tab: "settings", label: "Indstillinger", emoji: "⚙️" });
@@ -389,10 +383,6 @@ function App() {
                 key={item.tab}
                 type="button"
                 onClick={() => {
-                  if (item.tab === "personal") {
-                    setViewingMemberId("");
-                    setViewingMemberName("");
-                  }
                   setActiveTab(item.tab);
                   setIsSideMenuOpen(false);
                 }}
@@ -467,10 +457,8 @@ function App() {
             userRole={userRole}
             isSuperAdmin={isSuperAdmin}
             onOpenAdminApprovals={() => setActiveTab("settings")}
-            onMemberSelect={(memberId, memberName) => {
-              setViewingMemberId(memberId);
-              setViewingMemberName(memberName);
-              setActiveTab("personal");
+            onMemberSelect={() => {
+              // Member detail view removed - Profil tab now shows account settings only
             }}
           />
         )}
@@ -492,10 +480,12 @@ function App() {
           />
         )}
         {activeTab === "personal" && (
-          <PersonalOverview
+          <UserProfile
+            userId={userId}
             teamId={teamId}
-            userId={viewingMemberId || userId}
-            viewerName={viewingMemberId && viewingMemberId !== userId ? viewingMemberName : undefined}
+            email={userEmail}
+            displayName={displayName}
+            onNameChange={setDisplayName}
           />
         )}
         {activeTab === "fine-rules" && (
@@ -521,15 +511,7 @@ function App() {
             <SettingsPlaceholder />
           )
         )}
-        {activeTab === "profile" && (
-          <UserProfile
-            userId={userId}
-            teamId={teamId}
-            email={userEmail}
-            displayName={displayName}
-            onNameChange={setDisplayName}
-          />
-        )}
+
       </main>
 
       {lastAssignedFines && (
@@ -557,13 +539,7 @@ function App() {
       <BottomNavbar
         items={primaryMenuItems}
         activeTab={activeTab}
-        onTabChange={(tab) => {
-          if (tab === "personal") {
-            setViewingMemberId("");
-            setViewingMemberName("");
-          }
-          setActiveTab(tab);
-        }}
+        onTabChange={setActiveTab}
       />
     </div>
   );

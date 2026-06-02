@@ -1,10 +1,11 @@
 .bottom-navbar {
   position: fixed;
   left: 50%;
-  bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  bottom: env(safe-area-inset-bottom, 0px);
   width: 100%;
   max-width: 430px;
   transform: translateX(-50%);
+  z-index: 10;
   display: flex;
   overflow: hidden;
   background: color-mix(in srgb, var(--color-auth-bg-end) 82%, transparent);
