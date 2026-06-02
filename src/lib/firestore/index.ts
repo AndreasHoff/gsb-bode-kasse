@@ -40,6 +40,8 @@ export {
   assignFineWithPayment,
   softDeleteFine,
   restoreFine,
+  bulkSoftDeleteFines,
+  bulkRestoreFines,
 } from "./fines";
 
 export {
