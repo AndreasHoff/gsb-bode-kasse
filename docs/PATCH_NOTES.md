@@ -4,6 +4,19 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.18.0 — 3. juni 2026
+
+**Feature: Forbedret Profil-visning og UI-strømlining**
+
+- Omdøbt "Mine" til "Profil" i bundmenuen og samlet kontoindstillinger i én visning
+- Tilføjet tre opsummeringskort i Profil med nøgletal: Bøder i alt, Skylder og Betalt
+- Fjernet duplikeret "Konto"-menupunkt fra sidemenuen — al profilfunktionalitet er nu samlet ét sted
+- Top-navigationsbar er nu sticky med fast placering, så den bliver synlig under scroll
+- Strømlinet overskriftstørrelse til 1.2rem på tværs af alle faner for ensartet hierarki
+- Justeret skriftstørrelser i stat-kort for bedre visuel balance og læsbarhed
+
+---
+
 ## v0.17.0 — 2. juni 2026
 
 **Feature: Bulk-operationer og forbedret versionsdetektion**
