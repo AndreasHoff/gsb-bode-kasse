@@ -4,6 +4,19 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.19.0 — 2. juni 2026
+
+**Feature: Test flow af betaling af bøder (sandbox-flow uden MobilePay)**
+
+- Betaling-knappen i Profil-visningen er nu aktiv uden MobilePay-modtager. Betaling markeres som afventer admin-godkendelse, og en informationsbesked vises i stedet for at blokere knappen
+- Holdoversigt og Historik-visning genindlæser nu automatisk data ved app-fokus og ved synlighedsskift (tab-return), så saldi altid er opdaterede efter bødetildeling eller godkendelse
+- Ny test-suite for det fulde betalingsflow i `payments.test.ts` (8 tests): initiatePayment, approvePayment, disputePayment samt E2E-simuleringer af komplet flow
+- Ny test-suite for `assignFineWithPayment` i `fines.test.ts` (5 nye tests): enkelt- og bulk-tildeling, fejlscenarier og korrekt skriv til ActivityLog
+- Ny test-suite for Profil-visningens betalingsflow i `PersonalOverview.test.tsx` (9 tests): rendering, betal-knap, status-ændringer og visnings-tilstande
+- Samlet test-dækning øget fra 11 til 33 tests
+
+---
+
 ## v0.18.0 — 3. juni 2026
 
 **Feature: Forbedret Profil-visning og UI-strømlining**

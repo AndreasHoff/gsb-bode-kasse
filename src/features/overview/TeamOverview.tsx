@@ -155,6 +155,26 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    function refreshOnVisible(): void {
+      if (document.visibilityState === "visible") {
+        void loadData();
+      }
+    }
+
+    function refreshOnFocus(): void {
+      void loadData();
+    }
+
+    document.addEventListener("visibilitychange", refreshOnVisible);
+    window.addEventListener("focus", refreshOnFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refreshOnVisible);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
+  }, [loadData]);
+
   const sortedMembers = useMemo(
     () => [...memberStats].sort((a, b) => b.totalDebt - a.totalDebt),
     [memberStats],
