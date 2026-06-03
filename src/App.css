@@ -76,7 +76,7 @@
 	width: 100%;
 	max-width: 430px;
 	z-index: 20;
-	padding: 0.75rem 1rem;
+	padding: 0.25rem 0.5rem;
 	border-bottom: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
 	background: color-mix(in srgb, var(--color-auth-bg-end) 74%, transparent);
 	backdrop-filter: blur(12px);
