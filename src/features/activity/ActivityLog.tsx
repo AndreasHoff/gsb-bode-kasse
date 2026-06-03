@@ -82,6 +82,26 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
     void loadInitialEntries();
   }, [loadInitialEntries]);
 
+  useEffect(() => {
+    function refreshOnVisible(): void {
+      if (document.visibilityState === "visible") {
+        void loadInitialEntries();
+      }
+    }
+
+    function refreshOnFocus(): void {
+      void loadInitialEntries();
+    }
+
+    document.addEventListener("visibilitychange", refreshOnVisible);
+    window.addEventListener("focus", refreshOnFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refreshOnVisible);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
+  }, [loadInitialEntries]);
+
   const tabs: Array<{ id: HistoryFilter; label: string }> = [
     { id: "all", label: "Alle" },
     { id: "fines", label: "Bøder" },
