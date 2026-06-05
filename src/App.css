@@ -11,7 +11,7 @@
 		radial-gradient(circle at 12% 8%, var(--color-auth-orb-left) 0%, transparent 28%),
 		radial-gradient(circle at 88% 88%, var(--color-auth-orb-right) 0%, transparent 26%),
 		linear-gradient(180deg, var(--color-auth-bg-start) 0%, var(--color-auth-bg-end) 100%);
-	box-shadow: 0 16px 48px rgba(7, 17, 18, 0.55);
+	box-shadow: 0 0 64px rgba(0, 90, 169, 0.12);
 }
 
 .app-screen {
@@ -77,9 +77,10 @@
 	max-width: 430px;
 	z-index: 20;
 	padding: 0.25rem 0.5rem;
-	border-bottom: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
-	background: color-mix(in srgb, var(--color-auth-bg-end) 74%, transparent);
+	border-bottom: 1px solid rgba(0, 90, 169, 0.2);
+	background: var(--color-primary);
 	backdrop-filter: blur(12px);
+	box-shadow: 0 2px 12px rgba(0, 90, 169, 0.25);
 }
 
 .app-navbar {
@@ -93,16 +94,24 @@
 	width: 2.35rem;
 	min-height: 2.35rem;
 	padding: 0;
-	border-color: var(--color-border);
+	border-color: rgba(255, 255, 255, 0.3);
 	border-radius: 0.8rem;
-	background: color-mix(in srgb, var(--color-surface-muted) 82%, transparent);
-	color: var(--color-text);
+	background: rgba(255, 255, 255, 0.15);
+	color: var(--color-primary-contrast);
 	font-size: 1.1rem;
-	line-height: 1;
+	box-shadow: none;
+}
+
+.app-navbar__burger:hover {
+	background: rgba(255, 255, 255, 0.25);
 }
 
 .app-navbar__brand {
 	text-align: center;
+}
+
+.app-navbar__brand .app-title {
+	color: var(--color-primary-contrast);
 }
 
 .app-navbar__user {
@@ -116,15 +125,15 @@
 	width: 2.15rem;
 	min-height: 2.15rem;
 	padding: 0;
-	border-color: var(--color-border);
+	border-color: rgba(255, 255, 255, 0.3);
 	border-radius: 0.75rem;
-	background: color-mix(in srgb, var(--color-surface-muted) 76%, transparent);
-	color: var(--color-text);
+	background: rgba(255, 255, 255, 0.15);
+	color: var(--color-primary-contrast);
 	line-height: 1;
 }
 
 .app-navbar__theme-toggle:hover {
-	background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+	background: rgba(255, 255, 255, 0.25);
 }
 
 .app-navbar__user-name {
@@ -133,6 +142,7 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	color: var(--color-primary-contrast);
 }
 
 .app-menu-backdrop {
@@ -371,4 +381,31 @@
 .status-badge--abandoned {
 	background: var(--color-status-abandoned-bg);
 	color: var(--color-status-abandoned-text);
+}
+
+/* ── Dark theme overrides ────────────────────────────────── */
+:root[data-theme="violet"] .app-header {
+	background: var(--color-primary);
+	border-bottom-color: rgba(124, 58, 237, 0.3);
+	box-shadow: 0 2px 12px rgba(124, 58, 237, 0.25);
+}
+
+:root[data-theme="violet"] .app-shell {
+	box-shadow: 0 16px 48px rgba(7, 17, 18, 0.55);
+}
+
+:root[data-theme="violet"] .app-navbar__burger,
+:root[data-theme="violet"] .app-navbar__theme-toggle {
+	background: rgba(255, 255, 255, 0.15);
+	border-color: rgba(255, 255, 255, 0.3);
+	color: var(--color-primary-contrast);
+}
+
+:root[data-theme="violet"] .app-navbar__burger:hover,
+:root[data-theme="violet"] .app-navbar__theme-toggle:hover {
+	background: rgba(255, 255, 255, 0.25);
+}
+
+:root[data-theme="violet"] .app-card {
+	box-shadow: 0 16px 32px rgba(5, 15, 15, 0.35);
 }

@@ -4,38 +4,43 @@
   font-family: "Manrope", "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  --color-bg: #0e2021;
-  --color-surface: #163738;
-  --color-surface-muted: #214b4d;
-  --color-text: #effcf9;
-  --color-text-muted: #b6d7d2;
-  --color-primary: #0f766e;
-  --color-primary-strong: #115e59;
-  --color-primary-contrast: #f5fffe;
-  --color-accent: #ea580c;
-  --color-error: #ffd0d6;
-  --color-border: rgba(196, 230, 223, 0.3);
-  --color-bg-glow-cool: rgba(120, 220, 206, 0.24);
-  --color-bg-glow-warm: rgba(248, 163, 115, 0.22);
-  --color-auth-bg-start: #0e2021;
-  --color-auth-bg-end: #163738;
-  --color-auth-text: #effcf9;
-  --color-auth-text-muted: rgba(219, 237, 234, 0.82);
-  --color-auth-footnote: rgba(219, 237, 234, 0.74);
-  --color-auth-error: #ffd0d6;
-  --color-auth-orb-left: rgba(120, 220, 206, 0.24);
-  --color-auth-orb-right: rgba(248, 163, 115, 0.22);
-  --color-auth-panel-border: rgba(255, 255, 255, 0.14);
-  --color-auth-panel-bg: rgba(255, 255, 255, 0.08);
-  --color-auth-segment-border: rgba(255, 255, 255, 0.16);
-  --color-auth-segment-bg: rgba(255, 255, 255, 0.1);
-  --color-auth-segment-text: rgba(239, 252, 249, 0.86);
-  --color-auth-segment-hover: rgba(255, 255, 255, 0.12);
-  --color-auth-segment-active-bg: #ffffff;
-  --color-auth-segment-active-text: #102022;
-  --color-auth-input-border: rgba(255, 255, 255, 0.16);
-  --color-auth-input-bg: rgba(12, 28, 29, 0.6);
-  --color-auth-input-placeholder: rgba(219, 237, 234, 0.56);
+  /* Greve Badminton Brand Colors - Light Theme */
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F1F5F9;
+  --color-text: #1F2937;
+  --color-text-muted: #6B7280;
+  --color-primary: #005AA9;
+  --color-primary-strong: #0077CC;
+  --color-primary-contrast: #FFFFFF;
+  --color-accent: #F2B705;
+  --color-accent-light: #FFD447;
+  --color-error: #EF4444;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-info: #0077CC;
+  --color-border: #E5E7EB;
+  --color-bg-glow-cool: rgba(0, 90, 169, 0.08);
+  --color-bg-glow-warm: rgba(242, 183, 5, 0.12);
+  --color-auth-bg-start: #F8FAFC;
+  --color-auth-bg-end: #FFFFFF;
+  --color-auth-text: #1F2937;
+  --color-auth-text-muted: #6B7280;
+  --color-auth-footnote: #9CA3AF;
+  --color-auth-error: #EF4444;
+  --color-auth-orb-left: rgba(0, 90, 169, 0.1);
+  --color-auth-orb-right: rgba(242, 183, 5, 0.15);
+  --color-auth-panel-border: rgba(0, 90, 169, 0.12);
+  --color-auth-panel-bg: rgba(255, 255, 255, 0.8);
+  --color-auth-segment-border: #E5E7EB;
+  --color-auth-segment-bg: #F9FAFB;
+  --color-auth-segment-text: #6B7280;
+  --color-auth-segment-hover: #F3F4F6;
+  --color-auth-segment-active-bg: #005AA9;
+  --color-auth-segment-active-text: #FFFFFF;
+  --color-auth-input-border: #E5E7EB;
+  --color-auth-input-bg: #FFFFFF;
+  --color-auth-input-placeholder: #9CA3AF;
   --color-status-new-bg: #f3f4f6;
   --color-status-new-text: #374151;
   --color-status-triaged-bg: #dbeafe;
@@ -48,10 +53,10 @@
   --color-status-done-text: #15803d;
   --color-status-abandoned-bg: #fee2e2;
   --color-status-abandoned-text: #b91c1c;
-  --color-priority-low: #62d56d;
-  --color-priority-moderate: #f0db42;
-  --color-priority-high: #f5a14a;
-  --color-priority-critical: #e24f7b;
+  --color-priority-low: #22C55E;
+  --color-priority-moderate: #F59E0B;
+  --color-priority-high: #F97316;
+  --color-priority-critical: #EF4444;
   --app-main-bottom-space: calc(5.6rem + env(safe-area-inset-bottom, 0px));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -59,6 +64,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark theme - preserved from existing violet theme */
 :root[data-theme="violet"] {
   --color-bg: #1a1628;
   --color-surface: #2a2340;
@@ -69,7 +75,11 @@
   --color-primary-strong: #6d28d9;
   --color-primary-contrast: #f9f8ff;
   --color-accent: #f59e0b;
+  --color-accent-light: #fbbf24;
   --color-error: #ffd4e6;
+  --color-success: #6ee7b7;
+  --color-warning: #fbbf24;
+  --color-info: #a78bfa;
   --color-border: rgba(215, 198, 255, 0.34);
   --color-bg-glow-cool: rgba(167, 139, 250, 0.28);
   --color-bg-glow-warm: rgba(251, 191, 36, 0.22);
@@ -124,16 +134,19 @@ button {
   border: 1px solid transparent;
   padding: 0.6em 1rem;
   font-size: 1em;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   background-color: var(--color-primary);
   color: var(--color-primary-contrast);
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 90, 169, 0.2);
 }
 
 button:hover {
   background-color: var(--color-primary-strong);
+  box-shadow: 0 6px 16px rgba(0, 90, 169, 0.35);
+  transform: translateY(-1px);
 }
 
 button:active {
@@ -154,7 +167,7 @@ button:disabled:active {
 
 button:focus,
 button:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-accent) 45%, white);
+  outline: 3px solid rgba(242, 183, 5, 0.5);
   outline-offset: 2px;
 }
 
@@ -347,19 +360,19 @@ button:focus-visible {
   border-radius: 0.85rem;
   font-weight: 600;
   font-size: 0.88rem;
-  background: color-mix(in srgb, var(--color-surface-muted) 82%, transparent);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  transition: opacity 0.15s ease, transform 0.1s ease;
+  transition: opacity 0.15s ease, transform 0.1s ease, background 0.2s ease;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-surface-muted) 92%, transparent);
+  background: rgba(0, 90, 169, 0.08);
 }
 
 .btn-secondary:active:not(:disabled) {
@@ -379,17 +392,22 @@ button:focus-visible {
 
 .btn-accent {
   background: var(--color-accent);
-  color: white;
+  color: #1F2937;
+  font-weight: 700;
+}
+
+.btn-accent:hover:not(:disabled) {
+  background: var(--color-accent-light);
 }
 
 .btn-danger {
-  background: #dc2626;
+  background: var(--color-error);
   color: white;
 }
 
 .btn-success {
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
+  background: var(--color-success);
+  color: white;
 }
 
 /* Form Elements */
@@ -413,19 +431,19 @@ button:focus-visible {
   padding: 0.75rem 0.85rem;
   border: 1px solid var(--color-border);
   border-radius: 0.85rem;
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  background: var(--color-surface);
   color: var(--color-text);
   font-size: 0.9rem;
   font-family: inherit;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-select:focus,
 .form-input:focus,
 .form-textarea:focus {
-  outline: 2px solid color-mix(in srgb, var(--color-primary) 50%, white);
-  outline-offset: 1px;
+  outline: none;
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0, 90, 169, 0.12);
 }
 
 .form-textarea {
@@ -453,8 +471,8 @@ button:focus-visible {
 .status-error {
   padding: 0.75rem 0.9rem;
   border-radius: 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface-muted) 40%);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
   color: var(--color-error);
   font-size: 0.85rem;
   line-height: 1.4;
@@ -463,9 +481,9 @@ button:focus-visible {
 .status-success {
   padding: 0.75rem 0.9rem;
   border-radius: 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
-  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-muted) 40%);
-  color: var(--color-primary-contrast);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--color-success);
   font-size: 0.85rem;
   line-height: 1.4;
 }
