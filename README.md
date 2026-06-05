@@ -96,6 +96,7 @@ docs/
 | F011 | Skift farvetema          | Spec complete |
 | F012 | Profil                   | Spec complete |
 | F013 | Evangeliet               | Spec complete |
+| F020 | Brand Visual Identity    | Spec complete |
 
 ---
 

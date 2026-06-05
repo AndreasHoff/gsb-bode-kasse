@@ -4,6 +4,22 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.20.0 — 5. juni 2026
+
+**Feature: Brand Visual Identity (F020)**
+
+- Implementeret Greve Badminton's officielle brandfarver gennem hele app'en
+- Primær Blå (#005AA9) er nu dominerende i navigation, knapper og interaktive elementer
+- Sekundær Blå (#0077CC) bruges til hover-tilstande
+- Accent Guld (#F2B705) fremhæver aktive tilstande og badges
+- Top- og bundnavigation bruger nu blå baggrund med hvid tekst for stærk brandidentitet
+- Forbedret knap-styling med federe skrifttype (700) og lift-on-hover effekt
+- Dark mode (violet theme) bevaret med opdaterede navigationfarver
+- Alle farver opfylder WCAG AA kontrastkrav for tilgængelighed
+- Rettet TypeScript-fejl i TeamOverview vedrørende payment status-flag
+
+---
+
 ## v0.19.0 — 2. juni 2026
 
 **Feature: Test flow af betaling af bøder (sandbox-flow uden MobilePay)**

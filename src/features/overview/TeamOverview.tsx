@@ -82,10 +82,10 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
         }
       }
 
-      type UserAcc = { debt: number; paid: number };
+      type UserAcc = { debt: number; paid: number; hasPending?: boolean; hasDisputed?: boolean };
       const accByUser = new Map<string, UserAcc>();
       for (const user of users) {
-        accByUser.set(user.id, { debt: 0, paid: 0 });
+        accByUser.set(user.id, { debt: 0, paid: 0, hasPending: false, hasDisputed: false });
       }
 
       let aggIssued = 0;
@@ -125,7 +125,7 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       setTotalPaid(aggPaid);
 
       const stats: MemberStat[] = users.map((user) => {
-        const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0, hasPending: false, hasDisputed: false } as any;
+        const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0, hasPending: false, hasDisputed: false };
         const membership = membershipByUserId.get(user.id);
         const role: MemberRole = user.isSuperAdmin
           ? "super-admin"

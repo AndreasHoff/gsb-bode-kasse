@@ -8,9 +8,10 @@
   z-index: 10;
   display: flex;
   overflow: hidden;
-  background: color-mix(in srgb, var(--color-auth-bg-end) 82%, transparent);
-  box-shadow: 0 -12px 20px rgba(6, 15, 16, 0.46);
+  background: var(--color-primary);
+  box-shadow: 0 -4px 16px rgba(0, 90, 169, 0.35);
   backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 90, 169, 0.2);
 }
 
 .bottom-navbar__button {
@@ -25,18 +26,43 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--color-text-muted) 90%, white);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.75rem;
   font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .bottom-navbar__button:hover {
-  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  background: var(--color-primary-strong);
+  color: var(--color-primary-contrast);
 }
 
 .bottom-navbar__button--active,
 .bottom-navbar__button--active:hover {
-  color: color-mix(in srgb, var(--color-primary) 78%, var(--color-text));
-  background: color-mix(in srgb, var(--color-primary) 32%, transparent);
-  box-shadow: inset 0 2px 0 var(--color-primary);
+  color: var(--color-accent);
+  background: rgba(242, 183, 5, 0.2);
+  box-shadow: inset 0 3px 0 var(--color-accent);
+}
+
+/* Dark theme overrides */
+:root[data-theme="violet"] .bottom-navbar {
+  background: var(--color-primary);
+  box-shadow: 0 -4px 16px rgba(124, 58, 237, 0.35);
+  border-top-color: rgba(124, 58, 237, 0.3);
+}
+
+:root[data-theme="violet"] .bottom-navbar__button {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+:root[data-theme="violet"] .bottom-navbar__button:hover {
+  background: var(--color-primary-strong);
+  color: var(--color-primary-contrast);
+}
+
+:root[data-theme="violet"] .bottom-navbar__button--active,
+:root[data-theme="violet"] .bottom-navbar__button--active:hover {
+  color: var(--color-accent);
+  background: rgba(251, 191, 36, 0.2);
+  box-shadow: inset 0 3px 0 var(--color-accent);
 }
