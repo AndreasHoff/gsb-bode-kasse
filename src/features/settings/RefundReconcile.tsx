@@ -31,6 +31,7 @@ export default function RefundReconcile({ teamId, actorId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [confirmRefundId, setConfirmRefundId] = useState<string | null>(null);
+  const [confirmReconcileId, setConfirmReconcileId] = useState<string | null>(null);
 
   async function enrich(payments: Payment[]): Promise<EnrichedPayment[]> {
     return Promise.all(
@@ -95,6 +96,7 @@ export default function RefundReconcile({ teamId, actorId }: Props) {
     if (processingId) return;
     setProcessingId(paymentId);
     setError(null);
+    setConfirmReconcileId(null);
     try {
       await reconcilePayment(teamId, paymentId, actorId);
       setReconcilable((prev) => prev.filter((r) => r.payment.id !== paymentId));
@@ -206,40 +208,65 @@ export default function RefundReconcile({ teamId, actorId }: Props) {
         ) : (
           <ul className="flex flex-col gap-2">
             {reconcilable.map(({ payment, userName, fineTitle }) => {
+              const isConfirming = confirmReconcileId === payment.id;
               const isProcessing = processingId === payment.id;
               return (
-                <li
-                  key={payment.id}
-                  className="app-card p-3 flex items-center justify-between gap-2"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate">{userName ?? "Ukendt"}</p>
-                    <p className="text-xs text-[var(--color-text-muted)] truncate">
-                      {fineTitle ?? "Ukendt bøde"}
-                    </p>
-                    <span
-                      className={`text-xs font-semibold ${
-                        payment.status === "disputed"
-                          ? "text-[var(--color-error)]"
-                          : "text-[var(--color-text-muted)]"
-                      }`}
-                    >
-                      {payment.status === "disputed" ? "Bestridt" : "Ubetalt"}
-                    </span>
+                <li key={payment.id} className="app-card p-3 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">{userName ?? "Ukendt"}</p>
+                      <p className="text-xs text-[var(--color-text-muted)] truncate">
+                        {fineTitle ?? "Ukendt bøde"}
+                      </p>
+                      <span
+                        className={`text-xs font-semibold ${
+                          payment.status === "disputed"
+                            ? "text-[var(--color-error)]"
+                            : "text-[var(--color-text-muted)]"
+                        }`}
+                      >
+                        {payment.status === "disputed" ? "Bestridt" : "Ubetalt"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className="text-sm font-extrabold">
+                        {formatAmount(payment.amount)}
+                      </span>
+                      {!isConfirming && (
+                        <button
+                          type="button"
+                          className="member-management__action-btn"
+                          disabled={isProcessing || !!processingId}
+                          onClick={() => setConfirmReconcileId(payment.id)}
+                        >
+                          Marker som betalt
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-sm font-extrabold">
-                      {formatAmount(payment.amount)}
-                    </span>
-                    <button
-                      type="button"
-                      className="member-management__action-btn"
-                      disabled={isProcessing || !!processingId}
-                      onClick={() => void handleReconcile(payment.id)}
-                    >
-                      {isProcessing ? "Godkender…" : "Marker som betalt"}
-                    </button>
-                  </div>
+                  {isConfirming && (
+                    <div className="member-management__confirm">
+                      <p>Er du sikker? Betalingen markeres som betalt.</p>
+                      <div className="member-management__confirm-actions">
+                        <button
+                          type="button"
+                          className="btn-danger flex-1"
+                          disabled={isProcessing}
+                          onClick={() => void handleReconcile(payment.id)}
+                        >
+                          {isProcessing ? "Godkender…" : "Ja, godkend"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary flex-1"
+                          disabled={isProcessing}
+                          onClick={() => setConfirmReconcileId(null)}
+                        >
+                          Annuller
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               );
             })}
