@@ -214,6 +214,40 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
             <p className="team-saldo-card__value">{formatAmount(totalPaid)}</p>
           </div>
 
+          {/* Podium - Top 3 members by debt */}
+          {sortedMembers.length >= 3 && sortedMembers.some(m => m.totalDebt > 0) && (
+            <div className="podium">
+              {sortedMembers.slice(0, 3).map((item, idx) => {
+                const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
+                const initials = item.user.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2);
+                return (
+                  <div key={item.user.id} className={`podium-slot podium-slot--rank-${idx + 1}`}>
+                    <div className="podium-rank">{medal}</div>
+                    <div className="podium-avatar">{initials}</div>
+                    <div className="podium-name">{item.user.name}</div>
+                    <div className="podium-amount">{formatAmount(item.totalDebt)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Celebration when all debts cleared */}
+          {totalOwed === 0 && totalPaid > 0 && (
+            <div className="celebration-card">
+              <p className="celebration-card__emoji">🎉</p>
+              <p className="celebration-card__title">Alle bøder betalt!</p>
+              <p className="celebration-card__text">
+                Hele holdet har betalt deres bøder. Kassen har {formatAmount(totalPaid)}!
+              </p>
+            </div>
+          )}
+
           {/* 3 stat cards */}
           <div className="team-stats">
             <div className="team-stat-card">
@@ -259,7 +293,11 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
                       <div className="team-member-row__left">
                         <div className="team-member-avatar">{initials || "👤"}</div>
                         <div className="team-member-info">
-                          <p className="team-member-info__name">{item.user.name}</p>
+                          <p className="team-member-info__name">
+                            {item.user.name}
+                            {item.hasPending && <span className="badge badge--pending">Afventer</span>}
+                            {item.hasDisputed && <span className="badge badge--disputed">Anket</span>}
+                          </p>
                           <p className="team-member-info__role">{roleLabel}</p>
                         </div>
                       </div>

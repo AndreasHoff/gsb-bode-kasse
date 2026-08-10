@@ -322,6 +322,16 @@
 	background: rgba(255, 255, 255, 0.14);
 }
 
+.btn-danger {
+	border-color: var(--color-error);
+	background: var(--color-error);
+	color: #ffffff;
+}
+
+.btn-danger:hover {
+	background: color-mix(in srgb, var(--color-error) 88%, black);
+}
+
 .status-error {
 	color: var(--color-error);
 	font-size: 0.875rem;

@@ -10,8 +10,8 @@ import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
 import BottomNavbar from "./components/BottomNavbar";
+import AdminSettings from "./features/settings/AdminSettings";
 import { canAssignFines, canApprovePayments } from "./lib/permissions";
-import AdminApproval from "./features/payments/AdminApproval";
 import {
   ensurePersistentAuth,
   onAuthChange,
@@ -500,16 +500,12 @@ function App() {
         {activeTab === "activity" && <ActivityLog teamId={teamId} />}
         {activeTab === "proposals" && <Proposals />}
         {activeTab === "settings" && (
-          canApprovePayments(userRole, isSuperAdmin) ? (
-            <AdminApproval
-              teamId={teamId}
-              actorId={userId}
-              userRole={userRole}
-              isSuperAdmin={isSuperAdmin}
-            />
-          ) : (
-            <SettingsPlaceholder />
-          )
+          <AdminSettings
+            teamId={teamId}
+            actorId={userId}
+            userRole={userRole}
+            isSuperAdmin={isSuperAdmin}
+          />
         )}
 
       </main>
@@ -541,19 +537,6 @@ function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
-    </div>
-  );
-}
-
-function SettingsPlaceholder() {
-  return (
-    <div className="app-page">
-      <h1 className="app-title">Indstillinger</h1>
-      <p className="app-subtitle mb-6">Flere admin-funktioner kommer snart.</p>
-      <div className="empty-state">
-        <p className="text-4xl mb-3">⚙️</p>
-        <p className="text-sm">Denne sektion udbygges løbende.</p>
-      </div>
     </div>
   );
 }

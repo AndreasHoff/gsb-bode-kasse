@@ -8,10 +8,10 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { membersCol, memberDoc, activityLogCol } from "./refs";
+import { membersCol, memberDoc, activityLogCol, finesCol } from "./refs";
 import { membershipConverter } from "./converters";
 import { getUsers } from "./users";
-import type { Membership, ActivityLog } from "../../types/domain";
+import type { Membership, ActivityLog, Fine } from "../../types/domain";
 
 export async function getMemberships(teamId: string): Promise<Membership[]> {
   const snap = await getDocs(membersCol(teamId));
@@ -129,4 +129,81 @@ export async function backfillTeamMembershipsForAllUsers(
   }
 
   return { created, existing };
+}
+
+/**
+ * Deactivates a membership and soft-deletes all fines assigned to that user.
+ * Writes a member.removed ActivityLog entry and individual fine.deleted entries.
+ * Processes fines in batches to stay within Firestore's 500-op limit.
+ */
+export async function removeMember(
+  teamId: string,
+  userId: string,
+  actorId: string,
+): Promise<void> {
+  const memberRef = memberDoc(teamId, userId);
+  const memberSnap = await getDoc(memberRef);
+  if (!memberSnap.exists()) throw new Error(`Membership not found for user ${userId}`);
+
+  const existing = memberSnap.data();
+
+  // Deactivate membership + write member.removed log
+  const memberBatch = writeBatch(db);
+  memberBatch.set(memberRef, { ...existing, isActive: false });
+
+  const logColRef = activityLogCol(teamId);
+  const removedLogRef = doc(logColRef);
+  const removedLog: ActivityLog = {
+    id: removedLogRef.id,
+    teamId,
+    actorId,
+    action: "member.removed",
+    entityType: "membership",
+    entityId: userId,
+    metadata: { userId, role: existing.role },
+    createdAt: new Date().toISOString(),
+  };
+  memberBatch.set(removedLogRef, removedLog);
+  await memberBatch.commit();
+
+  // Soft-delete all active fines assigned to this user
+  const finesSnap = await getDocs(
+    query(finesCol(teamId), where("assignedTo", "array-contains", userId)),
+  );
+  const activeFines = finesSnap.docs.filter((d) => !d.data().deletedAt);
+  if (activeFines.length === 0) return;
+
+  const MAX_OPS = 450;
+  const now = new Date().toISOString();
+  let fineBatch = writeBatch(db);
+  let opsCount = 0;
+
+  for (const fineDocSnap of activeFines) {
+    const fine = fineDocSnap.data() as Fine;
+    fineBatch.set(fineDocSnap.ref, { ...fine, deletedAt: now });
+
+    const fineLogRef = doc(logColRef);
+    const fineLog: ActivityLog = {
+      id: fineLogRef.id,
+      teamId,
+      actorId,
+      action: "fine.deleted",
+      entityType: "fine",
+      entityId: fineDocSnap.id,
+      metadata: { title: fine.title, amount: fine.amount, reason: "member.removed" },
+      createdAt: now,
+    };
+    fineBatch.set(fineLogRef, fineLog);
+
+    opsCount += 2;
+    if (opsCount >= MAX_OPS) {
+      await fineBatch.commit();
+      fineBatch = writeBatch(db);
+      opsCount = 0;
+    }
+  }
+
+  if (opsCount > 0) {
+    await fineBatch.commit();
+  }
 }
