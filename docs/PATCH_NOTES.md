@@ -6,16 +6,24 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ## v0.22.0 — 10. august 2026
 
-**Features: Admin Management Tools (F021, F022, F015)**
+**Features: Admin Management Tools (F022, F015)**
 
-- Tilføjet sæsonhåndtering: Opret og luk sæsoner med bekræftelse
-- Tilføjet medlemshåndtering: Se roster, skift roller, fjern medlemmer (kaskaderer bøder)
-- Tilføjet betalingsrefundering: Godkend/refunder betalinger og manuel afstemning af ubetalte/omtvistede
-- Tilføjet bulk-import af bøderegler: One-click import af 70+ vordefinerede bøderegler for sæson 25/26
-- Alle admin-operationer logges i aktivitetslog
-- Nyt "Bøder" faneblad i Indstillinger med import-button
-- Forhindrer fjernelse af sidste admin
-- Atomare batches i Firestore for dataintegritet
+**F022 - Medlemshåndtering:**
+- Tilføjet Medlemmer-tab i Indstillinger med fuld adminrolle-kontrol
+- Admin kan se alle aktive medlemmer med rolle-badges (Admin/Medlem)
+- Promover medlem til admin eller degrader admin til medlem
+- Fjern medlem med inline bekræftelse — kaskaderer soft-delete af alle medlemmets bøder
+- Sikkerhedsbarrierer: Blokerer selvfjernelse og demotion af sidste admin
+- ActivityLog-integrering: `member.roleChanged` og `member.removed` entries
+
+**F015 - Betalingsrefundering & Manuel afstemning:**
+- Tilføjet Refunder-tab i Indstillinger for admin-bruger med to sektioner
+- Refunder-sektion: Viser senest godkendte betalinger som kan refunderes (status → unpaid, clear approvedAt/approvedBy)
+- Manuel betaling-sektion: Viser ubetalte og bestridte betalinger til manuel godkendelse (kontantbetaling)
+- Inline bekræftelses-dialoge for både refunderings- og godkendelsesflow
+- ActivityLog-integrering med `payment.refunded` og `payment.reconciled` action-strings inkl. metadata
+- Knapper deaktiveres under behandling, tom tilstand når ingen elementer
+- Korrekt sortering: godkendte betalinger efter dato (nyeste først), ubetalte efter medlemsnavn (A-Z dansk)
 
 ---
 
