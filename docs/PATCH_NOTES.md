@@ -4,6 +4,38 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.22.0 — 10. august 2026
+
+**Features: Admin Management Tools (F021, F022, F015)**
+
+- Tilføjet sæsonhåndtering: Opret og luk sæsoner med bekræftelse
+- Tilføjet medlemshåndtering: Se roster, skift roller, fjern medlemmer (kaskaderer bøder)
+- Tilføjet betalingsrefundering: Godkend/refunder betalinger og manuel afstemning af ubetalte/omtvistede
+- Tilføjet bulk-import af bøderegler: One-click import af 70+ vordefinerede bøderegler for sæson 25/26
+- Alle admin-operationer logges i aktivitetslog
+- Nyt "Bøder" faneblad i Indstillinger med import-button
+- Forhindrer fjernelse af sidste admin
+- Atomare batches i Firestore for dataintegritet
+
+---
+
+## v0.21.0 — 24. juli 2026
+
+**Feature: Podium Badges & UI Polish (F018)**
+
+- Tilføjet podium-badges for top 3 spillere sorteret efter udestående gæld
+- Medaljer (🥇🥈🥉) viser de tre største syndere på holdoversigten
+- Visuelt distinkte borders: 1. plads (blå), 2. plads (guld), 3. plads (standard)
+- Cirkulære avatarer med initialer i podium-visning
+- Ny fejrings-card når alle bøder er betalt — med animation og gradient-baggrund
+- Tilføjet "Afventer" og "Anket" badges ved spillernavne for betalingsstatus
+- Forbedrede hover-effekter på medlem-rækker: translateX + box-shadow
+- Smooth animations: podium pulse, celebration bounce, hover transitions
+- Alle forbedringer fungerer i både lys og mørk tilstand
+- Fejlrettelse: Fjernet duplikeret `display` property i podium-avatar CSS
+
+---
+
 ## v0.20.0 — 5. juni 2026
 
 **Feature: Brand Visual Identity (F020)**

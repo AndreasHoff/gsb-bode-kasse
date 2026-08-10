@@ -14,6 +14,7 @@ export {
   getActiveMembershipsForUser,
   backfillTeamMembershipsForAllUsers,
   upsertMembership,
+  removeMember,
 } from "./members";
 
 export {
@@ -30,6 +31,7 @@ export {
   createFineRule,
   updateFineRule,
   deactivateFineRule,
+  bulkCreateFineRules,
 } from "./fineRules";
 
 export {
@@ -52,6 +54,10 @@ export {
   initiatePayment,
   approvePayment,
   disputePayment,
+  getApprovedPayments,
+  getPaymentsForReconciliation,
+  refundPayment,
+  reconcilePayment,
 } from "./payments";
 
 export type { CreateProposalInput, UpdateProposalInput } from "./proposals";

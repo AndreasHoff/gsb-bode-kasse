@@ -116,3 +116,90 @@ export async function deactivateFineRule(
 
   await batch.commit();
 }
+
+/**
+ * Bulk-imports fine rules from a seed data array.
+ * Processes in batches of ~40 rules (80 writes per batch, within 500-op Firestore limit).
+ * Skips rules that already exist (by title).
+ * Returns summary of created/skipped rules.
+ */
+export async function bulkCreateFineRules(
+  teamId: string,
+  seedRules: Array<{
+    title: string;
+    amount: number;
+    emoji?: string;
+    description?: string;
+  }>,
+  actorId: string,
+  onProgress?: (created: number, total: number) => void,
+): Promise<{ created: number; skipped: number; errors: string[] }> {
+  const existing = await getFineRules(teamId);
+  const existingTitles = new Set(existing.map((r) => r.title));
+
+  let created = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const total = seedRules.length;
+
+  // Batch in groups of 40 (2 writes per rule = 80 ops, under 500 limit)
+  const batchSize = 40;
+
+  for (let i = 0; i < seedRules.length; i += batchSize) {
+    const batch = writeBatch(db);
+    const batchRules = seedRules.slice(i, i + batchSize);
+    let opsInBatch = 0;
+
+    for (const seedRule of batchRules) {
+      if (existingTitles.has(seedRule.title)) {
+        skipped += 1;
+        continue;
+      }
+
+      const colRef = fineRulesCol(teamId);
+      const ruleRef = doc(colRef);
+      const rule: FineRule = {
+        id: ruleRef.id,
+        teamId,
+        title: seedRule.title,
+        amount: seedRule.amount,
+        emoji: seedRule.emoji,
+        description: seedRule.description,
+        isActive: true,
+        createdBy: actorId,
+        createdAt: new Date().toISOString(),
+      };
+      batch.set(ruleRef, rule);
+      opsInBatch += 1;
+
+      const logColRef = activityLogCol(teamId);
+      const logRef = doc(logColRef);
+      const logEntry: ActivityLog = {
+        id: logRef.id,
+        teamId,
+        actorId,
+        action: "rule.created",
+        entityType: "fineRule",
+        entityId: ruleRef.id,
+        metadata: { title: rule.title, amount: rule.amount },
+        createdAt: new Date().toISOString(),
+      };
+      batch.set(logRef, logEntry);
+      opsInBatch += 1;
+
+      created += 1;
+    }
+
+    if (opsInBatch > 0) {
+      try {
+        await batch.commit();
+      } catch (err) {
+        errors.push(`Batch ${i}-${i + batchSize} failed: ${err}`);
+      }
+    }
+
+    onProgress?.(created + skipped, total);
+  }
+
+  return { created, skipped, errors };
+}

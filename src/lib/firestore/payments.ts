@@ -173,3 +173,110 @@ export async function disputePayment(
   await batch.commit();
   return updated;
 }
+
+/**
+ * Returns all payments with status "approved".
+ * Used for refund workflow (F015).
+ */
+export async function getApprovedPayments(teamId: string): Promise<Payment[]> {
+  const q = query(paymentsCol(teamId), where("status", "==", "approved"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data());
+}
+
+/**
+ * Returns all payments with status "unpaid" or "disputed".
+ * Used for manual reconciliation workflow (F015).
+ */
+export async function getPaymentsForReconciliation(teamId: string): Promise<Payment[]> {
+  const [unpaidSnap, disputedSnap] = await Promise.all([
+    getDocs(query(paymentsCol(teamId), where("status", "==", "unpaid"))),
+    getDocs(query(paymentsCol(teamId), where("status", "==", "disputed"))),
+  ]);
+  return [
+    ...unpaidSnap.docs.map((d) => d.data()),
+    ...disputedSnap.docs.map((d) => d.data()),
+  ];
+}
+
+/**
+ * Refunds an approved payment: resets status to "unpaid" and clears approval fields.
+ * Writes a payment.refunded ActivityLog entry atomically.
+ */
+export async function refundPayment(
+  teamId: string,
+  paymentId: string,
+  actorId: string,
+): Promise<Payment> {
+  const existing = await getPayment(teamId, paymentId);
+  if (!existing) throw new Error(`Payment ${paymentId} not found in team ${teamId}`);
+
+  const batch = writeBatch(db);
+
+  const pRef = paymentDoc(teamId, paymentId);
+  const { approvedAt: _approvedAt, approvedBy: _approvedBy, ...rest } = existing;
+  void _approvedAt;
+  void _approvedBy;
+  const updated: Payment = { ...rest, status: "unpaid" };
+  batch.set(pRef, updated);
+
+  const logColRef = activityLogCol(teamId);
+  const logRef = doc(logColRef);
+  const logEntry: ActivityLog = {
+    id: logRef.id,
+    teamId,
+    actorId,
+    action: "payment.refunded",
+    entityType: "payment",
+    entityId: paymentId,
+    metadata: { fineId: existing.fineId, amount: existing.amount, userId: existing.userId },
+    createdAt: new Date().toISOString(),
+  };
+  batch.set(logRef, logEntry);
+
+  await batch.commit();
+  return updated;
+}
+
+/**
+ * Manually reconciles a payment (e.g. cash paid outside MobilePay).
+ * Sets status to "approved" from any non-approved state.
+ * Writes a payment.reconciled ActivityLog entry atomically.
+ */
+export async function reconcilePayment(
+  teamId: string,
+  paymentId: string,
+  actorId: string,
+): Promise<Payment> {
+  const existing = await getPayment(teamId, paymentId);
+  if (!existing) throw new Error(`Payment ${paymentId} not found in team ${teamId}`);
+
+  const batch = writeBatch(db);
+
+  const pRef = paymentDoc(teamId, paymentId);
+  const now = new Date().toISOString();
+  const updated: Payment = {
+    ...existing,
+    status: "approved",
+    approvedAt: now,
+    approvedBy: actorId,
+  };
+  batch.set(pRef, updated);
+
+  const logColRef = activityLogCol(teamId);
+  const logRef = doc(logColRef);
+  const logEntry: ActivityLog = {
+    id: logRef.id,
+    teamId,
+    actorId,
+    action: "payment.reconciled",
+    entityType: "payment",
+    entityId: paymentId,
+    metadata: { fineId: existing.fineId, amount: existing.amount, userId: existing.userId },
+    createdAt: new Date().toISOString(),
+  };
+  batch.set(logRef, logEntry);
+
+  await batch.commit();
+  return updated;
+}
