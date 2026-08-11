@@ -129,7 +129,7 @@ export async function assignFineWithPayment(
       const paymentRef = doc(paymentsCol(data.teamId));
       const payment: Payment = {
         id: paymentRef.id,
-        fineId: fine.id,
+        fineIds: [fine.id],
         userId: targetUserId,
         amount: data.amount,
         status: "unpaid",
@@ -146,7 +146,7 @@ export async function assignFineWithPayment(
         entityType: "payment",
         entityId: payment.id,
         metadata: {
-          fineId: fine.id,
+          fineIds: [fine.id],
           userId: payment.userId,
           amount: payment.amount,
         },

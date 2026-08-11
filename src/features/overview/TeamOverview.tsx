@@ -7,8 +7,21 @@ import {
   getUsers,
 } from "../../lib/firestore";
 import { formatAmount } from "../../lib/utils";
-import type { Membership, User, Role } from "../../types/domain";
+import type { Membership, User, Role, Payment } from "../../types/domain";
 import "./team-overview.css";
+
+/**
+ * Helper to get fine IDs from a payment, handling backward compatibility.
+ */
+function getFineIdsFromPayment(payment: Payment): string[] {
+  if (payment.fineIds && payment.fineIds.length > 0) {
+    return payment.fineIds;
+  }
+  if (payment.fineId) {
+    return [payment.fineId];
+  }
+  return [];
+}
 
 interface TeamOverviewProps {
   teamId: string;
@@ -93,7 +106,9 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       let aggPaid = 0;
 
       for (const payment of payments) {
-        if (!seasonFineIds.has(payment.fineId)) continue;
+        const fineIds = getFineIdsFromPayment(payment);
+        // Skip if none of the fines belong to this season
+        if (!fineIds.some(fid => seasonFineIds.has(fid))) continue;
 
         const acc = accByUser.get(payment.userId);
 

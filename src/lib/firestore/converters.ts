@@ -62,7 +62,8 @@ interface TeamDoc extends DocumentData {
   name: string;
   slug: string;
   logoUrl?: string;
-  mobilePayRecipient?: string;
+  mobilePayRecipient?: string; // Legacy field, deprecated
+  mobilePayBoxUrl?: string;
   createdAt: Timestamp;
 }
 
@@ -108,7 +109,8 @@ interface FineDoc extends DocumentData {
 }
 
 interface PaymentDoc extends DocumentData {
-  fineId: string;
+  fineId?: string; // Legacy: single fine (deprecated)
+  fineIds?: string[]; // V2: supports combined payments
   userId: string;
   amount: number;
   status: PaymentStatus;
@@ -166,8 +168,8 @@ export const teamConverter: FirestoreDataConverter<Team, TeamDoc> = {
       name: team.name,
       slug: team.slug,
       ...(team.logoUrl !== undefined && { logoUrl: team.logoUrl }),
-      ...(team.mobilePayRecipient !== undefined && {
-        mobilePayRecipient: team.mobilePayRecipient,
+      ...(team.mobilePayBoxUrl !== undefined && {
+        mobilePayBoxUrl: team.mobilePayBoxUrl,
       }),
       createdAt: Timestamp.fromDate(new Date(team.createdAt)),
     };
@@ -179,7 +181,7 @@ export const teamConverter: FirestoreDataConverter<Team, TeamDoc> = {
       name: d.name,
       slug: d.slug,
       logoUrl: d.logoUrl,
-      mobilePayRecipient: d.mobilePayRecipient,
+      mobilePayBoxUrl: d.mobilePayBoxUrl ?? d.mobilePayRecipient, // Fallback for backward compatibility
       createdAt: toIso(d.createdAt),
     };
   },
@@ -307,7 +309,8 @@ export const paymentConverter: FirestoreDataConverter<Payment, PaymentDoc> = {
   toFirestore(modelObject: WithFieldValue<Payment>): PaymentDoc {
     const p = modelObject as Payment;
     return {
-      fineId: p.fineId,
+      ...(p.fineId !== undefined && { fineId: p.fineId }),
+      ...(p.fineIds !== undefined && { fineIds: p.fineIds }),
       userId: p.userId,
       amount: p.amount,
       status: p.status,
@@ -325,6 +328,7 @@ export const paymentConverter: FirestoreDataConverter<Payment, PaymentDoc> = {
     return {
       id: snapshot.id,
       fineId: d.fineId,
+      fineIds: d.fineIds,
       userId: d.userId,
       amount: d.amount,
       status: d.status,

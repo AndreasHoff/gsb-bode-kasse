@@ -14,8 +14,27 @@ interface Props {
   isSuperAdmin?: boolean;
 }
 
+type PaymentWithDetails = {
+  payment: Payment;
+  userName?: string;
+  fineTitles: string[];
+};
+
+/**
+ * Helper to get fine IDs from a payment, handling backward compatibility.
+ */
+function getFineIdsFromPayment(payment: Payment): string[] {
+  if (payment.fineIds && payment.fineIds.length > 0) {
+    return payment.fineIds;
+  }
+  if (payment.fineId) {
+    return [payment.fineId];
+  }
+  return [];
+}
+
 export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin }: Props) {
-  const [items, setItems] = useState<Array<{ payment: Payment; userName?: string; fineTitle?: string }>>([]);
+  const [items, setItems] = useState<PaymentWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -32,8 +51,14 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
         const detailed = await Promise.all(
           payments.map(async (p) => {
             const user = await getUserProfile(p.userId);
-            const fine = await getFine(teamId, p.fineId);
-            return { payment: p, userName: user?.name, fineTitle: fine?.title };
+            const fineIds = getFineIdsFromPayment(p);
+            const fines = await Promise.all(
+              fineIds.map((fid) => getFine(teamId, fid)),
+            );
+            const fineTitles = fines
+              .filter((f) => f !== null)
+              .map((f) => f!.title);
+            return { payment: p, userName: user?.name, fineTitles };
           }),
         );
         setItems(detailed);
@@ -125,7 +150,17 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
             <div className="admin-approval-main">
               <div className="admin-approval-info">
                 <p className="admin-approval-name">{it.userName ?? it.payment.userId}</p>
-                <p className="admin-approval-fine">{it.fineTitle ?? "Bøde"}</p>
+                {it.fineTitles.length === 1 && (
+                  <p className="admin-approval-fine">{it.fineTitles[0]}</p>
+                )}
+                {it.fineTitles.length > 1 && (
+                  <p className="admin-approval-fine">
+                    {it.fineTitles.length} bøder samlet
+                  </p>
+                )}
+                {it.fineTitles.length === 0 && (
+                  <p className="admin-approval-fine">Bøde</p>
+                )}
               </div>
               <div className="admin-approval-meta">
                 <span className="admin-approval-amount">{formatAmount(it.payment.amount)}</span>
@@ -149,7 +184,7 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
                 onClick={() => void handleDispute(it.payment.id)}
                 disabled={processingId === it.payment.id}
               >
-                Underkend
+                Afvis
               </button>
             </div>
           </li>

@@ -130,7 +130,7 @@ describe("approvePayment", () => {
     mocks.mockGetDoc.mockResolvedValueOnce({ exists: () => false });
 
     await expect(approvePayment("team-1", "missing-payment", "admin-1")).rejects.toThrow(
-      "Payment missing-payment not found in team team-1",
+      "Betaling blev ikke fundet",
     );
   });
 });
@@ -174,7 +174,7 @@ describe("disputePayment", () => {
     mocks.mockGetDoc.mockResolvedValueOnce({ exists: () => false });
 
     await expect(disputePayment("team-1", "missing-payment", "admin-1")).rejects.toThrow(
-      "Payment missing-payment not found in team team-1",
+      "Betaling blev ikke fundet",
     );
   });
 });
@@ -228,7 +228,7 @@ describe("Full E2E simulated payment flow", () => {
     const approveLogCall = mocks.mockBatch.set.mock.calls[1] as [unknown, Record<string, unknown>];
     expect(approveLogCall[1].action).toBe("payment.approved");
     expect(approveLogCall[1].metadata).toMatchObject({
-      fineId: "fine-1",
+      fineIds: ["fine-1"],
       amount: 50,
       userId: "user-1",
     });
