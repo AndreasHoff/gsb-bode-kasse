@@ -18,7 +18,7 @@ export interface Team {
   name: string;
   slug: string;
   logoUrl?: string;
-  mobilePayRecipient?: string;
+  mobilePayBoxUrl?: string;
   createdAt: string;
 }
 
@@ -69,7 +69,8 @@ export interface Fine {
 
 export interface Payment {
   id: string;
-  fineId: string;
+  fineId?: string; // Legacy: single fine (deprecated, kept for backward compatibility)
+  fineIds?: string[]; // V2: supports combined payments
   userId: string;
   amount: number;
   status: PaymentStatus;

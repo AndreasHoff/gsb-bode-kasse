@@ -225,7 +225,7 @@ describe("assignFineWithPayment", () => {
     expect(result.fines[0].amount).toBe(50);
     expect(result.fines[0].assignedTo).toEqual(["user-1"]);
 
-    expect(result.payments[0].fineId).toBe(result.fines[0].id);
+    expect(result.payments[0].fineIds).toEqual([result.fines[0].id]);
     expect(result.payments[0].userId).toBe("user-1");
     expect(result.payments[0].amount).toBe(50);
     expect(result.payments[0].status).toBe("unpaid");
@@ -258,7 +258,7 @@ describe("assignFineWithPayment", () => {
 
     // Each payment must belong to the corresponding fine
     for (const payment of result.payments) {
-      const matchingFine = result.fines.find((f) => f.id === payment.fineId);
+      const matchingFine = result.fines.find((f) => payment.fineIds && payment.fineIds.includes(f.id));
       expect(matchingFine).toBeDefined();
       expect(matchingFine?.assignedTo[0]).toBe(payment.userId);
     }

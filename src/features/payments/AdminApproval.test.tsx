@@ -111,7 +111,7 @@ describe("AdminApproval", () => {
 
     await screen.findByText("Morten");
 
-    await user.click(screen.getByRole("button", { name: "Underkend" }));
+    await user.click(screen.getByRole("button", { name: "Afvis" }));
 
     await waitFor(() => {
       expect(mocks.disputePaymentMock).toHaveBeenCalledWith("team-1", "payment-1", "admin-1");

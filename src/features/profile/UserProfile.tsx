@@ -6,7 +6,7 @@ import {
   getTeam,
   updateUserProfile,
 } from "../../lib/firestore";
-import { buildMobilePayDeepLink, formatAmount } from "../../lib/utils";
+import { formatAmount } from "../../lib/utils";
 import "./profile.css";
 
 interface UserProfileProps {
@@ -33,7 +33,7 @@ export default function UserProfile({
 
   const [paidTotal, setPaidTotal] = useState<number | null>(null);
   const [outstandingTotal, setOutstandingTotal] = useState<number | null>(null);
-  const [mobilePayRecipient, setMobilePayRecipient] = useState<string | undefined>(
+  const [mobilePayBoxUrl, setMobilePayBoxUrl] = useState<string | undefined>(
     undefined,
   );
   const [isLoadingStats, setIsLoadingStats] = useState(true);
@@ -45,7 +45,20 @@ export default function UserProfile({
     setEditedName(displayName);
   }, [displayName]);
 
-  // Load financial stats and MobilePay recipient
+  /**
+   * Helper to get fine IDs from a payment, handling backward compatibility.
+   */
+  function getFineIdsFromPayment(payment: { fineId?: string; fineIds?: string[] }): string[] {
+    if (payment.fineIds && payment.fineIds.length > 0) {
+      return payment.fineIds;
+    }
+    if (payment.fineId) {
+      return [payment.fineId];
+    }
+    return [];
+  }
+
+  // Load financial stats and MobilePay Box URL
   useEffect(() => {
     let isActive = true;
 
@@ -68,7 +81,10 @@ export default function UserProfile({
         let paid = 0;
         let outstanding = 0;
         for (const p of payments) {
-          if (!userFineIds.has(p.fineId)) continue;
+          const fineIds = getFineIdsFromPayment(p);
+          const isUserFine = fineIds.some((fid) => userFineIds.has(fid));
+          if (!isUserFine) continue;
+
           if (p.status === "approved") {
             paid += p.amount;
           } else if (p.status === "unpaid" || p.status === "pending" || p.status === "disputed") {
@@ -78,13 +94,13 @@ export default function UserProfile({
 
         setPaidTotal(paid);
         setOutstandingTotal(outstanding);
-        setMobilePayRecipient(team?.mobilePayRecipient?.trim() || undefined);
+        setMobilePayBoxUrl(team?.mobilePayBoxUrl?.trim() || undefined);
       } catch (error) {
         if (!isActive) return;
         const message = error instanceof Error ? error.message : "Ukendt fejl";
         setPaidTotal(0);
         setOutstandingTotal(0);
-        setMobilePayRecipient(undefined);
+        setMobilePayBoxUrl(undefined);
         setStatsError(`Kunne ikke hente betalingsoversigt (${message}).`);
       } finally {
         if (isActive) setIsLoadingStats(false);
@@ -121,42 +137,10 @@ export default function UserProfile({
   }
 
   function handlePayNow(): void {
-    if (!outstandingTotal || !mobilePayRecipient) return;
+    if (!outstandingTotal || !mobilePayBoxUrl) return;
 
-    const { nativeUrl, webUrl } = buildMobilePayDeepLink({
-      amount: outstandingTotal,
-      recipient: mobilePayRecipient,
-      comment: "Bøder GSB",
-    });
-
-    // Try native app first, fallback to web in same tab if app did not open.
-    let appOpened = false;
-    const markAppOpened = (): void => {
-      if (document.visibilityState === "hidden") appOpened = true;
-    };
-    const markAppOpenedOnPageHide = (): void => {
-      appOpened = true;
-    };
-
-    document.addEventListener("visibilitychange", markAppOpened);
-    window.addEventListener("pagehide", markAppOpenedOnPageHide);
-
-    const link = document.createElement("a");
-    link.href = nativeUrl;
-    link.style.display = "none";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Fallback after short delay only if app did not open.
-    setTimeout(() => {
-      document.removeEventListener("visibilitychange", markAppOpened);
-      window.removeEventListener("pagehide", markAppOpenedOnPageHide);
-
-      if (!appOpened) {
-        window.location.assign(webUrl);
-      }
-    }, 1200);
+    // Open MobilePay Box in a new tab
+    window.open(mobilePayBoxUrl, "_blank", "noopener,noreferrer");
   }
 
   const canSaveName =
@@ -164,11 +148,11 @@ export default function UserProfile({
     editedName.trim() !== displayName &&
     !isSaving;
 
-  const hasMobilePayRecipient = (mobilePayRecipient ?? "").trim().length > 0;
+  const hasMobilePayBoxUrl = (mobilePayBoxUrl ?? "").trim().length > 0;
   const canPayNow =
     !isLoadingStats &&
     (outstandingTotal ?? 0) > 0 &&
-    hasMobilePayRecipient;
+    hasMobilePayBoxUrl;
 
   const initials = displayName
     .split(" ")
@@ -236,10 +220,10 @@ export default function UserProfile({
       </button>
       {!isLoadingStats &&
         (outstandingTotal ?? 0) > 0 &&
-        !hasMobilePayRecipient && (
+        !hasMobilePayBoxUrl && (
           <p className="status-note mt-2">
-            MobilePay-modtager mangler for holdet. Kontakt en admin for at
-            konfigurere modtageren.
+            MobilePay Box URL mangler for holdet. Kontakt en admin for at
+            konfigurere den.
           </p>
         )}
 

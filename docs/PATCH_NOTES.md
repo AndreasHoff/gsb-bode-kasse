@@ -4,6 +4,28 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.23.0 — 11. august 2026
+
+**Feature: MobilePay Box Integration (F023)**
+
+**F023 - Betal Bøde (MobilePay Box):**
+- Erstattet MobilePay deep-link flow med MobilePay Box URL-flow
+- Admin kan nu konfigurere MobilePay Box URL i Indstillinger → Konfiguration-tab
+- Nyt to-trins betalingsflow på "Mine Bøder":
+  - Pre-payment dialog: Viser bødetitler, total, og "Åbn MobilePay"-knap
+  - Åbner MobilePay Box URL i nyt tab (`window.open`)
+  - Post-payment dialog: "Har du gennemført betalingen?" med Ja/Nej-knapper
+  - "Ja" opretter betaling med status "pending" til admin-godkendelse
+- Ny "Betal alle"-knap i "Mine Bøder" når flere ubetalte bøder eksisterer
+- Opdateret Admin Godkend Betalinger til at vise "3 bøder samlet" for kombinerede betalinger
+- Bagudkompatibelt schema: både `fineId` (legacy) og `fineIds` (v2) understøttes
+- Firestore rules opdateret: team-admins kan nu opdatere teams, medlemmer kan oprette pending payments
+- Fjernet `mobilePayRecipient` felt fra Team-typen (erstattet med `mobilePayBoxUrl`)
+- Ny `createCombinedPayment()` funktion til at håndtere kombinerede betalinger
+- ActivityLog metadata opdateret til at bruge `fineIds` array i stedet for enkelt `fineId`
+
+---
+
 ## v0.22.0 — 10. august 2026
 
 **Features: Admin Management Tools (F022, F015)**

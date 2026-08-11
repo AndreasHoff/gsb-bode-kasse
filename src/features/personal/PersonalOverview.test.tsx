@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   getPaymentsForUserMock: vi.fn(),
   getTeamMock: vi.fn(),
   getUsersMock: vi.fn(),
-  initiatePaymentMock: vi.fn(),
+  createCombinedPaymentMock: vi.fn(),
 }));
 
 vi.mock("../../lib/firestore", () => ({
@@ -20,7 +20,7 @@ vi.mock("../../lib/firestore", () => ({
   getPaymentsForUser: mocks.getPaymentsForUserMock,
   getTeam: mocks.getTeamMock,
   getUsers: mocks.getUsersMock,
-  initiatePayment: mocks.initiatePaymentMock,
+  createCombinedPayment: mocks.createCombinedPaymentMock,
 }));
 
 // Suppress MobilePay deep-link navigation in tests
@@ -61,7 +61,7 @@ const unpaidPayment: Payment = {
   status: "unpaid",
 };
 
-function setupDefaultMocks() {
+function setupDefaultMocks(withMobilePay = false) {
   mocks.getActiveSeasonMock.mockResolvedValue(activeSeason);
   mocks.getFinesForUserMock.mockResolvedValue([baseFine]);
   mocks.getPaymentsForUserMock.mockResolvedValue([unpaidPayment]);
@@ -70,7 +70,7 @@ function setupDefaultMocks() {
     name: "GSB",
     slug: "gsb",
     createdAt: "2026-01-01",
-    mobilePayRecipient: null,
+    mobilePayBoxUrl: withMobilePay ? "https://qr.mobilepay.dk/box/test" : null,
   });
   mocks.getUsersMock.mockResolvedValue([adminUser]);
 }
@@ -90,11 +90,20 @@ describe("PersonalOverview", () => {
     expect(screen.getByText("Betalt")).toBeInTheDocument();
   });
 
-  it("displays unpaid fines with a Betal button", async () => {
+  it("displays unpaid fines with a Betal bøde button when MobilePay is configured", async () => {
+    setupDefaultMocks(true);
     render(<PersonalOverview teamId="team-1" userId="user-1" />);
 
     expect(await screen.findByText("For sent til træning")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Betal" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Betal bøde" })).toBeInTheDocument();
+  });
+
+  it("does not show Betal button when MobilePay is not configured", async () => {
+    render(<PersonalOverview teamId="team-1" userId="user-1" />);
+
+    expect(await screen.findByText("For sent til træning")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Betal/ })).not.toBeInTheDocument();
+    expect(screen.getByText("MobilePay er ikke konfigureret for dette hold.")).toBeInTheDocument();
   });
 
   it("shows the correct unpaid total", async () => {
@@ -111,24 +120,52 @@ describe("PersonalOverview", () => {
     expect(screen.getByText("Skylder")).toBeInTheDocument();
   });
 
-  it("calls initiatePayment when Betal is clicked and refreshes data", async () => {
+  it("calls createCombinedPayment when user confirms payment after opening MobilePay", async () => {
+    setupDefaultMocks(true);
     const user = userEvent.setup();
 
-    const pendingPayment: Payment = { ...unpaidPayment, status: "pending", initiatedAt: "2026-06-01T11:00:00.000Z" };
-    mocks.initiatePaymentMock.mockResolvedValue(pendingPayment);
+    const pendingPayment: Payment = { 
+      ...unpaidPayment, 
+      fineIds: ["fine-1"],
+      status: "pending", 
+      initiatedAt: "2026-06-01T11:00:00.000Z" 
+    };
+    mocks.createCombinedPaymentMock.mockResolvedValue(pendingPayment);
 
-    // After the click the component calls loadData again — return pending payment this time
+    // After the payment creation, component reloads and shows pending payment
     mocks.getPaymentsForUserMock
       .mockResolvedValueOnce([unpaidPayment])   // initial load
-      .mockResolvedValue([pendingPayment]);       // reload after initiate
+      .mockResolvedValue([pendingPayment]);       // reload after payment created
 
     render(<PersonalOverview teamId="team-1" userId="user-1" />);
 
-    const payButton = await screen.findByRole("button", { name: "Betal" });
+    const payButton = await screen.findByRole("button", { name: "Betal bøde" });
     await user.click(payButton);
 
+    // Should show pre-payment dialog
+    expect(await screen.findByText("Du er ved at betale:")).toBeInTheDocument();
+    expect(screen.getAllByText("For sent til træning").length).toBeGreaterThan(0);
+    expect(screen.getByText("I alt: 50 kr.")).toBeInTheDocument();
+
+    // Click "Åbn MobilePay"
+    const openMobilePayButton = screen.getByRole("button", { name: "Åbn MobilePay" });
+    await user.click(openMobilePayButton);
+
+    // Should show post-payment confirmation dialog
+    expect(await screen.findByText("Har du gennemført betalingen?")).toBeInTheDocument();
+
+    // Click "Ja" to confirm
+    const yesButton = screen.getByRole("button", { name: "Ja" });
+    await user.click(yesButton);
+
     await waitFor(() => {
-      expect(mocks.initiatePaymentMock).toHaveBeenCalledWith("team-1", "payment-1", "user-1");
+      expect(mocks.createCombinedPaymentMock).toHaveBeenCalledWith(
+        "team-1", 
+        ["fine-1"], 
+        "user-1", 
+        50, 
+        "user-1"
+      );
     });
 
     // The fine should now be in the "Afventer godkendelse" section
@@ -138,7 +175,12 @@ describe("PersonalOverview", () => {
   });
 
   it("renders pending fines in the 'Afventer godkendelse' section", async () => {
-    const pendingPayment: Payment = { ...unpaidPayment, status: "pending", initiatedAt: "2026-06-01T11:00:00.000Z" };
+    const pendingPayment: Payment = { 
+      ...unpaidPayment, 
+      fineIds: ["fine-1"],
+      status: "pending", 
+      initiatedAt: "2026-06-01T11:00:00.000Z" 
+    };
     mocks.getPaymentsForUserMock.mockResolvedValue([pendingPayment]);
 
     render(<PersonalOverview teamId="team-1" userId="user-1" />);
@@ -147,12 +189,13 @@ describe("PersonalOverview", () => {
     expect(screen.getByText("For sent til træning")).toBeInTheDocument();
 
     // There should be no "Betal" button for pending fines
-    expect(screen.queryByRole("button", { name: "Betal" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Betal/ })).not.toBeInTheDocument();
   });
 
   it("renders approved fines in the 'Vis betalte bøder' collapsible section", async () => {
     const approvedPayment: Payment = {
       ...unpaidPayment,
+      fineIds: ["fine-1"],
       status: "approved",
       approvedAt: "2026-06-02T09:00:00.000Z",
       approvedBy: "admin-1",
@@ -190,6 +233,7 @@ describe("PersonalOverview", () => {
   });
 
   it("renders in viewer mode with the member's name as the title", async () => {
+    setupDefaultMocks(true);
     render(
       <PersonalOverview teamId="team-1" userId="user-1" viewerName="Morten" />,
     );
@@ -197,6 +241,6 @@ describe("PersonalOverview", () => {
     expect(await screen.findByText("Morten")).toBeInTheDocument();
 
     // In viewer mode there should be no pay button
-    expect(screen.queryByRole("button", { name: "Betal" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Betal/ })).not.toBeInTheDocument();
   });
 });

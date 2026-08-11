@@ -6,9 +6,9 @@ import {
   getPaymentsForUser,
   getTeam,
   getUsers,
-  initiatePayment,
+  createCombinedPayment,
 } from "../../lib/firestore";
-import { buildMobilePayDeepLink, formatAmount, formatRelativeTime } from "../../lib/utils";
+import { formatAmount, formatRelativeTime } from "../../lib/utils";
 import "./personal-overview.css";
 
 interface PersonalOverviewProps {
@@ -31,10 +31,33 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
   const [payingFineId, setPayingFineId] = useState<string | null>(null);
   const [isPayingAll, setIsPayingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mobilePayRecipient, setMobilePayRecipient] = useState<string | null>(null);
+  const [mobilePayBoxUrl, setMobilePayBoxUrl] = useState<string | null>(null);
   const [paidOpen, setPaidOpen] = useState(false);
+  const [paymentInProgress, setPaymentInProgress] = useState(false);
+
+  // Dialog state for MobilePay Box flow
+  const [showPrePayDialog, setShowPrePayDialog] = useState(false);
+  const [showPostPayDialog, setShowPostPayDialog] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState<{
+    fineIds: string[];
+    amount: number;
+    titles: string[];
+  } | null>(null);
 
   const [fineRows, setFineRows] = useState<FineWithPayment[]>([]);
+
+  /**
+   * Helper to get fine IDs from a payment, handling backward compatibility.
+   */
+  function getFineIdsFromPayment(payment: Payment): string[] {
+    if (payment.fineIds && payment.fineIds.length > 0) {
+      return payment.fineIds;
+    }
+    if (payment.fineId) {
+      return [payment.fineId];
+    }
+    return [];
+  }
 
   const loadData = useCallback(async () => {
     if (!teamId || !userId) {
@@ -59,9 +82,26 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         ? fines.filter((fine) => fine.seasonId === season.id)
         : [];
 
-      const paymentByFineId = new Map<string, Payment>();
+      // Build a map of fineId -> pending Payment (if any)
+      const pendingPaymentByFineId = new Map<string, Payment>();
       for (const payment of payments) {
-        paymentByFineId.set(payment.fineId, payment);
+        if (payment.status === "pending") {
+          const fineIds = getFineIdsFromPayment(payment);
+          for (const fid of fineIds) {
+            pendingPaymentByFineId.set(fid, payment);
+          }
+        }
+      }
+
+      // Build a map of fineId -> approved Payment (for status display)
+      const approvedPaymentByFineId = new Map<string, Payment>();
+      for (const payment of payments) {
+        if (payment.status === "approved") {
+          const fineIds = getFineIdsFromPayment(payment);
+          for (const fid of fineIds) {
+            approvedPaymentByFineId.set(fid, payment);
+          }
+        }
       }
 
       const userById = new Map<string, User>();
@@ -71,9 +111,17 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
 
       const rows: FineWithPayment[] = activeSeasonFines
         .map((fine) => {
-          const payment = paymentByFineId.get(fine.id) ?? null;
+          const pendingPayment = pendingPaymentByFineId.get(fine.id);
+          const approvedPayment = approvedPaymentByFineId.get(fine.id);
+          const payment = pendingPayment || approvedPayment || null;
           const assignedByName = userById.get(fine.assignedBy)?.name ?? "Ukendt";
-          const effectiveStatus = payment?.status ?? "unpaid";
+
+          let effectiveStatus: PaymentStatus = "unpaid";
+          if (pendingPayment) {
+            effectiveStatus = "pending";
+          } else if (approvedPayment) {
+            effectiveStatus = "approved";
+          }
 
           return {
             fine,
@@ -85,14 +133,14 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         .sort((a, b) => b.fine.createdAt.localeCompare(a.fine.createdAt));
 
       setFineRows(rows);
-      setMobilePayRecipient(isViewerMode ? null : (team?.mobilePayRecipient?.trim() || null));
+      setMobilePayBoxUrl(isViewerMode ? null : (team?.mobilePayBoxUrl?.trim() || null));
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : "Ukendt fejl";
       setError(`Kunne ikke hente dine bøder (${message}).`);
     } finally {
       setLoading(false);
     }
-  }, [teamId, userId, viewerName]);
+  }, [teamId, userId, isViewerMode]);
 
   useEffect(() => {
     void loadData();
@@ -143,92 +191,104 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
 
   const totalFinesCount = fineRows.length;
 
-  const canPay = unpaidTotal > 0;
+  const canPay = unpaidTotal > 0 && unpaidRows.length > 0;
+  const hasMultipleFines = unpaidRows.length > 1;
+  const mobilePayConfigured = !!mobilePayBoxUrl;
 
-  async function startMobilePay(amount: number, comment: string): Promise<void> {
-    const recipient = mobilePayRecipient?.trim();
-    if (!recipient) {
+  function handlePaySingleClick(row: FineWithPayment): void {
+    if (isViewerMode || row.effectiveStatus !== "unpaid" || !mobilePayConfigured) {
       return;
     }
 
-    const { nativeUrl, webUrl } = buildMobilePayDeepLink({
-      amount,
-      recipient,
-      comment,
+    setPendingPaymentData({
+      fineIds: [row.fine.id],
+      amount: row.fine.amount,
+      titles: [row.fine.title],
     });
-
-    let appOpened = false;
-    const markAppOpened = (): void => {
-      if (document.visibilityState === "hidden") appOpened = true;
-    };
-    const markAppOpenedOnPageHide = (): void => {
-      appOpened = true;
-    };
-
-    document.addEventListener("visibilitychange", markAppOpened);
-    window.addEventListener("pagehide", markAppOpenedOnPageHide);
-
-    window.location.assign(nativeUrl);
-
-    setTimeout(() => {
-      document.removeEventListener("visibilitychange", markAppOpened);
-      window.removeEventListener("pagehide", markAppOpenedOnPageHide);
-
-      if (!appOpened) {
-        window.location.assign(webUrl);
-      }
-    }, 1200);
+    setShowPrePayDialog(true);
   }
 
-  async function handlePaySingle(row: FineWithPayment): Promise<void> {
-    if (isViewerMode || !row.payment || row.effectiveStatus !== "unpaid") {
+  function handlePayAllClick(): void {
+    if (isViewerMode || !canPay || !mobilePayConfigured) {
       return;
     }
 
-    setPayingFineId(row.fine.id);
+    setPendingPaymentData({
+      fineIds: unpaidRows.map((r) => r.fine.id),
+      amount: unpaidTotal,
+      titles: unpaidRows.map((r) => r.fine.title),
+    });
+    setShowPrePayDialog(true);
+  }
+
+  function handleCancelPrePay(): void {
+    setShowPrePayDialog(false);
+    setPendingPaymentData(null);
+  }
+
+  function handleOpenMobilePay(): void {
+    setShowPrePayDialog(false);
+
+    if (!mobilePayBoxUrl) {
+      setError("MobilePay Box URL mangler.");
+      return;
+    }
+
+    // Open MobilePay Box in a new tab without navigating away
+    window.open(mobilePayBoxUrl, "_blank", "noopener,noreferrer");
+
+    // Show post-payment confirmation dialog
+    setShowPostPayDialog(true);
+  }
+
+  async function handleConfirmPayment(): Promise<void> {
+    setShowPostPayDialog(false);
+
+    if (!pendingPaymentData) {
+      setError("Betalingsdata mangler.");
+      return;
+    }
+
+    // Prevent duplicate submissions with 2-second debounce
+    if (paymentInProgress) {
+      return;
+    }
+    setPaymentInProgress(true);
+
+    const isSingle = pendingPaymentData.fineIds.length === 1;
+    if (isSingle) {
+      setPayingFineId(pendingPaymentData.fineIds[0]);
+    } else {
+      setIsPayingAll(true);
+    }
     setError(null);
 
     try {
-      await initiatePayment(teamId, row.payment.id, userId);
-      await startMobilePay(row.fine.amount, `Bøde: ${row.fine.title}`);
+      await createCombinedPayment(
+        teamId,
+        pendingPaymentData.fineIds,
+        userId,
+        pendingPaymentData.amount,
+        userId,
+      );
       await loadData();
     } catch (payError) {
       const message = payError instanceof Error ? payError.message : "Ukendt fejl";
-      setError(`Kunne ikke starte betaling (${message}).`);
+      setError(`Kunne ikke registrere betaling (${message}).`);
     } finally {
       setPayingFineId(null);
+      setIsPayingAll(false);
+      setPendingPaymentData(null);
+      // Re-enable payment button after 2 seconds
+      setTimeout(() => setPaymentInProgress(false), 2000);
     }
   }
 
-  async function handlePayAll(): Promise<void> {
-    if (isViewerMode || !canPay) {
-      return;
-    }
-
-    const paymentsToInitiate = unpaidRows
-      .map((row) => row.payment)
-      .filter((payment): payment is Payment => payment !== null);
-
-    if (paymentsToInitiate.length === 0) {
-      setError("Mangler betalingslinjer for en eller flere bøder.");
-      return;
-    }
-
-    setIsPayingAll(true);
-    setError(null);
-
-    try {
-      await Promise.all(
-        paymentsToInitiate.map((payment) => initiatePayment(teamId, payment.id, userId)),
-      );
-      await startMobilePay(unpaidTotal, "Bøder GSB");
-      await loadData();
-    } catch (payError) {
-      const message = payError instanceof Error ? payError.message : "Ukendt fejl";
-      setError(`Kunne ikke starte samlet betaling (${message}).`);
-    } finally {
-      setIsPayingAll(false);
-    }
+  function handleCancelPayment(): void {
+    setShowPostPayDialog(false);
+    setPendingPaymentData(null);
+    setPayingFineId(null);
+    setIsPayingAll(false);
   }
 
   return (
@@ -260,22 +320,20 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         </div>
       </div>
 
-      {!isViewerMode && (
+      {!isViewerMode && hasMultipleFines && (
         <button
           type="button"
           className="btn-primary personal-pay-btn"
-          onClick={() => {
-            void handlePayAll();
-          }}
-          disabled={!canPay || isPayingAll || loading}
+          onClick={handlePayAllClick}
+          disabled={!canPay || isPayingAll || loading || !mobilePayConfigured || paymentInProgress}
         >
-          {isPayingAll ? "Starter betaling..." : "Betal alle"}
+          {isPayingAll ? "Registrerer..." : "Betal alle"}
         </button>
       )}
 
-      {!isViewerMode && !loading && unpaidTotal > 0 && !mobilePayRecipient && (
+      {!isViewerMode && !loading && unpaidTotal > 0 && !mobilePayConfigured && (
         <p className="status-note mb-4">
-          MobilePay-modtager mangler – betaling registreres og afventer admin-godkendelse.
+          MobilePay er ikke konfigureret for dette hold.
         </p>
       )}
 
@@ -309,11 +367,19 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
               <FineRowCard
                 key={row.fine.id}
                 row={row}
-                actionLabel={payingFineId === row.fine.id ? "Starter..." : "Betal"}
-                actionDisabled={isViewerMode || payingFineId === row.fine.id || isPayingAll}
-                onAction={isViewerMode ? undefined : () => {
-                  void handlePaySingle(row);
-                }}
+                actionLabel={payingFineId === row.fine.id ? "Registrerer..." : "Betal bøde"}
+                actionDisabled={
+                  isViewerMode ||
+                  payingFineId === row.fine.id ||
+                  isPayingAll ||
+                  !mobilePayConfigured ||
+                  paymentInProgress
+                }
+                onAction={
+                  isViewerMode || !mobilePayConfigured
+                    ? undefined
+                    : () => handlePaySingleClick(row)
+                }
               />
             ))}
           </div>
@@ -358,6 +424,69 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
             </div>
           )}
         </section>
+      )}
+
+      {/* Pre-payment confirmation dialog */}
+      {showPrePayDialog && pendingPaymentData && (
+        <div className="dialog-overlay" onClick={handleCancelPrePay}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="dialog-title">Du er ved at betale:</h3>
+            <ul className="dialog-fine-list">
+              {pendingPaymentData.titles.map((title, idx) => (
+                <li key={idx}>{title}</li>
+              ))}
+            </ul>
+            <p className="dialog-total">
+              <strong>I alt: {formatAmount(pendingPaymentData.amount)}</strong>
+            </p>
+            <p className="dialog-text">
+              til klubbens MobilePay Box. Indtast beløbet manuelt i MobilePay.
+            </p>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleOpenMobilePay}
+              >
+                Åbn MobilePay
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleCancelPrePay}
+              >
+                Annuller
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post-payment confirmation dialog */}
+      {showPostPayDialog && (
+        <div className="dialog-overlay" onClick={handleCancelPayment}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="dialog-title">Har du gennemført betalingen?</h3>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  void handleConfirmPayment();
+                }}
+              >
+                Ja
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleCancelPayment}
+              >
+                Nej
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

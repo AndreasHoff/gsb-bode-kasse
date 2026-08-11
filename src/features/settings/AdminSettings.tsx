@@ -1,5 +1,5 @@
-// Feature: Admin Settings (F021, F022, F015)
-// Tabbed admin panel: payment approval, refunds/reconciliation, season management, member management.
+// Feature: Admin Settings (F021, F022, F015, F023)
+// Tabbed admin panel: payment approval, refunds/reconciliation, season management, member management, team configuration.
 
 import { useState } from "react";
 import type { Role } from "../../types/domain";
@@ -9,9 +9,10 @@ import SeasonManagement from "./SeasonManagement";
 import MemberManagement from "./MemberManagement";
 import RefundReconcile from "./RefundReconcile";
 import ImportFineRules from "./ImportFineRules";
+import TeamConfiguration from "./TeamConfiguration";
 import "./admin-settings.css";
 
-type AdminTab = "payments" | "refunds" | "fines" | "season" | "members";
+type AdminTab = "payments" | "refunds" | "fines" | "season" | "members" | "config";
 
 interface Props {
   teamId: string;
@@ -75,6 +76,15 @@ export default function AdminSettings({ teamId, actorId, userRole, isSuperAdmin 
             Medlemmer
           </button>
         )}
+        {showSeason && (
+          <button
+            type="button"
+            className={`admin-settings__tab${activeTab === "config" ? " admin-settings__tab--active" : ""}`}
+            onClick={() => setActiveTab("config")}
+          >
+            Indstillinger
+          </button>
+        )}
       </nav>
 
       <div className="admin-settings__content">
@@ -97,6 +107,9 @@ export default function AdminSettings({ teamId, actorId, userRole, isSuperAdmin 
         )}
         {activeTab === "members" && showMembers && (
           <MemberManagement teamId={teamId} actorId={actorId} />
+        )}
+        {activeTab === "config" && showSeason && (
+          <TeamConfiguration teamId={teamId} />
         )}
       </div>
     </div>

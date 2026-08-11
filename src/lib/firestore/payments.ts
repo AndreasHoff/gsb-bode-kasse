@@ -2,6 +2,22 @@ import { getDocs, getDoc, doc, setDoc, writeBatch, query, where } from "firebase
 import { db } from "../firebase";
 import { paymentsCol, paymentDoc, activityLogCol } from "./refs";
 import type { Payment, ActivityLog } from "../../types/domain";
+import { getFine } from "./fines";
+import { getActiveSeason } from "./seasons";
+
+/**
+ * Helper to get fine IDs from a payment, handling backward compatibility.
+ * Old payments have `fineId`, new payments have `fineIds[]`.
+ */
+function getFineIdsFromPayment(payment: Payment): string[] {
+  if (payment.fineIds && payment.fineIds.length > 0) {
+    return payment.fineIds;
+  }
+  if (payment.fineId) {
+    return [payment.fineId];
+  }
+  return [];
+}
 
 export async function getPayments(teamId: string): Promise<Payment[]> {
   const snap = await getDocs(paymentsCol(teamId));
@@ -80,6 +96,7 @@ export async function initiatePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -87,13 +104,105 @@ export async function initiatePayment(
     action: "payment.initiated",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineId: existing.fineId, amount: existing.amount },
+    metadata: { fineIds, amount: existing.amount },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
 
   await batch.commit();
   return updated;
+}
+
+/**
+ * Creates a combined payment for multiple fines and sets status to "pending".
+ * Used when a member pays multiple fines at once via MobilePay Box.
+ * Writes an ActivityLog entry atomically.
+ */
+export async function createCombinedPayment(
+  teamId: string,
+  fineIds: string[],
+  userId: string,
+  totalAmount: number,
+  actorId: string,
+): Promise<Payment> {
+  if (fineIds.length === 0) {
+    throw new Error("Kan ikke oprette betaling uden bøder");
+  }
+
+  // 1. Validate active season exists (cheapest: 1 cached read, fails fast on bad setup)
+  const activeSeason = await getActiveSeason(teamId);
+  if (!activeSeason) {
+    throw new Error("Ingen aktiv sæson");
+  }
+
+  // 2. Fetch all fines and validate they exist and aren't deleted (N reads, filters garbage early)
+  const fines = await Promise.all(fineIds.map(fid => getFine(teamId, fid)));
+  
+  if (fines.some(f => !f || f.deletedAt)) {
+    throw new Error("En eller flere bøder findes ikke længere");
+  }
+
+  // 3. Verify fine ownership (no I/O, fails fast if existence check failed)
+  const nonOwnedFines = fines.filter(f => f && !f.assignedTo.includes(userId));
+  if (nonOwnedFines.length > 0) {
+    throw new Error("Du kan kun betale dine egne bøder");
+  }
+
+  // 4. Verify all fines belong to active season (no I/O, uses already-fetched data)
+  const wrongSeasonFines = fines.filter(f => f && f.seasonId !== activeSeason.id);
+  if (wrongSeasonFines.length > 0) {
+    throw new Error("Alle bøder skal tilhøre den aktive sæson");
+  }
+
+  // 5. Validate amount matches sum of fines (pure computation, no I/O)
+  const actualTotal = fines.reduce((sum, f) => sum + (f?.amount ?? 0), 0);
+  if (actualTotal !== totalAmount) {
+    throw new Error("Beløbet matcher ikke bødernes samlede værdi");
+  }
+
+  // 6. Check for duplicate pending payments (most expensive: full table scan, done last)
+  const allPending = await getPendingPayments(teamId);
+  const existingFineIds = new Set<string>();
+  for (const p of allPending) {
+    const pFineIds = getFineIdsFromPayment(p);
+    for (const fid of pFineIds) {
+      existingFineIds.add(fid);
+    }
+  }
+  const duplicates = fineIds.filter(fid => existingFineIds.has(fid));
+  if (duplicates.length > 0) {
+    throw new Error("En betaling for disse bøder er allerede i gang");
+  }
+
+  const batch = writeBatch(db);
+
+  const paymentRef = doc(paymentsCol(teamId));
+  const payment: Payment = {
+    id: paymentRef.id,
+    fineIds,
+    userId,
+    amount: totalAmount,
+    status: "pending",
+    initiatedAt: new Date().toISOString(),
+  };
+  batch.set(paymentRef, payment);
+
+  const logColRef = activityLogCol(teamId);
+  const logRef = doc(logColRef);
+  const logEntry: ActivityLog = {
+    id: logRef.id,
+    teamId,
+    actorId,
+    action: "payment.initiated",
+    entityType: "payment",
+    entityId: payment.id,
+    metadata: { fineIds, amount: totalAmount },
+    createdAt: new Date().toISOString(),
+  };
+  batch.set(logRef, logEntry);
+
+  await batch.commit();
+  return payment;
 }
 
 /**
@@ -107,7 +216,12 @@ export async function approvePayment(
   actorId: string,
 ): Promise<Payment> {
   const existing = await getPayment(teamId, paymentId);
-  if (!existing) throw new Error(`Payment ${paymentId} not found in team ${teamId}`);
+  if (!existing) throw new Error("Betaling blev ikke fundet");
+
+  // Validate payment is in pending state
+  if (existing.status !== "pending") {
+    throw new Error("Kan kun godkende betalinger med status 'pending'");
+  }
 
   const batch = writeBatch(db);
 
@@ -122,6 +236,7 @@ export async function approvePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -129,7 +244,7 @@ export async function approvePayment(
     action: "payment.approved",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineId: existing.fineId, amount: existing.amount, userId: existing.userId },
+    metadata: { fineIds, amount: existing.amount, userId: existing.userId },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
@@ -148,7 +263,12 @@ export async function disputePayment(
   actorId: string,
 ): Promise<Payment> {
   const existing = await getPayment(teamId, paymentId);
-  if (!existing) throw new Error(`Payment ${paymentId} not found in team ${teamId}`);
+  if (!existing) throw new Error("Betaling blev ikke fundet");
+
+  // Validate payment is in pending state
+  if (existing.status !== "pending") {
+    throw new Error("Kan kun afvise betalinger med status 'pending'");
+  }
 
   const batch = writeBatch(db);
 
@@ -158,6 +278,7 @@ export async function disputePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -165,7 +286,7 @@ export async function disputePayment(
     action: "payment.disputed",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineId: existing.fineId, amount: existing.amount, userId: existing.userId },
+    metadata: { fineIds, amount: existing.amount, userId: existing.userId },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
@@ -222,6 +343,7 @@ export async function refundPayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -229,7 +351,7 @@ export async function refundPayment(
     action: "payment.refunded",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineId: existing.fineId, amount: existing.amount, userId: existing.userId },
+    metadata: { fineIds, amount: existing.amount, userId: existing.userId },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
@@ -265,6 +387,7 @@ export async function reconcilePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -272,7 +395,7 @@ export async function reconcilePayment(
     action: "payment.reconciled",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineId: existing.fineId, amount: existing.amount, userId: existing.userId },
+    metadata: { fineIds, amount: existing.amount, userId: existing.userId },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
