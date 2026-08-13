@@ -20,7 +20,7 @@ vi.mock("../../lib/firestore", () => ({
   createCombinedPayment: mocks.createCombinedPaymentMock,
 }));
 
-const fine: Fine = {
+const fineOne: Fine = {
   id: "fine-1",
   teamId: "team-1",
   seasonId: "season-1",
@@ -32,19 +32,31 @@ const fine: Fine = {
   createdAt: "2026-08-01T10:00:00.000Z",
 };
 
+const fineTwo: Fine = {
+  id: "fine-2",
+  teamId: "team-1",
+  seasonId: "season-1",
+  title: "Glemte fjerbolde",
+  amount: 25,
+  assignedTo: ["user-1"],
+  assignedBy: "admin-1",
+  isShared: false,
+  createdAt: "2026-08-02T10:00:00.000Z",
+};
+
 const unpaidPayment: Payment = {
   id: "payment-unpaid",
-  fineIds: ["fine-1"],
+  fineIds: ["fine-1", "fine-2"],
   userId: "user-1",
-  amount: 50,
+  amount: 75,
   status: "unpaid",
 };
 
 const pendingPayment: Payment = {
   id: "payment-pending",
-  fineIds: ["fine-1"],
+  fineIds: ["fine-1", "fine-2"],
   userId: "user-1",
-  amount: 50,
+  amount: 75,
   status: "pending",
   initiatedAt: "2026-08-01T11:00:00.000Z",
 };
@@ -65,7 +77,7 @@ describe("UserProfile payment flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.sessionStorage.clear();
-    mocks.getFinesForUserMock.mockResolvedValue([fine]);
+    mocks.getFinesForUserMock.mockResolvedValue([fineOne, fineTwo]);
     mocks.getPaymentsForUserMock.mockResolvedValue([unpaidPayment]);
     mocks.getTeamMock.mockResolvedValue({
       id: "team-1",
@@ -79,16 +91,26 @@ describe("UserProfile payment flow", () => {
     vi.spyOn(window, "open").mockReturnValue(null);
   });
 
-  it("registers payment and shows feedback when user returns to app", async () => {
+  it("registers selected fines payment when user returns to app", async () => {
     const user = userEvent.setup();
+    const selectedPendingPayment: Payment = {
+      ...pendingPayment,
+      fineIds: ["fine-1"],
+      amount: 50,
+    };
     mocks.getPaymentsForUserMock
       .mockResolvedValueOnce([unpaidPayment])
-      .mockResolvedValue([pendingPayment]);
+      .mockResolvedValue([selectedPendingPayment]);
 
     renderProfile();
 
-    const payButton = await screen.findByRole("button", {
-      name: /Betal udestående bøder via MobilePay/i,
+    const fineTwoCheckbox = await screen.findByRole("checkbox", {
+      name: /Glemte fjerbolde/i,
+    });
+    await user.click(fineTwoCheckbox);
+
+    const payButton = screen.getByRole("button", {
+      name: /Betal valgte bøder via MobilePay/i,
     });
     await user.click(payButton);
 
@@ -118,13 +140,38 @@ describe("UserProfile payment flow", () => {
     ).toBeInTheDocument();
   });
 
+  it("registers all outstanding fines when user taps pay all", async () => {
+    const user = userEvent.setup();
+    mocks.getPaymentsForUserMock
+      .mockResolvedValueOnce([unpaidPayment])
+      .mockResolvedValue([pendingPayment]);
+
+    renderProfile();
+
+    const payAllButton = await screen.findByRole("button", {
+      name: /Betal alle udestående bøder via MobilePay/i,
+    });
+    await user.click(payAllButton);
+    window.dispatchEvent(new Event("focus"));
+
+    await waitFor(() => {
+      expect(mocks.createCombinedPaymentMock).toHaveBeenCalledWith(
+        "team-1",
+        ["fine-1", "fine-2"],
+        "user-1",
+        75,
+        "user-1",
+      );
+    });
+  });
+
   it("shows pending amount as temporary paid", async () => {
     mocks.getPaymentsForUserMock.mockResolvedValue([pendingPayment]);
 
     renderProfile();
 
     expect(
-      await screen.findByText(/Midlertidigt betalt: 50 kr\./i),
+      await screen.findByText(/Midlertidigt betalt: 75 kr\./i),
     ).toBeInTheDocument();
   });
 });

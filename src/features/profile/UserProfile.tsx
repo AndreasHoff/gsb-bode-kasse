@@ -1,5 +1,5 @@
 // Feature: User Profile (F012)
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createCombinedPayment,
   getFinesForUser,
@@ -17,6 +17,12 @@ interface UserProfileProps {
   displayName: string;
   onNameChange: (newName: string) => void;
 }
+
+type UnpaidFineSummary = {
+  id: string;
+  title: string;
+  amount: number;
+};
 
 export default function UserProfile({
   userId,
@@ -36,7 +42,8 @@ export default function UserProfile({
   const [paidTotal, setPaidTotal] = useState<number | null>(null);
   const [outstandingTotal, setOutstandingTotal] = useState<number | null>(null);
   const [pendingTotal, setPendingTotal] = useState<number | null>(null);
-  const [unpaidFineIds, setUnpaidFineIds] = useState<string[]>([]);
+  const [unpaidFines, setUnpaidFines] = useState<UnpaidFineSummary[]>([]);
+  const [selectedFineIds, setSelectedFineIds] = useState<string[]>([]);
   const [isRegisteringPayment, setIsRegisteringPayment] = useState(false);
   const [paymentFeedback, setPaymentFeedback] = useState<{
     type: "success" | "error";
@@ -100,6 +107,7 @@ export default function UserProfile({
         let paid = 0;
         let outstanding = 0;
         let pending = 0;
+        const nextUnpaidFines: UnpaidFineSummary[] = [];
         const unpaidIds: string[] = [];
 
         for (const fine of fines) {
@@ -110,13 +118,23 @@ export default function UserProfile({
           } else {
             outstanding += fine.amount;
             unpaidIds.push(fine.id);
+            nextUnpaidFines.push({
+              id: fine.id,
+              title: fine.title,
+              amount: fine.amount,
+            });
           }
         }
 
         setPaidTotal(paid);
         setOutstandingTotal(outstanding);
         setPendingTotal(pending);
-        setUnpaidFineIds(unpaidIds);
+        setUnpaidFines(nextUnpaidFines);
+        setSelectedFineIds((previous) => {
+          const unpaidSet = new Set(unpaidIds);
+          const stillUnpaid = previous.filter((id) => unpaidSet.has(id));
+          return stillUnpaid.length > 0 ? stillUnpaid : unpaidIds;
+        });
         setMobilePayBoxUrl(team?.mobilePayBoxUrl?.trim() || undefined);
       } catch (error) {
         if (!isActive) return;
@@ -124,7 +142,8 @@ export default function UserProfile({
         setPaidTotal(0);
         setOutstandingTotal(0);
         setPendingTotal(0);
-        setUnpaidFineIds([]);
+        setUnpaidFines([]);
+        setSelectedFineIds([]);
         setMobilePayBoxUrl(undefined);
         setStatsError(`Kunne ikke hente betalingsoversigt (${message}).`);
       } finally {
@@ -239,13 +258,13 @@ export default function UserProfile({
     };
   }, [settlePaymentDraft]);
 
-  function handlePayNow(): void {
-    if (!outstandingTotal || !mobilePayBoxUrl || unpaidFineIds.length === 0) return;
+  function startPayment(fineIds: string[], amount: number): void {
+    if (!mobilePayBoxUrl || fineIds.length === 0 || amount <= 0) return;
 
     setPaymentFeedback(null);
     window.sessionStorage.setItem(
       paymentDraftStorageKey,
-      JSON.stringify({ fineIds: unpaidFineIds, amount: outstandingTotal }),
+      JSON.stringify({ fineIds, amount }),
     );
 
     try {
@@ -260,17 +279,49 @@ export default function UserProfile({
     }
   }
 
+  function handlePaySelected(): void {
+    if (selectedFineIds.length === 0) return;
+    const selectedFineIdsSet = new Set(selectedFineIds);
+    const selectedAmount = unpaidFines.reduce(
+      (sum, fine) => (selectedFineIdsSet.has(fine.id) ? sum + fine.amount : sum),
+      0,
+    );
+    startPayment(selectedFineIds, selectedAmount);
+  }
+
+  function handlePayAll(): void {
+    if (!outstandingTotal || unpaidFines.length === 0) return;
+    startPayment(
+      unpaidFines.map((fine) => fine.id),
+      outstandingTotal,
+    );
+  }
+
   const canSaveName =
     editedName.trim().length > 0 &&
     editedName.trim() !== displayName &&
     !isSaving;
 
   const hasMobilePayBoxUrl = (mobilePayBoxUrl ?? "").trim().length > 0;
-  const canPayNow =
+  const selectedTotal = useMemo(() => {
+    const selectedFineIdsSet = new Set(selectedFineIds);
+    return unpaidFines.reduce(
+      (sum, fine) => (selectedFineIdsSet.has(fine.id) ? sum + fine.amount : sum),
+      0,
+    );
+  }, [selectedFineIds, unpaidFines]);
+  const canPaySelected =
+    !isLoadingStats &&
+    selectedFineIds.length > 0 &&
+    selectedTotal > 0 &&
+    hasMobilePayBoxUrl &&
+    unpaidFines.length > 0 &&
+    !isRegisteringPayment;
+  const canPayAll =
     !isLoadingStats &&
     (outstandingTotal ?? 0) > 0 &&
     hasMobilePayBoxUrl &&
-    unpaidFineIds.length > 0 &&
+    unpaidFines.length > 0 &&
     !isRegisteringPayment;
 
   const initials = displayName
@@ -324,17 +375,57 @@ export default function UserProfile({
       </div>
 
       {/* Pay now */}
+      {!isLoadingStats && unpaidFines.length > 0 && (
+        <section className="profile-payment-section">
+          <p className="profile-section__title">Vælg bøder til betaling</p>
+          <div className="profile-fine-selection-list">
+            {unpaidFines.map((fine) => (
+              <label key={fine.id} className="profile-fine-selection-item">
+                <input
+                  type="checkbox"
+                  checked={selectedFineIds.includes(fine.id)}
+                  onChange={(event) => {
+                    setSelectedFineIds((previous) => {
+                      if (event.target.checked) {
+                        return previous.includes(fine.id)
+                          ? previous
+                          : [...previous, fine.id];
+                      }
+                      return previous.filter((id) => id !== fine.id);
+                    });
+                  }}
+                />
+                <span>{fine.title}</span>
+                <strong>{formatAmount(fine.amount)}</strong>
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
       <button
         type="button"
         className="profile-pay-btn"
-        onClick={handlePayNow}
-        disabled={!canPayNow}
-        aria-label="Betal udestående bøder via MobilePay"
+        onClick={handlePaySelected}
+        disabled={!canPaySelected}
+        aria-label="Betal valgte bøder via MobilePay"
       >
         <span>💸</span>
         <span>
-          Betal nu
-          {canPayNow ? ` – ${formatAmount(outstandingTotal ?? 0)}` : ""}
+          Betal valgte
+          {canPaySelected ? ` – ${formatAmount(selectedTotal)}` : ""}
+        </span>
+      </button>
+      <button
+        type="button"
+        className="profile-pay-btn profile-pay-btn--secondary"
+        onClick={handlePayAll}
+        disabled={!canPayAll}
+        aria-label="Betal alle udestående bøder via MobilePay"
+      >
+        <span>🧾</span>
+        <span>
+          Betal alle
+          {canPayAll ? ` – ${formatAmount(outstandingTotal ?? 0)}` : ""}
         </span>
       </button>
       {!isLoadingStats &&

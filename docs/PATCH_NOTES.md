@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.24.0 — 13. august 2026
+
+**Feature: Fleksibel betaling af valgte bøder i profil**
+
+- Profilbetaling understøtter nu valg af én, flere eller alle udestående bøder før MobilePay åbnes
+- Tilføjet checkbox-liste over ubetalte bøder med beløb, så medlemmet kan betale delvist ved behov
+- Tilføjet separat handling for **Betal valgte** og **Betal alle** i samme flow
+- MobilePay-returflowet bevares robust med registrering som `pending` efter app-retur
+- Udvidet tests for både delvis betaling og betaling af alle bøder i profil
+
+---
+
 ## v0.23.1 — 13. august 2026
 
 **Fix: Stabilisering af MobilePay-retur i profilbetaling**

@@ -108,7 +108,7 @@
 
 .profile-pay-btn {
 	width: 100%;
-	margin-bottom: 1.5rem;
+	margin-bottom: 0.65rem;
 	padding: 0.9rem 1rem;
 	border-radius: 0.9rem;
 	font-weight: 700;
@@ -135,6 +135,40 @@
 .profile-pay-btn:disabled {
 	opacity: 0.38;
 	cursor: not-allowed;
+}
+
+.profile-pay-btn--secondary {
+	background: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface-muted));
+	color: var(--color-primary);
+	border: 1px solid color-mix(in srgb, var(--color-primary) 50%, transparent);
+	margin-bottom: 1.25rem;
+}
+
+.profile-payment-section {
+	margin-bottom: 0.75rem;
+}
+
+.profile-fine-selection-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-bottom: 0.6rem;
+}
+
+.profile-fine-selection-item {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 0.55rem;
+	padding: 0.6rem 0.75rem;
+	border-radius: 0.75rem;
+	border: 1px solid var(--color-border);
+	background: color-mix(in srgb, var(--color-surface-muted) 50%, transparent);
+	font-size: 0.85rem;
+}
+
+.profile-fine-selection-item strong {
+	font-size: 0.82rem;
 }
 
 .profile-section {
