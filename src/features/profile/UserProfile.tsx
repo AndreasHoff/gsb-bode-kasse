@@ -1,6 +1,7 @@
 // Feature: User Profile (F012)
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  createCombinedPayment,
   getFinesForUser,
   getPaymentsForUser,
   getTeam,
@@ -24,6 +25,7 @@ export default function UserProfile({
   displayName,
   onNameChange,
 }: UserProfileProps) {
+  const paymentDraftStorageKey = `gsb:payment-draft:${teamId}:${userId}`;
   const [editedName, setEditedName] = useState(displayName);
   const [isSaving, setIsSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{
@@ -33,6 +35,13 @@ export default function UserProfile({
 
   const [paidTotal, setPaidTotal] = useState<number | null>(null);
   const [outstandingTotal, setOutstandingTotal] = useState<number | null>(null);
+  const [pendingTotal, setPendingTotal] = useState<number | null>(null);
+  const [unpaidFineIds, setUnpaidFineIds] = useState<string[]>([]);
+  const [isRegisteringPayment, setIsRegisteringPayment] = useState(false);
+  const [paymentFeedback, setPaymentFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [mobilePayBoxUrl, setMobilePayBoxUrl] = useState<string | undefined>(
     undefined,
   );
@@ -75,31 +84,47 @@ export default function UserProfile({
 
         if (!isActive) return;
 
-        const userFineIds = new Set(fines.map((f) => f.id));
-
-        // Compute paid and outstanding from payments for user's fines
-        let paid = 0;
-        let outstanding = 0;
+        const pendingFineIds = new Set<string>();
+        const approvedFineIds = new Set<string>();
         for (const p of payments) {
           const fineIds = getFineIdsFromPayment(p);
-          const isUserFine = fineIds.some((fid) => userFineIds.has(fid));
-          if (!isUserFine) continue;
-
+          if (p.status === "pending") {
+            fineIds.forEach((id) => pendingFineIds.add(id));
+          }
           if (p.status === "approved") {
-            paid += p.amount;
-          } else if (p.status === "unpaid" || p.status === "pending" || p.status === "disputed") {
-            outstanding += p.amount;
+            fineIds.forEach((id) => approvedFineIds.add(id));
+          }
+        }
+
+        // Compute totals per fine to avoid double counting when both unpaid+pending payment records exist
+        let paid = 0;
+        let outstanding = 0;
+        let pending = 0;
+        const unpaidIds: string[] = [];
+
+        for (const fine of fines) {
+          if (approvedFineIds.has(fine.id)) {
+            paid += fine.amount;
+          } else if (pendingFineIds.has(fine.id)) {
+            pending += fine.amount;
+          } else {
+            outstanding += fine.amount;
+            unpaidIds.push(fine.id);
           }
         }
 
         setPaidTotal(paid);
         setOutstandingTotal(outstanding);
+        setPendingTotal(pending);
+        setUnpaidFineIds(unpaidIds);
         setMobilePayBoxUrl(team?.mobilePayBoxUrl?.trim() || undefined);
       } catch (error) {
         if (!isActive) return;
         const message = error instanceof Error ? error.message : "Ukendt fejl";
         setPaidTotal(0);
         setOutstandingTotal(0);
+        setPendingTotal(0);
+        setUnpaidFineIds([]);
         setMobilePayBoxUrl(undefined);
         setStatsError(`Kunne ikke hente betalingsoversigt (${message}).`);
       } finally {
@@ -136,11 +161,103 @@ export default function UserProfile({
     }
   }
 
-  function handlePayNow(): void {
-    if (!outstandingTotal || !mobilePayBoxUrl) return;
+  const settlePaymentDraft = useCallback(async (): Promise<void> => {
+    if (isRegisteringPayment) return;
 
-    // Open MobilePay Box in a new tab
-    window.open(mobilePayBoxUrl, "_blank", "noopener,noreferrer");
+    const rawDraft = window.sessionStorage.getItem(paymentDraftStorageKey);
+    if (!rawDraft) return;
+
+    type PaymentDraft = { fineIds: string[]; amount: number };
+    let parsed: PaymentDraft | null = null;
+    try {
+      parsed = JSON.parse(rawDraft) as PaymentDraft;
+    } catch {
+      window.sessionStorage.removeItem(paymentDraftStorageKey);
+      return;
+    }
+
+    if (!parsed || parsed.fineIds.length === 0 || parsed.amount <= 0) {
+      window.sessionStorage.removeItem(paymentDraftStorageKey);
+      return;
+    }
+
+    setIsRegisteringPayment(true);
+    setPaymentFeedback(null);
+    window.sessionStorage.removeItem(paymentDraftStorageKey);
+
+    try {
+      await createCombinedPayment(
+        teamId,
+        parsed.fineIds,
+        userId,
+        parsed.amount,
+        userId,
+      );
+      setPaymentFeedback({
+        type: "success",
+        message:
+          "Din betaling er modtaget. En admin vil godkende hurtigst muligt.",
+      });
+      setStatsReloadKey((prev) => prev + 1);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ukendt fejl";
+      if (message.includes("allerede i gang")) {
+        setPaymentFeedback({
+          type: "success",
+          message:
+            "Din betaling er registreret som afventer godkendelse.",
+        });
+        setStatsReloadKey((prev) => prev + 1);
+      } else {
+        setPaymentFeedback({
+          type: "error",
+          message: `Kunne ikke registrere betaling (${message}).`,
+        });
+      }
+    } finally {
+      setIsRegisteringPayment(false);
+    }
+  }, [isRegisteringPayment, paymentDraftStorageKey, teamId, userId]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void settlePaymentDraft();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void settlePaymentDraft();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    void settlePaymentDraft();
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [settlePaymentDraft]);
+
+  function handlePayNow(): void {
+    if (!outstandingTotal || !mobilePayBoxUrl || unpaidFineIds.length === 0) return;
+
+    setPaymentFeedback(null);
+    window.sessionStorage.setItem(
+      paymentDraftStorageKey,
+      JSON.stringify({ fineIds: unpaidFineIds, amount: outstandingTotal }),
+    );
+
+    try {
+      // Open MobilePay Box in a new tab
+      window.open(mobilePayBoxUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      window.sessionStorage.removeItem(paymentDraftStorageKey);
+      setPaymentFeedback({
+        type: "error",
+        message: "Kunne ikke åbne MobilePay. Prøv igen.",
+      });
+    }
   }
 
   const canSaveName =
@@ -152,7 +269,9 @@ export default function UserProfile({
   const canPayNow =
     !isLoadingStats &&
     (outstandingTotal ?? 0) > 0 &&
-    hasMobilePayBoxUrl;
+    hasMobilePayBoxUrl &&
+    unpaidFineIds.length > 0 &&
+    !isRegisteringPayment;
 
   const initials = displayName
     .split(" ")
@@ -226,6 +345,17 @@ export default function UserProfile({
             konfigurere den.
           </p>
         )}
+      {paymentFeedback && (
+        <p className={`profile-feedback profile-feedback--${paymentFeedback.type}`}>
+          {paymentFeedback.message}
+        </p>
+      )}
+      {!isLoadingStats && (pendingTotal ?? 0) > 0 && (
+        <p className="status-note mt-2">
+          Midlertidigt betalt: {formatAmount(pendingTotal ?? 0)} (afventer
+          godkendelse)
+        </p>
+      )}
 
       {/* Profile fields */}
       <div className="profile-section">
