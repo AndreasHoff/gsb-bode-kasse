@@ -1,5 +1,5 @@
 // Feature: User Profile (F012)
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createCombinedPayment,
   getFinesForUser,
@@ -49,6 +49,7 @@ export default function UserProfile({
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const paymentFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mobilePayBoxUrl, setMobilePayBoxUrl] = useState<string | undefined>(
     undefined,
   );
@@ -215,7 +216,7 @@ export default function UserProfile({
       setPaymentFeedback({
         type: "success",
         message:
-          "Din betaling er modtaget. En admin vil godkende hurtigst muligt.",
+          "Betaling modtaget! En admin godkender hurtigst muligt. 🎉",
       });
       setStatsReloadKey((prev) => prev + 1);
     } catch (error) {
@@ -224,7 +225,7 @@ export default function UserProfile({
         setPaymentFeedback({
           type: "success",
           message:
-            "Din betaling er registreret som afventer godkendelse.",
+            "Betaling registreret og afventer godkendelse. 🎉",
         });
         setStatsReloadKey((prev) => prev + 1);
       } else {
@@ -237,6 +238,22 @@ export default function UserProfile({
       setIsRegisteringPayment(false);
     }
   }, [isRegisteringPayment, paymentDraftStorageKey, teamId, userId]);
+
+  // Auto-dismiss payment feedback toast after 6 seconds
+  useEffect(() => {
+    if (!paymentFeedback) return;
+    if (paymentFeedbackTimerRef.current) {
+      clearTimeout(paymentFeedbackTimerRef.current);
+    }
+    paymentFeedbackTimerRef.current = setTimeout(() => {
+      setPaymentFeedback(null);
+    }, 6000);
+    return () => {
+      if (paymentFeedbackTimerRef.current) {
+        clearTimeout(paymentFeedbackTimerRef.current);
+      }
+    };
+  }, [paymentFeedback]);
 
   useEffect(() => {
     const handleFocus = () => {
@@ -267,16 +284,12 @@ export default function UserProfile({
       JSON.stringify({ fineIds, amount }),
     );
 
-    try {
-      // Open MobilePay Box in a new tab
-      window.open(mobilePayBoxUrl, "_blank", "noopener,noreferrer");
-    } catch {
-      window.sessionStorage.removeItem(paymentDraftStorageKey);
-      setPaymentFeedback({
-        type: "error",
-        message: "Kunne ikke åbne MobilePay. Prøv igen.",
-      });
-    }
+    // Navigate the current tab to MobilePay so that iOS does not leave the
+    // user stranded in an empty new tab (window.open("_blank") causes a blank
+    // tab when MobilePay redirects to its native app deep-link).
+    // The sessionStorage draft persists across the navigation and is settled
+    // when the user returns and the app reloads.
+    window.location.href = mobilePayBoxUrl;
   }
 
   function handlePaySelected(): void {
@@ -437,9 +450,17 @@ export default function UserProfile({
           </p>
         )}
       {paymentFeedback && (
-        <p className={`profile-feedback profile-feedback--${paymentFeedback.type}`}>
-          {paymentFeedback.message}
-        </p>
+        <div
+          role="status"
+          aria-live="polite"
+          className={`profile-payment-toast profile-payment-toast--${paymentFeedback.type}`}
+          onClick={() => setPaymentFeedback(null)}
+        >
+          <span className="profile-payment-toast__icon" aria-hidden="true">
+            {paymentFeedback.type === "success" ? "✅" : "⚠️"}
+          </span>
+          <span className="profile-payment-toast__message">{paymentFeedback.message}</span>
+        </div>
       )}
       {!isLoadingStats && (pendingTotal ?? 0) > 0 && (
         <p className="status-note mt-2">
