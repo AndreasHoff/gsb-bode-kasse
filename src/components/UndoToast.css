@@ -1,0 +1,68 @@
+.undo-toast {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: calc(100% - 1.5rem);
+  max-width: calc(430px - 1.5rem);
+  padding: 0.75rem;
+  background: transparent;
+  pointer-events: auto;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
+  transform: translateY(-100%);
+  margin: 0.75rem;
+}
+
+.undo-toast--visible {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.undo-toast--hidden {
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+
+.undo-toast__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--color-card-bg);
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.undo-toast__message {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--color-text);
+  flex: 1;
+  min-width: 0;
+}
+
+.undo-toast__button {
+  flex-shrink: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.undo-toast__button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 80%, black);
+}
+
+.undo-toast__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

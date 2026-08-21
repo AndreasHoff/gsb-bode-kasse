@@ -10,6 +10,7 @@ import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
 import BottomNavbar from "./components/BottomNavbar";
+import UndoToast from "./components/UndoToast";
 import AdminSettings from "./features/settings/AdminSettings";
 import { canAssignFines, canApprovePayments } from "./lib/permissions";
 import {
@@ -511,25 +512,20 @@ function App() {
       </main>
 
       {lastAssignedFines && (
-        <div className="app-main pt-0 pb-2">
-          <div className="app-card app-card--muted p-3 flex items-center justify-between gap-3">
-            <p className="text-xs text-[var(--color-text)]">
-              {lastAssignedFines.fineIds.length === 1
-                ? `Bøde tildelt til ${lastAssignedFines.memberNames[0]}.`
-                : `${lastAssignedFines.fineIds.length} bøder tildelt.`}
-            </p>
-            <button
-              type="button"
-              className="btn-secondary px-3 py-1.5 text-xs"
-              onClick={() => {
-                void handleUndoLastAssignedFines();
-              }}
-              disabled={isUndoingAssign}
-            >
-              {isUndoingAssign ? "Fortryder..." : "Fortryd"}
-            </button>
-          </div>
-        </div>
+        <UndoToast
+          message={
+            lastAssignedFines.fineIds.length === 1
+              ? `Bøde tildelt til ${lastAssignedFines.memberNames[0]}.`
+              : `${lastAssignedFines.fineIds.length} bøder tildelt.`
+          }
+          onUndo={() => {
+            void handleUndoLastAssignedFines();
+          }}
+          isUndoing={isUndoingAssign}
+          onHidden={() => {
+            setLastAssignedFines(null);
+          }}
+        />
       )}
 
       <BottomNavbar
