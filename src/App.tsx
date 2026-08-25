@@ -59,7 +59,6 @@ function App() {
   const [teamId, setTeamId] = useState("");
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [userId, setUserId] = useState("");
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [lastAssignedFines, setLastAssignedFines] = useState<{
     teamId: string;
     fineIds: string[];
@@ -119,7 +118,6 @@ function App() {
         setTeamId("");
         setUserRole(null);
         setUserId("");
-        setIsSuperAdmin(false);
         return;
       }
 
@@ -137,8 +135,6 @@ function App() {
           email: user.email || "ukendt@bruger.local",
           avatarUrl: user.photoURL || undefined,
         });
-        const superAdmin = userProfile.isSuperAdmin === true;
-        setIsSuperAdmin(superAdmin);
         setUserEmail(userProfile.email);
 
         const memberships = await getActiveMembershipsForUser(user.uid);
@@ -156,7 +152,7 @@ function App() {
             setTeamId("");
             setUserRole(null);
             setUserId(user.uid);
-            setStatus(superAdmin ? "ready" : "no-membership");
+            setStatus("no-membership");
             return;
           }
 
@@ -178,13 +174,6 @@ function App() {
           setDisplayName(userProfile.name);
           setTeamName(defaultTeam.name || "Mit hold");
           setStatus("ready");
-
-          if (superAdmin) {
-            void backfillTeamMembershipsForAllUsers(defaultTeam.id).catch((error) => {
-              console.error("[auth] Super-admin membership backfill failed", error);
-            });
-          }
-
           return;
         }
 
@@ -197,12 +186,6 @@ function App() {
         setDisplayName(userProfile.name);
         setTeamName(team?.name || "Mit hold");
         setStatus("ready");
-
-        if (superAdmin) {
-          void backfillTeamMembershipsForAllUsers(primaryMembership.teamId).catch((error) => {
-            console.error("[auth] Super-admin membership backfill failed", error);
-          });
-        }
       } catch (error) {
         console.error("[auth] Session sync failed", error);
         setAuthError(toFriendlyErrorMessage(error));
@@ -348,15 +331,15 @@ function App() {
   ];
   const menuItems = [...primaryMenuItems];
 
-  if (canAssignFines(userRole, isSuperAdmin)) {
+  if (canAssignFines(userRole)) {
     menuItems.splice(1, 0, { tab: "assign-fine", label: "Giv bøde", emoji: "🎯" });
   }
 
-  if (canApprovePayments(userRole, isSuperAdmin)) {
+  if (canApprovePayments(userRole)) {
     menuItems.push({ tab: "settings", label: "Indstillinger", emoji: "⚙️" });
   }
 
-  if (isSuperAdmin) {
+  if (userRole === "admin") {
     menuItems.push(
       { tab: "proposals", label: "Idéforslag", emoji: "💡" },
     );
@@ -456,7 +439,6 @@ function App() {
           <TeamOverview
             teamId={teamId}
             userRole={userRole}
-            isSuperAdmin={isSuperAdmin}
             onOpenAdminApprovals={() => setActiveTab("settings")}
             onMemberSelect={() => {
               // Member detail view removed - Profil tab now shows account settings only
@@ -468,7 +450,6 @@ function App() {
             teamId={teamId}
             actorId={userId}
             actorRole={userRole}
-            isSuperAdmin={isSuperAdmin}
             onAssigned={({ fineIds, memberNames }) => {
               setLastAssignedFines({
                 teamId,
@@ -494,7 +475,6 @@ function App() {
             teamId={teamId}
             userRole={userRole}
             userId={userId}
-            isSuperAdmin={isSuperAdmin}
           />
         )}
         {activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}
@@ -505,7 +485,6 @@ function App() {
             teamId={teamId}
             actorId={userId}
             userRole={userRole}
-            isSuperAdmin={isSuperAdmin}
           />
         )}
 

@@ -51,7 +51,6 @@ describe("AdminApproval", () => {
         teamId="team-1"
         actorId="admin-1"
         userRole="member"
-        isSuperAdmin={false}
       />,
     );
 
@@ -64,7 +63,6 @@ describe("AdminApproval", () => {
         teamId="team-1"
         actorId="admin-1"
         userRole="admin"
-        isSuperAdmin={false}
       />,
     );
 
@@ -81,7 +79,6 @@ describe("AdminApproval", () => {
         teamId="team-1"
         actorId="admin-1"
         userRole="admin"
-        isSuperAdmin={false}
       />,
     );
 
@@ -105,7 +102,6 @@ describe("AdminApproval", () => {
         teamId="team-1"
         actorId="admin-1"
         userRole="admin"
-        isSuperAdmin={false}
       />,
     );
 

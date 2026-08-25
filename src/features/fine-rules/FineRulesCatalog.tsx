@@ -13,7 +13,6 @@ interface Props {
   teamId: string;
   userRole: Role | null;
   userId: string;
-  isSuperAdmin: boolean;
 }
 
 type View =
@@ -24,11 +23,10 @@ export default function FineRulesCatalog({
   teamId,
   userRole,
   userId,
-  isSuperAdmin,
 }: Props) {
   const [view, setView] = useState<View>({ screen: "list" });
 
-  const canManageRules = canManageFineRules(userRole, isSuperAdmin);
+  const canManageRules = canManageFineRules(userRole);
 
   if (!teamId) {
     return (
@@ -58,7 +56,6 @@ export default function FineRulesCatalog({
     <FineRulesList
       teamId={teamId}
       userRole={userRole}
-      isSuperAdmin={isSuperAdmin}
       onNew={() => setView({ screen: "form" })}
       onEdit={(ruleId) => setView({ screen: "form", ruleId })}
     />
@@ -68,7 +65,6 @@ export default function FineRulesCatalog({
 interface ListProps {
   teamId: string;
   userRole: Role | null;
-  isSuperAdmin: boolean;
   onNew: () => void;
   onEdit: (ruleId: string) => void;
 }
@@ -76,7 +72,6 @@ interface ListProps {
 function FineRulesList({
   teamId,
   userRole,
-  isSuperAdmin,
   onNew,
   onEdit,
 }: ListProps) {
@@ -84,7 +79,7 @@ function FineRulesList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const canManageRules = canManageFineRules(userRole, isSuperAdmin);
+  const canManageRules = canManageFineRules(userRole);
 
   const loadRules = useCallback(() => {
     setLoading(true);

@@ -26,7 +26,6 @@ interface AssignFineProps {
   teamId: string;
   actorId: string;
   actorRole: Role | null;
-  isSuperAdmin: boolean;
   onAssigned: (payload: { fineIds: string[]; memberNames: string[] }) => void;
 }
 
@@ -39,7 +38,6 @@ export default function AssignFine({
   teamId,
   actorId,
   actorRole,
-  isSuperAdmin,
   onAssigned,
 }: AssignFineProps) {
   const [loading, setLoading] = useState(true);
@@ -60,7 +58,7 @@ export default function AssignFine({
     null,
   );
 
-  const hasPermission = canAssignFines(actorRole, isSuperAdmin);
+  const hasPermission = canAssignFines(actorRole);
 
   useEffect(() => {
     let isActive = true;

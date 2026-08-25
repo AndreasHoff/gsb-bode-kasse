@@ -11,7 +11,6 @@ interface Props {
   teamId: string;
   actorId: string;
   userRole?: Role | null;
-  isSuperAdmin?: boolean;
 }
 
 type PaymentWithDetails = {
@@ -33,7 +32,7 @@ function getFineIdsFromPayment(payment: Payment): string[] {
   return [];
 }
 
-export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin }: Props) {
+export default function AdminApproval({ teamId, actorId, userRole }: Props) {
   const [items, setItems] = useState<PaymentWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +82,7 @@ export default function AdminApproval({ teamId, actorId, userRole, isSuperAdmin 
     );
   }
 
-  if (!canApprovePayments(userRole ?? null, isSuperAdmin)) {
+  if (!canApprovePayments(userRole ?? null)) {
     return (
       <div className="admin-approval">
         <h1 className="app-title">Godkend betalinger</h1>

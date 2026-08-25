@@ -2,7 +2,7 @@
 // Admin can bulk-import the pre-defined fine rules for the season.
 
 import { useState } from "react";
-import { bulkCreateFineRules } from "../../lib/firestore";
+import { bulkCreateFineRules, wipeFineDataForTeam } from "../../lib/firestore";
 import { fineRulesSeason2526 } from "../../lib/firestore/seedRulesSeason2526";
 
 interface Props {
@@ -18,6 +18,10 @@ export default function ImportFineRules({ teamId, actorId }: Props) {
     errors: string[];
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetResult, setResetResult] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   async function handleImport(): Promise<void> {
     if (loading) return;
@@ -42,6 +46,31 @@ export default function ImportFineRules({ teamId, actorId }: Props) {
       setError(err instanceof Error ? err.message : "Importering mislykkedes");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResetFinancialTotals(): Promise<void> {
+    if (resetLoading) return;
+    if (
+      !window.confirm(
+        "ADVARSEL: Dette vil slette alle bøder og betalinger for alle medlemmer på dette hold.\n\nDenne handling kan IKKE omgøres.\n\nEr du helt sikker?",
+      )
+    )
+      return;
+
+    setResetLoading(true);
+    setResetError(null);
+    setResetResult(null);
+
+    try {
+      const result = await wipeFineDataForTeam(teamId);
+      setResetResult(`✅ Slettet ${result.finesDeleted} bøder og ${result.paymentsDeleted} betalinger`);
+    } catch (err) {
+      setResetError(
+        err instanceof Error ? err.message : "Sletningen mislykkedes",
+      );
+    } finally {
+      setResetLoading(false);
     }
   }
 
@@ -83,6 +112,33 @@ export default function ImportFineRules({ teamId, actorId }: Props) {
           onClick={() => void handleImport()}
         >
           {loading ? "Importerer…" : "Importér alle bøderegler"}
+        </button>
+      </section>
+
+      <section>
+        <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
+          Nulstil testdata
+        </h2>
+
+        <p className="text-sm text-[var(--color-text-muted)] mb-4">
+          Slet alle bøder og betalinger for dette hold. Praktisk til testing.
+        </p>
+
+        {resetError && <p className="status-error mb-4">{resetError}</p>}
+
+        {resetResult && (
+          <div className="app-card p-3 mb-4 flex flex-col gap-2">
+            <p className="text-sm font-bold">{resetResult}</p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="btn-primary w-full bg-[var(--color-error)] hover:bg-[var(--color-error-hover)]"
+          disabled={resetLoading}
+          onClick={() => void handleResetFinancialTotals()}
+        >
+          {resetLoading ? "Sletter…" : "Slet alle bøder og betalinger"}
         </button>
       </section>
     </div>
