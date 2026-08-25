@@ -88,7 +88,12 @@ describe("UserProfile payment flow", () => {
     });
     mocks.updateUserProfileMock.mockResolvedValue(undefined);
     mocks.createCombinedPaymentMock.mockResolvedValue(pendingPayment);
+    // Spy on location.href setter instead of window.open (navigation changed to same-tab)
     vi.spyOn(window, "open").mockReturnValue(null);
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { ...window.location, href: "" },
+    });
   });
 
   it("registers selected fines payment when user returns to app", async () => {
@@ -114,10 +119,8 @@ describe("UserProfile payment flow", () => {
     });
     await user.click(payButton);
 
-    expect(window.open).toHaveBeenCalledWith(
+    expect(window.location.href).toBe(
       "https://qr.mobilepay.dk/box/test",
-      "_blank",
-      "noopener,noreferrer",
     );
     expect(mocks.createCombinedPaymentMock).not.toHaveBeenCalled();
 
@@ -135,7 +138,7 @@ describe("UserProfile payment flow", () => {
 
     expect(
       await screen.findByText(
-        "Din betaling er modtaget. En admin vil godkende hurtigst muligt.",
+        "Betaling modtaget! En admin godkender hurtigst muligt. 🎉",
       ),
     ).toBeInTheDocument();
   });

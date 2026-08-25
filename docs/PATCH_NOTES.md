@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.24.1 — 15. august 2026
+
+**Fix: Hvid skærm ved retur fra MobilePay (kritisk)**
+
+- Rettet kritisk fejl: `window.open("_blank")` åbnede en ny tab i iOS Safari, som stod blank efter MobilePay-betaling — brugeren var fanget i tom fane uden historik at gå tilbage til
+- Ændret til `window.location.href` så appen navigerer i den aktuelle fane; sessionStorage-kladden sikrer at betalingen registreres ved retur
+- Tilføjet prominent toast-besked øverst på skærmen ved vellykket betaling (forsvinder automatisk efter 6 sekunder, kan lukkes manuelt)
+- Toast vises med ✅ ikon og klar besked: "Betaling modtaget! En admin godkender hurtigst muligt."
+
+---
+
 ## v0.24.0 — 13. august 2026
 
 **Feature: Fleksibel betaling af valgte bøder i profil**
