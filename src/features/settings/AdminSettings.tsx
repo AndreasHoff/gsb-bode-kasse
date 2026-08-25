@@ -18,15 +18,14 @@ interface Props {
   teamId: string;
   actorId: string;
   userRole: Role | null;
-  isSuperAdmin: boolean;
 }
 
-export default function AdminSettings({ teamId, actorId, userRole, isSuperAdmin }: Props) {
+export default function AdminSettings({ teamId, actorId, userRole }: Props) {
   const [activeTab, setActiveTab] = useState<AdminTab>("payments");
 
-  const showPayments = canApprovePayments(userRole, isSuperAdmin);
-  const showSeason = canManageSeasons(userRole, isSuperAdmin);
-  const showMembers = canManageMembers(userRole, isSuperAdmin);
+  const showPayments = canApprovePayments(userRole);
+  const showSeason = canManageSeasons(userRole);
+  const showMembers = canManageMembers(userRole);
 
   return (
     <div className="admin-settings">
@@ -93,7 +92,6 @@ export default function AdminSettings({ teamId, actorId, userRole, isSuperAdmin 
             teamId={teamId}
             actorId={actorId}
             userRole={userRole}
-            isSuperAdmin={isSuperAdmin}
           />
         )}
         {activeTab === "refunds" && showPayments && (

@@ -11,23 +11,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isSuperAdmin() {
-      return isSignedIn()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperAdmin == true;
-    }
-
     function isTeamAdmin(teamId) {
-      return isSuperAdmin() || (
-        isSignedIn()
+      return isSignedIn()
         && exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid))
-        && get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role == "admin"
-      );
+        && get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role == "admin";
     }
 
     match /featureProposals/{proposalId} {
       allow read: if isSignedIn();
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin() && (
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
         request.resource.data.status == resource.data.status
         && request.resource.data.statusUpdatedAt == resource.data.statusUpdatedAt
         && request.resource.data.approvedAt == resource.data.approvedAt
@@ -51,9 +44,9 @@ service cloud.firestore {
 
     match /teams/{teamId} {
       allow read: if isSignedIn();
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin() || isTeamAdmin(teamId);
-      allow delete: if isSuperAdmin();
+      allow create: if isSignedIn();
+      allow update: if isTeamAdmin(teamId);
+      allow delete: if isTeamAdmin(teamId);
 
       match /members/{memberId} {
         allow read: if isSignedIn();

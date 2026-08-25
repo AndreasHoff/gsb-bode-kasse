@@ -9,8 +9,9 @@ export interface User {
   name: string;
   email: string;
   avatarUrl?: string;
-  isSuperAdmin?: boolean;
   createdAt: string;
+  outstandingFineBalance?: number; // New field for outstanding balance
+  totalPaidAmount?: number;     // New field for total paid amount
 }
 
 export interface Team {

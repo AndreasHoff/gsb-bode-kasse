@@ -54,7 +54,6 @@ interface UserDoc extends DocumentData {
   name: string;
   email: string;
   avatarUrl?: string;
-  isSuperAdmin?: boolean;
   createdAt: Timestamp;
 }
 
@@ -144,7 +143,6 @@ export const userConverter: FirestoreDataConverter<User, UserDoc> = {
       name: user.name,
       email: user.email,
       ...(user.avatarUrl !== undefined && { avatarUrl: user.avatarUrl }),
-      ...(user.isSuperAdmin !== undefined && { isSuperAdmin: user.isSuperAdmin }),
       createdAt: Timestamp.fromDate(new Date(user.createdAt)),
     };
   },
@@ -155,7 +153,6 @@ export const userConverter: FirestoreDataConverter<User, UserDoc> = {
       name: d.name,
       email: d.email,
       avatarUrl: d.avatarUrl,
-      isSuperAdmin: d.isSuperAdmin,
       createdAt: toIso(d.createdAt),
     };
   },

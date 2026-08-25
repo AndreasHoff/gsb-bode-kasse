@@ -27,11 +27,10 @@ interface TeamOverviewProps {
   teamId: string;
   onMemberSelect: (memberId: string, memberName: string) => void;
   userRole?: Role | null;
-  isSuperAdmin?: boolean;
   onOpenAdminApprovals?: () => void;
 }
 
-type MemberRole = "super-admin" | "admin" | "member";
+type MemberRole = "admin" | "member";
 
 type MemberStat = {
   user: User;
@@ -142,11 +141,7 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       const stats: MemberStat[] = users.map((user) => {
         const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0, hasPending: false, hasDisputed: false };
         const membership = membershipByUserId.get(user.id);
-        const role: MemberRole = user.isSuperAdmin
-          ? "super-admin"
-          : membership?.role === "admin"
-            ? "admin"
-            : "member";
+        const role: MemberRole = membership?.role === "admin" ? "admin" : "member";
         return {
           user,
           totalDebt: acc.debt,
@@ -293,11 +288,9 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
                   .toUpperCase()
                   .slice(0, 2);
                 const roleLabel =
-                  item.role === "super-admin"
-                    ? "Super Admin"
-                    : item.role === "admin"
-                      ? "Admin"
-                      : "Medlem";
+                  item.role === "admin"
+                    ? "Admin"
+                    : "Medlem";
                 return (
                   <li key={item.user.id}>
                     <button
