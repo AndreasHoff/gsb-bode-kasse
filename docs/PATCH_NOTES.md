@@ -4,6 +4,21 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.25.0 — 27. august 2026
+
+**Feature: PWA installation prompt (F025)**
+
+- Tilføjet installation prompt til velkomstskærmen som opmuntrer nye besøgende til at installere appen
+- Android-brugere får en native installationsknap via browser-API'et
+- iOS-brugere får step-by-step instruktioner i en accordion (dansk vejledning)
+- Prompt kan afvises og vises ikke igen (gemmes i localStorage)
+- Installer-mulighed tilgængelig fra profilsiden for alle mobile brugere
+- Detektion af om appen allerede kører som installeret PWA — ingen prompt vises
+- Desktop-browsere ignoreres (appen er mobile-first)
+- Fuld platform-detektion og tilpasning til Android vs iOS brugerflade
+
+---
+
 ## v0.24.2 — 27. august 2026
 
 **Test: Omfattende testdækning for F024 balance tracking**

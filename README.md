@@ -99,6 +99,7 @@ docs/
 | F020 | Brand Visual Identity    | Spec complete |
 | F023 | Pay Fine (MobilePay Box) | Spec complete |
 | F024 | Balance Tracking Per Season | Spec complete |
+| F025 | PWA Install Prompt       | Spec complete |
 
 ---
 
