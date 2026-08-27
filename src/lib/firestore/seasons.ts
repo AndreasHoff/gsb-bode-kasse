@@ -27,6 +27,7 @@ export async function getSeason(
  * Creates a new season and writes an ActivityLog entry atomically.
  * Only one season can be active per team — callers must close the current
  * active season before creating a new one.
+ * Initializes balance fields to 0 per F024.
  */
 export async function createSeason(
   data: Omit<Season, "id">,
@@ -36,7 +37,13 @@ export async function createSeason(
 
   const colRef = seasonsCol(data.teamId);
   const docRef = doc(colRef);
-  const season: Season = { id: docRef.id, ...data };
+  const season: Season = {
+    id: docRef.id,
+    ...data,
+    totalApprovedBalance: 0,
+    totalPendingBalance: 0,
+    totalOutstanding: 0,
+  };
   batch.set(docRef, season);
 
   const logColRef = activityLogCol(data.teamId);

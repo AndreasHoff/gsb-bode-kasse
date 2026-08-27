@@ -8,19 +8,22 @@ This document defines the core domain entities of the GSB Bødekasse platform.
 
 Represents a registered user of the platform.
 
-| Field        | Type     | Description                                |
-|--------------|----------|--------------------------------------------|
-| id           | string   | Unique identifier                          |
-| name         | string   | Display name                               |
-| email        | string   | Authentication email                       |
-| avatarUrl    | string?  | Optional profile image                     |
-| createdAt    | datetime | Account creation timestamp                 |
+| Field                  | Type     | Description                                |
+|------------------------|----------|--------------------------------------------|
+| id                     | string   | Unique identifier                          |
+| name                   | string   | Display name                               |
+| email                  | string   | Authentication email                       |
+| avatarUrl              | string?  | Optional profile image                     |
+| createdAt              | datetime | Account creation timestamp                 |
+| outstandingFineBalance | number?  | **Deprecated** - migrating to per-season tracking |
+| totalPaidAmount        | number?  | **Deprecated** - migrating to per-season tracking |
 
 **Business Rules:**
 - Email must be unique across the system
 - A user can be a member of multiple teams
 - User permissions are determined by their role within each team (member or admin)
 - Deleting a user does not delete historical records (soft delete)
+- Balance fields are deprecated in favor of UserSeasonBalance entity (F024)
 
 ---
 
@@ -68,19 +71,23 @@ Join entity between User and Team.
 
 Represents a time-bounded competitive/social period for a team.
 
-| Field        | Type     | Description                                |
-|--------------|----------|--------------------------------------------|
-| id           | string   | Unique identifier                          |
-| teamId       | string   | Reference to Team                          |
-| name         | string   | Season label (e.g. "Efterår 2025")         |
-| startDate    | date     | Season start                               |
-| endDate      | date?    | Season end (null = active)                 |
-| isActive     | boolean  | Whether this is the current season         |
+| Field                | Type     | Description                                     |
+|----------------------|----------|-------------------------------------------------|
+| id                   | string   | Unique identifier                               |
+| teamId               | string   | Reference to Team                               |
+| name                 | string   | Season label (e.g. "Efterår 2025")              |
+| startDate            | date     | Season start                                    |
+| endDate              | date?    | Season end (null = active)                      |
+| isActive             | boolean  | Whether this is the current season              |
+| totalApprovedBalance | number?  | Total DKK from approved payments (denormalized) |
+| totalPendingBalance  | number?  | Total DKK from pending payments (denormalized)  |
+| totalOutstanding     | number?  | Total DKK from unpaid fines (denormalized)      |
 
 **Business Rules:**
 - Only one season per team can be active at a time
 - Fines are always scoped to a season
 - Closing a season does not delete its data
+- Balance fields are updated atomically when payments change status (F024)
 
 ---
 
@@ -133,18 +140,15 @@ A fine assigned to one or more users.
 - Deleted fines are soft-deleted, not removed from DB
 - Shared fines are shown collectively but tracked individually
 
----
-
-## Payment
-
-Tracks the payment state for a fine assigned to a specific user.
+---one or more fines assigned to a specific user.
 
 | Field        | Type           | Description                                  |
 |--------------|----------------|----------------------------------------------|
 | id           | string         | Unique identifier                            |
-| fineId       | string         | Reference to Fine                            |
+| fineId       | string?        | **Deprecated** - Legacy reference to single Fine |
+| fineIds      | string[]?      | References to Fines (supports combined payments) |
 | userId       | string         | Reference to User (the person paying)        |
-| amount       | number         | Amount to pay (may differ from fine amount)  |
+| amount       | number         | Amount to pay (sum of all fines)             |
 | status       | PaymentStatus  | Current payment state                        |
 | initiatedAt  | datetime?      | When user tapped "Pay"                       |
 | approvedAt   | datetime?      | When admin approved                          |
@@ -156,6 +160,11 @@ Tracks the payment state for a fine assigned to a specific user.
 - `approved` — admin has confirmed receipt
 - `disputed` — payment flagged for review
 
+**Business Rules:**
+- New payments use `fineIds[]` to support combined payments (F023)
+- Legacy payments may have only `fineId` - code must handle both
+- Only Admins can approve payments
+- Approved payments can be refunded via F015 (creates audit log entry)
 **Business Rules:**
 - Each (fineId, userId) pair has exactly one Payment record
 - Only Admins can approve payments
@@ -178,14 +187,39 @@ Immutable audit trail of all significant actions.
 | metadata     | object?  | Optional additional context                |
 | createdAt    | datetime | When the action occurred                   |
 
-**Action types:**
-- `fine.assigned`, `fine.deleted`, `fine.restored`
-- `payment.initiated`, `payment.approved`, `payment.disputed`
+**Action types:**, `payment.refunded`, `payment.reconciled`
 - `member.added`, `member.removed`, `member.role_changed`
 - `season.created`, `season.closed`
 - `rule.created`, `rule.deactivated`
+- `balance.updated` (F024)
 
 **Business Rules:**
+- ActivityLog entries are never deleted
+- All mutations to Fine, Payment, Membership must create a log entry
+
+---
+
+## UserSeasonBalance
+
+Tracks a user's financial state within a specific team and season.
+
+| Field             | Type     | Description                                      |
+|-------------------|----------|--------------------------------------------------|
+| id                | string   | Unique identifier                                |
+| userId            | string   | Reference to User                                |
+| teamId            | string   | Reference to Team                                |
+| seasonId          | string   | Reference to Season                              |
+| outstandingBalance| number   | Total unpaid fines (DKK)                         |
+| pendingBalance    | number   | Total pending payments awaiting approval (DKK)   |
+| approvedBalance   | number   | Total approved payments (DKK)                    |
+| updatedAt         | datetime | Last balance update timestamp                    |
+
+**Business Rules:**
+- Each (userId, teamId, seasonId) tuple has exactly one UserSeasonBalance record
+- Balances are updated atomically when fines are assigned/deleted or payments change status
+- Balance updates write a `balance.updated` ActivityLog entry
+- Only balances for the active season are actively maintained
+- When a season is closed, its balances are frozen
 - ActivityLog entries are never deleted
 - All mutations to Fine, Payment, Membership must create a log entry
 

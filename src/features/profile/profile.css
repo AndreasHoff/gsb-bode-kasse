@@ -27,6 +27,197 @@
 	margin-bottom: 0.75rem;
 }
 
+/* Back button for member profile */
+.back-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 1rem;
+	margin-bottom: 1rem;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--color-primary);
+	background: transparent;
+	border: 1px solid var(--color-border);
+	border-radius: 0.75rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.back-button:hover {
+	background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+	border-color: var(--color-primary);
+}
+
+.back-button:active {
+	transform: scale(0.98);
+}
+
+/* Profile header for member view */
+.profile-header {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	margin-bottom: 1.5rem;
+}
+
+/* Balance grid for member profile */
+.balance-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 0.75rem;
+}
+
+.balance-card {
+	padding: 0.85rem 0.65rem;
+	border-radius: 0.75rem;
+	border: 1px solid var(--color-border);
+	background: color-mix(in srgb, var(--color-surface-muted) 52%, transparent);
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	text-align: center;
+}
+
+.balance-card--outstanding {
+	border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+	background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-muted) 40%, transparent);
+}
+
+.balance-card--pending {
+	border-color: color-mix(in srgb, orange 55%, transparent);
+	background: color-mix(in srgb, orange 10%, var(--color-surface-muted) 40%, transparent);
+}
+
+.balance-card--approved {
+	border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+	background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-muted) 40%, transparent);
+}
+
+.balance-card__label {
+	font-size: 0.65rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--color-text-muted);
+}
+
+.balance-card__value {
+	font-size: 1.1rem;
+	font-weight: 800;
+	line-height: 1.1;
+}
+
+.balance-card--outstanding .balance-card__value {
+	color: var(--color-accent);
+}
+
+.balance-card--pending .balance-card__value {
+	color: orange;
+}
+
+.balance-card--approved .balance-card__value {
+	color: var(--color-primary);
+}
+
+/* Profile section */
+.profile-section {
+	margin-bottom: 1.75rem;
+}
+
+.profile-section-title {
+	font-size: 0.85rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--color-text-muted);
+	margin-bottom: 0.75rem;
+}
+
+/* Fine list for member profile */
+.fine-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.fine-item {
+	padding: 0.85rem;
+	border-radius: 0.75rem;
+	border: 1px solid var(--color-border);
+	background: color-mix(in srgb, var(--color-surface-muted) 45%, transparent);
+}
+
+.fine-item__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 0.5rem;
+}
+
+.fine-item__title {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--color-text);
+}
+
+.fine-item__amount {
+	font-size: 1rem;
+	font-weight: 700;
+	color: var(--color-primary);
+}
+
+.fine-item__meta {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.fine-item__date {
+	font-size: 0.75rem;
+	color: var(--color-text-muted);
+}
+
+.fine-item__status {
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 0.2rem 0.5rem;
+	border-radius: 0.4rem;
+}
+
+.fine-item__status--unpaid {
+	background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+	color: var(--color-accent);
+}
+
+.fine-item__status--pending {
+	background: color-mix(in srgb, orange 20%, transparent);
+	color: orange;
+}
+
+.fine-item__status--approved {
+	background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+	color: var(--color-primary);
+}
+
+.fine-item__status--disputed {
+	background: color-mix(in srgb, red 20%, transparent);
+	color: red;
+}
+
+.fine-item__note {
+	margin-top: 0.5rem;
+	padding-top: 0.5rem;
+	border-top: 1px solid var(--color-border);
+	font-size: 0.8rem;
+	color: var(--color-text-muted);
+	font-style: italic;
+}
+
 .profile-hero__name {
 	font-size: 1.15rem;
 	font-weight: 700;

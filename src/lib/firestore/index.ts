@@ -26,6 +26,15 @@ export {
 } from "./seasons";
 
 export {
+  getUserSeasonBalance,
+  getOrCreateUserSeasonBalance,
+  updateUserSeasonBalance,
+  getSeasonBalances,
+  getUserBalances,
+} from "./balances";
+export type { BalanceDelta } from "./balances";
+
+export {
   getFineRules,
   getFineRule,
   createFineRule,

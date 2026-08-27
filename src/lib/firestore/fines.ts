@@ -1,9 +1,9 @@
 import { getDocs, getDoc, doc, writeBatch, query, where } from "firebase/firestore";
 import { db } from "../firebase";
-import { finesCol, fineDoc, activityLogCol, paymentsCol } from "./refs";
-import type { Fine, ActivityLog } from "../../types/domain";
-import type { Payment } from "../../types/domain";
+import { finesCol, fineDoc, activityLogCol, paymentsCol, paymentDoc } from "./refs";
+import type { Fine, ActivityLog, Payment } from "../../types/domain";
 import { getActiveSeason } from "./seasons";
+import { updateUserSeasonBalance } from "./balances";
 
 export async function getFines(
   teamId: string,
@@ -80,6 +80,7 @@ export async function assignFine(
 /**
  * Assigns a fine, creates its unpaid payment, and writes the fine.assigned log in one batch.
  * This keeps F001 resilient so we never persist a fine without a matching payment.
+ * Updates UserSeasonBalance for each assigned user (F024).
  */
 export async function assignFineWithPayment(
   data: Omit<Fine, "id" | "createdAt" | "deletedAt">,
@@ -98,7 +99,7 @@ export async function assignFineWithPayment(
 
   const total = targetUserIds.length;
   const MAX_OPS_PER_BATCH = 450;
-  const OPS_PER_FINE = 4; // fine + payment + payment log + fine log
+  const OPS_PER_FINE = 7; // fine + payment + payment log + fine log + balance + season + balance log
   const maxFinesPerBatch = Math.floor(MAX_OPS_PER_BATCH / OPS_PER_FINE);
 
   const allFines: Fine[] = [];
@@ -172,6 +173,17 @@ export async function assignFineWithPayment(
         createdAt,
       };
       batch.set(logRef, logEntry);
+
+      // Update balance for the assigned user (F024)
+      await updateUserSeasonBalance(
+        targetUserId,
+        data.teamId,
+        data.seasonId,
+        { outstandingBalance: data.amount },
+        "fine.assigned",
+        actorId,
+        batch,
+      );
     }
 
     await batch.commit();
@@ -188,6 +200,7 @@ export async function assignFineWithPayment(
 /**
  * Soft-deletes a fine by setting deletedAt. Never hard-deletes.
  * Writes an ActivityLog entry atomically.
+ * Updates UserSeasonBalance based on payment status (F024).
  */
 export async function softDeleteFine(
   teamId: string,
@@ -196,6 +209,16 @@ export async function softDeleteFine(
 ): Promise<void> {
   const existing = await getFine(teamId, fineId);
   if (!existing) throw new Error(`Fine ${fineId} not found in team ${teamId}`);
+
+  // Get payments for this fine
+  const q = query(paymentsCol(teamId), where("fineIds", "array-contains", fineId));
+  const paymentsSnap = await getDocs(q);
+  const payments = paymentsSnap.docs.map((d) => d.data());
+
+  // Also check legacy fineId field
+  const qLegacy = query(paymentsCol(teamId), where("fineId", "==", fineId));
+  const legacySnap = await getDocs(qLegacy);
+  payments.push(...legacySnap.docs.map((d) => d.data()));
 
   const batch = writeBatch(db);
 
@@ -217,12 +240,33 @@ export async function softDeleteFine(
   };
   batch.set(logRef, logEntry);
 
+  // Update balances for each payment based on status
+  for (const payment of payments) {
+    const delta =
+      payment.status === "approved"
+        ? { approvedBalance: -payment.amount }
+        : payment.status === "pending"
+          ? { pendingBalance: -payment.amount }
+          : { outstandingBalance: -payment.amount }; // unpaid or disputed
+
+    await updateUserSeasonBalance(
+      payment.userId,
+      teamId,
+      existing.seasonId,
+      delta,
+      "fine.deleted",
+      actorId,
+      batch,
+    );
+  }
+
   await batch.commit();
 }
 
 /**
  * Restores a soft-deleted fine by clearing deletedAt.
  * Writes an ActivityLog entry atomically.
+ * Updates UserSeasonBalance based on payment status (F024).
  */
 export async function restoreFine(
   teamId: string,
@@ -231,6 +275,16 @@ export async function restoreFine(
 ): Promise<void> {
   const existing = await getFine(teamId, fineId);
   if (!existing) throw new Error(`Fine ${fineId} not found in team ${teamId}`);
+
+  // Get payments for this fine
+  const q = query(paymentsCol(teamId), where("fineIds", "array-contains", fineId));
+  const paymentsSnap = await getDocs(q);
+  const payments = paymentsSnap.docs.map((d) => d.data());
+
+  // Also check legacy fineId field
+  const qLegacy = query(paymentsCol(teamId), where("fineId", "==", fineId));
+  const legacySnap = await getDocs(qLegacy);
+  payments.push(...legacySnap.docs.map((d) => d.data()));
 
   const batch = writeBatch(db);
 
@@ -253,6 +307,26 @@ export async function restoreFine(
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
+
+  // Update balances for each payment (reverse the delete operation)
+  for (const payment of payments) {
+    const delta =
+      payment.status === "approved"
+        ? { approvedBalance: payment.amount }
+        : payment.status === "pending"
+          ? { pendingBalance: payment.amount }
+          : { outstandingBalance: payment.amount }; // unpaid or disputed
+
+    await updateUserSeasonBalance(
+      payment.userId,
+      teamId,
+      existing.seasonId,
+      delta,
+      "fine.restored",
+      actorId,
+      batch,
+    );
+  }
 
   await batch.commit();
 }

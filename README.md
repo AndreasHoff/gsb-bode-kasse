@@ -98,6 +98,7 @@ docs/
 | F013 | Evangeliet               | Spec complete |
 | F020 | Brand Visual Identity    | Spec complete |
 | F023 | Pay Fine (MobilePay Box) | Spec complete |
+| F024 | Balance Tracking Per Season | Spec complete |
 
 ---
 

@@ -10,6 +10,7 @@ import {
   paymentConverter,
   activityLogConverter,
   featureProposalConverter,
+  userSeasonBalanceConverter,
 } from "./converters";
 // ---------------------------------------------------------------------------
 // Top-level collections
@@ -51,6 +52,16 @@ export const seasonsCol = (teamId: string) =>
 
 export const seasonDoc = (teamId: string, seasonId: string) =>
   doc(db, "teams", teamId, "seasons", seasonId).withConverter(seasonConverter);
+
+export const userSeasonBalancesCol = (teamId: string) =>
+  collection(db, "teams", teamId, "userSeasonBalances").withConverter(
+    userSeasonBalanceConverter,
+  );
+
+export const userSeasonBalanceDoc = (teamId: string, balanceId: string) =>
+  doc(db, "teams", teamId, "userSeasonBalances", balanceId).withConverter(
+    userSeasonBalanceConverter,
+  );
 
 export const fineRulesCol = (teamId: string) =>
   collection(db, "teams", teamId, "fineRules").withConverter(fineRuleConverter);
