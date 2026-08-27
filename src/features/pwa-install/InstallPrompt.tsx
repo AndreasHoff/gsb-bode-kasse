@@ -71,7 +71,8 @@ export default function InstallPrompt() {
             {isExpanded && (
               <div className="install-prompt__instructions">
                 <ol className="install-prompt__steps">
-                  <li>Tryk på del-knappen (⬆️) nederst i browseren</li>
+                  <li>Tryk på de 3 små prikker ...  nederst i browseren</li>
+                  <li>Tryk på "Del"</li>
                   <li>Scroll ned og vælg "Føj til hjemmeskærm"</li>
                   <li>Tryk "Tilføj" øverst til højre</li>
                 </ol>

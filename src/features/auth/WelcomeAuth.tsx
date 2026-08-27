@@ -62,10 +62,8 @@ function WelcomeAuth({
 
       <div className="auth-shell__content">
         <header className="mb-8">
-          <h1 className="app-title auth-title mt-3">Velkommen til holdets bødekasse</h1>
+          <h1 className="app-title auth-title mt-3">Velkommen til GSB's bødekasse</h1>
         </header>
-
-        <InstallPrompt />
 
         <div className="segment mb-4 text-sm">
           <button
@@ -159,6 +157,9 @@ function WelcomeAuth({
             {isLoading ? "Vent..." : submitLabel}
           </button>
         </form>
+
+        <InstallPrompt />
+
       </div>
     </section>
   );
