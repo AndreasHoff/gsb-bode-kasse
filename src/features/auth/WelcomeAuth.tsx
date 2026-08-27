@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import InstallPrompt from "../pwa-install/InstallPrompt";
 import "./auth.css";
 
 type AuthMode = "login" | "register";
@@ -63,6 +64,8 @@ function WelcomeAuth({
         <header className="mb-8">
           <h1 className="app-title auth-title mt-3">Velkommen til holdets bødekasse</h1>
         </header>
+
+        <InstallPrompt />
 
         <div className="segment mb-4 text-sm">
           <button

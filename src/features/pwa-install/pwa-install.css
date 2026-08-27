@@ -1,0 +1,288 @@
+/* Feature: PWA Install Prompt (F025) */
+
+.install-prompt {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-strong) 100%);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.install-prompt__content {
+  color: white;
+}
+
+.install-prompt__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.install-prompt__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.install-prompt__button {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.install-prompt__button:active {
+  transform: scale(0.97);
+}
+
+.install-prompt__button--primary {
+  background: white;
+  color: var(--color-primary);
+}
+
+.install-prompt__button--primary:hover {
+  opacity: 0.95;
+}
+
+.install-prompt__button--secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.install-prompt__button--secondary:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.install-prompt__manual {
+  display: flex;
+  flex-direction: column;
+}
+
+.install-prompt__accordion {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.15s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.install-prompt__accordion:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.install-prompt__accordion-icon {
+  font-size: 1.25rem;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.install-prompt__instructions {
+  margin-top: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.install-prompt__steps {
+  margin: 0;
+  padding-left: 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.install-prompt__steps li {
+  margin-bottom: 0.5rem;
+}
+
+.install-prompt__steps li:last-child {
+  margin-bottom: 0;
+}
+
+/* Profile integration */
+.install-app-option {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-strong) 100%);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.install-app-option:active {
+  transform: scale(0.98);
+}
+
+.install-app-option__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: white;
+}
+
+.install-app-option__icon {
+  font-size: 1.5rem;
+}
+
+.install-app-option__text {
+  flex: 1;
+}
+
+.install-app-option__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.125rem;
+}
+
+.install-app-option__subtitle {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.install-app-option__chevron {
+  font-size: 1.25rem;
+  opacity: 0.7;
+}
+
+/* Modal for installation instructions */
+.install-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.install-modal {
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.install-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.install-modal__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.install-modal__close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s ease;
+}
+
+.install-modal__close:hover {
+  background: var(--color-surface-muted);
+}
+
+.install-modal__content {
+  color: var(--color-text);
+}
+
+.install-modal__platform {
+  background: var(--color-surface-muted);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--color-text-muted);
+}
+
+.install-modal__steps {
+  margin: 0;
+  padding-left: 1.5rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--color-text);
+}
+
+.install-modal__steps li {
+  margin-bottom: 0.75rem;
+}
+
+.install-modal__steps li:last-child {
+  margin-bottom: 0;
+}
+
+.install-modal__actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.install-modal__button {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.install-modal__button--primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.install-modal__button--primary:hover {
+  opacity: 0.9;
+}
+
+.install-modal__button--primary:active {
+  transform: scale(0.97);
+}
+
+.install-modal__button--secondary {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.install-modal__button--secondary:hover {
+  opacity: 0.9;
+}
+
+.install-modal__button--secondary:active {
+  transform: scale(0.97);
+}
