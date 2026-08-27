@@ -67,6 +67,7 @@ interface TeamDoc extends DocumentData {
 }
 
 interface MembershipDoc extends DocumentData {
+  name: string;
   userId: string;
   teamId: string;
   role: Role;
@@ -188,6 +189,7 @@ export const membershipConverter: FirestoreDataConverter<Membership, MembershipD
   toFirestore(modelObject: WithFieldValue<Membership>): MembershipDoc {
     const m = modelObject as Membership;
     return {
+      name: m.name,
       userId: m.userId,
       teamId: m.teamId,
       role: m.role,
@@ -196,14 +198,33 @@ export const membershipConverter: FirestoreDataConverter<Membership, MembershipD
     };
   },
   fromFirestore(snapshot: QueryDocumentSnapshot<MembershipDoc>): Membership {
-    const d = snapshot.data();
+    const d = snapshot.data() as Record<string, unknown>;
+    
+    let role = (d.role as string) || "member";
+    
+    // Backward compatibility: Check for old admin field names if role is not set
+    // This handles legacy data that still has isTeamAdmin, isSuperAdmin, or isAdmin fields
+    if (role === "member" && (d.isTeamAdmin === true || d.isSuperAdmin === true || d.isAdmin === true)) {
+      const oldFields = [];
+      if (d.isTeamAdmin === true) oldFields.push("isTeamAdmin");
+      if (d.isSuperAdmin === true) oldFields.push("isSuperAdmin");
+      if (d.isAdmin === true) oldFields.push("isAdmin");
+      console.log(`[converter] Converting legacy admin fields to role:admin`, {
+        userId: d.userId,
+        teamId: d.teamId,
+        legacyFields: oldFields,
+      });
+      role = "admin";
+    }
+    
     return {
+      name: typeof d.name === "string" ? d.name : "",
       id: snapshot.id,
-      userId: d.userId,
-      teamId: d.teamId,
-      role: d.role,
-      joinedAt: toIso(d.joinedAt),
-      isActive: d.isActive,
+      userId: d.userId as string,
+      teamId: d.teamId as string,
+      role: role as "member" | "admin",
+      joinedAt: toIso(d.joinedAt as Timestamp),
+      isActive: typeof d.isActive === "boolean" ? d.isActive : true,
     };
   },
 };

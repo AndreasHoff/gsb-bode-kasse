@@ -12,7 +12,7 @@ applyTo: "src/features/**"
 3. **Check domain types** — review `src/types/domain.ts` before creating any local interfaces
 4. **Check permissions** — identify which roles can trigger the feature; use helpers from `src/lib/permissions.ts`
 
-Team membership roles are limited to `member` and `admin`. `isSuperAdmin` is a separate user-level flag and should only be used for explicitly scoped cross-team capabilities.
+Team membership roles are limited to `member` and `admin`. All permissions are determined by a user's role within each team.
 
 ## Component structure
 
@@ -94,14 +94,13 @@ If a feature changes visible UI, layout, or interaction behavior:
 2. Capture screenshots as evidence (mobile first, including 430px where relevant).
 3. Attach or reference screenshot evidence in your implementation summary.
 
-If the feature requires privileged access (for example super-admin-only views/actions) and available test users do not have required claims:
+If the feature requires admin access and available test users do not have required role:
 
 1. Pause implementation validation.
-2. Ask the maintainer for a dedicated test user with correct claims (for example `isSuperAdmin: true`).
+2. Ask the maintainer for a dedicated test user with admin role.
 3. Resume once role-ready credentials are available.
 
 Known test account emails:
 1. `copilot.test.20260519.1@example.com` (member/admin flows)
-2. `copilot@github.com` (super-admin flows)
 
 Passwords must be handled securely and never stored in repository files.

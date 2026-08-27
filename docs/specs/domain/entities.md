@@ -14,13 +14,12 @@ Represents a registered user of the platform.
 | name         | string   | Display name                               |
 | email        | string   | Authentication email                       |
 | avatarUrl    | string?  | Optional profile image                     |
-| isSuperAdmin | boolean? | Global capability flag for proposal access |
 | createdAt    | datetime | Account creation timestamp                 |
 
 **Business Rules:**
 - Email must be unique across the system
 - A user can be a member of multiple teams
-- `isSuperAdmin` is a user-level capability flag, not a team membership role
+- User permissions are determined by their role within each team (member or admin)
 - Deleting a user does not delete historical records (soft delete)
 
 ---
@@ -50,6 +49,7 @@ Join entity between User and Team.
 | Field        | Type     | Description                                |
 |--------------|----------|--------------------------------------------|
 | id           | string   | Unique identifier                          |
+| name         | string   | Member name copied for team-local display  |
 | userId       | string   | Reference to User                          |
 | teamId       | string   | Reference to Team                          |
 | role         | Role     | User's role within the team                |
@@ -58,6 +58,7 @@ Join entity between User and Team.
 
 **Business Rules:**
 - A user can only have one active membership per team
+- Membership name is a denormalized copy and must stay aligned with the user profile name when updated
 - Role must be one of: Member, Admin
 - Only Admins can deactivate memberships
 
@@ -231,7 +232,7 @@ enum Role {
 }
 ```
 
-`isSuperAdmin` on `User` is a separate global capability flag and not part of the team membership role model.
+The role field determines all permissions within a team. A user's role is specific to each team they join.
 
 **Permission matrix:**
 

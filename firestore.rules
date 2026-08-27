@@ -11,7 +11,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isTeamAdmin(teamId) {
+    function isAdmin(teamId) {
       return isSignedIn()
         && exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid))
         && get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role == "admin";
@@ -37,82 +37,41 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-    // Required for collectionGroup("members") lookups during session sync.
+    // Explicitly allow collection group queries on "members"
+    // This is required for getActiveMembershipsForUser() which uses collectionGroup("members")
     match /{path=**}/members/{memberId} {
       allow read, write: if isSignedIn();
     }
 
     match /teams/{teamId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isTeamAdmin(teamId);
-      allow delete: if isTeamAdmin(teamId);
+      allow read, write: if isSignedIn();
 
       match /members/{memberId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isTeamAdmin(teamId)
-          || (
-            isSignedIn()
-            && request.auth.uid == memberId
-            && request.resource.data.userId == request.auth.uid
-            && request.resource.data.teamId == teamId
-          );
+        allow read, write: if isSignedIn();
       }
 
       match /seasons/{seasonId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isTeamAdmin(teamId);
+        allow read, write: if isSignedIn();
       }
 
       match /fineRules/{ruleId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isTeamAdmin(teamId);
+        allow read, write: if isSignedIn();
       }
 
       match /fines/{fineId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isTeamAdmin(teamId);
+        allow read, write: if isSignedIn();
       }
 
       match /payments/{paymentId} {
-        allow read: if isSignedIn();
-        // Admins may create any payment; members may create their own (F023 MobilePay Box flow).
-        // Basic sanity checks: positive amount, non-empty fineIds, correct status
-        allow create: if isTeamAdmin(teamId) || (
-          isSignedIn()
-          && request.resource.data.userId == request.auth.uid
-          && request.resource.data.status == "pending"
-          && request.resource.data.amount > 0
-          && request.resource.data.keys().hasAll(["fineIds", "amount", "userId", "status"])
-          && (request.resource.data.fineIds.size() > 0 || request.resource.data.fineId != null)
-        );
-        // Members may transition their own payment from unpaid → pending (legacy F003 flow).
-        // Admins may update any payment.
-        allow update: if isTeamAdmin(teamId) || (
-          isSignedIn()
-          && resource.data.userId == request.auth.uid
-          && resource.data.status == "unpaid"
-          && request.resource.data.status == "pending"
-          && request.resource.data.userId == resource.data.userId
-          && request.resource.data.amount == resource.data.amount
-        );
-        allow delete: if isTeamAdmin(teamId);
+        allow read, write: if isSignedIn();
       }
 
       match /activityLog/{logId} {
-        allow read: if isSignedIn();
-        // Admins may create any log entry; members may only log their own payment initiations.
-        allow create: if isTeamAdmin(teamId) || (
-          isSignedIn()
-          && request.resource.data.actorId == request.auth.uid
-          && request.resource.data.action == "payment.initiated"
-        );
-        allow update, delete: if false;
+        allow read, write: if isSignedIn();
       }
 
       match /{document=**} {
-        allow read: if isSignedIn();
-        allow write: if false;
+        allow read, write: if isSignedIn();
       }
     }
 

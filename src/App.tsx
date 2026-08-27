@@ -21,7 +21,6 @@ import {
   signOut,
 } from "./lib/auth";
 import {
-  backfillTeamMembershipsForAllUsers,
   ensureUserProfile,
   getActiveMembershipsForUser,
   getTeam,
@@ -129,18 +128,22 @@ function App() {
           user.displayName?.trim() ||
           user.email ||
           "Spiller";
+
+        console.log("[auth] Starting session sync for user:", user.uid);
+
         const userProfile = await ensureUserProfile({
           id: user.uid,
           name: resolvedName,
           email: user.email || "ukendt@bruger.local",
           avatarUrl: user.photoURL || undefined,
         });
+        const rawUserProfile = userProfile as unknown as Record<string, unknown>;
         setUserEmail(userProfile.email);
-
         const memberships = await getActiveMembershipsForUser(user.uid);
 
         if (memberships.length === 0) {
           const teams = await getTeams();
+
           const defaultTeam =
             teams.find((team) => team.slug.trim().toLowerCase() === "gsb") ||
             teams.find((team) => team.name.trim().toLowerCase() === "gsb") ||
@@ -159,6 +162,7 @@ function App() {
           const createdMembership = await upsertMembership(
             {
               userId: user.uid,
+              name: userProfile.name,
               teamId: defaultTeam.id,
               role: "member",
               joinedAt: new Date().toISOString(),
@@ -167,6 +171,26 @@ function App() {
             user.uid,
             "member.added",
           );
+
+          console.log("[auth] Session trace:", {
+            authUid: user.uid,
+            usersDocumentPath: `users/${user.uid}`,
+            usersDocument: {
+              createdAt: userProfile.createdAt,
+              email: userProfile.email,
+              name: userProfile.name,
+              role: rawUserProfile.role ?? null,
+            },
+            membershipDocumentPath: `teams/${defaultTeam.id}/members/${createdMembership.id}`,
+            membershipDocument: {
+              name: createdMembership.name,
+              role: createdMembership.role,
+              teamId: createdMembership.teamId,
+              userId: createdMembership.userId,
+              isActive: createdMembership.isActive,
+            },
+            note: "No active membership existed, so the app created one with role 'member'.",
+          });
 
           setUserId(user.uid);
           setTeamId(defaultTeam.id);
@@ -180,6 +204,26 @@ function App() {
         const primaryMembership = memberships[0];
         const team = await getTeam(primaryMembership.teamId);
 
+        console.log("[auth] Session trace:", {
+          authUid: user.uid,
+          usersDocumentPath: `users/${user.uid}`,
+          usersDocument: {
+            createdAt: userProfile.createdAt,
+            email: userProfile.email,
+            name: userProfile.name,
+            role: rawUserProfile.role ?? null,
+          },
+          membershipDocumentPath: `teams/${primaryMembership.teamId}/members/${primaryMembership.id}`,
+          membershipDocument: {
+            name: primaryMembership.name,
+            role: primaryMembership.role,
+            teamId: primaryMembership.teamId,
+            userId: primaryMembership.userId,
+            isActive: primaryMembership.isActive,
+          },
+          teamName: team?.name || "Mit hold",
+        });
+
         setUserId(user.uid);
         setTeamId(primaryMembership.teamId);
         setUserRole(primaryMembership.role);
@@ -187,7 +231,12 @@ function App() {
         setTeamName(team?.name || "Mit hold");
         setStatus("ready");
       } catch (error) {
-        console.error("[auth] Session sync failed", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[auth] Session sync failed at unknown step:", {
+          error,
+          message: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         setAuthError(toFriendlyErrorMessage(error));
         setStatus("signed-out");
       }
@@ -419,7 +468,12 @@ function App() {
             >
               🎨
             </button>
-            <p className="app-subtitle app-navbar__user-name">{displayName}</p>
+            <div className="app-navbar__user-info">
+              <p className="app-subtitle app-navbar__user-name">{displayName}</p>
+              {userRole === "admin" && (
+                <p className="app-navbar__user-role">admin</p>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => {
