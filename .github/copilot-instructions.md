@@ -47,7 +47,7 @@ When implementing from specs, always verify the resulting implementation remains
 
 Always use helpers from `src/lib/permissions.ts` — never hardcode role strings in UI or logic.
 
-Team membership roles are limited to `member` and `admin`. `isSuperAdmin` is a separate user-level capability used for scoped global features such as proposal management.
+Team membership roles are limited to `member` and `admin`. All permissions are determined by a user's role within each team.
 
 ```ts
 canAssignFines(role)      // admin only (v1 baseline)
@@ -55,7 +55,7 @@ canApprovePayments(role)  // admin only (v1 baseline)
 canDeleteFines(role)      // admin only (v1 baseline)
 canManageMembers(role)    // admin only
 canManageSeasons(role)    // admin only
-canManageProposals(isSuperAdmin) // super-admin only
+canManageProposals(role)  // admin only
 ```
 
 ## Code Conventions
@@ -107,7 +107,7 @@ For any feature or fix that changes visible UI/UX:
 - Capture screenshots that show the implemented result (mobile width first, including 430px where relevant).
 - Provide those screenshots as completion evidence in the final delivery/update.
 
-If the visual flow requires privileges (for example `isSuperAdmin: true`) and no suitable test account is available:
+If the visual flow requires admin privileges and no suitable test account is available:
 
 - Pause and request a dedicated test user from the maintainer.
 - Continue once credentials/claims are available.
@@ -115,7 +115,6 @@ If the visual flow requires privileges (for example `isSuperAdmin: true`) and no
 
 Known test accounts for this repo:
 - Member/admin flow test email: `copilot.test.20260519.1@example.com`
-- Super-admin flow test email: `copilot@github.com`
 - Passwords are intentionally not stored in repo docs; use secure/local secret handling.
 
 ## Key Docs

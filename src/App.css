@@ -145,6 +145,23 @@
 	color: var(--color-primary-contrast);
 }
 
+.app-navbar__user-info {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.15rem;
+}
+
+.app-navbar__user-role {
+	margin: 0;
+	font-size: 0.65rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: rgba(255, 255, 255, 0.75);
+	opacity: 0.9;
+}
+
 .app-menu-backdrop {
 	position: fixed;
 	inset: 0;

@@ -31,8 +31,19 @@ export async function ensureUserProfile(
     createdAt: new Date().toISOString(),
   };
 
-  await setDoc(userDoc(user.id), user);
-  return user;
+  try {
+    console.log("[users] Creating user profile:", { userId: user.id, email: user.email });
+    await setDoc(userDoc(user.id), user);
+    console.log("[users] User profile created successfully");
+    return user;
+  } catch (error) {
+    console.error("[users] Failed to create user profile:", {
+      userId: user.id,
+      email: user.email,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 }
 
 /** Updates the mutable fields of a user profile (currently: name). */

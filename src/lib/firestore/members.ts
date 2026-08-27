@@ -8,7 +8,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { membersCol, memberDoc, activityLogCol, finesCol } from "./refs";
+import { membersCol, memberDoc, activityLogCol, finesCol, teamsCol } from "./refs";
 import { membershipConverter } from "./converters";
 import { getUsers } from "./users";
 import type { Membership, ActivityLog, Fine } from "../../types/domain";
@@ -105,6 +105,7 @@ export async function backfillTeamMembershipsForAllUsers(
     }
 
     const membership: Membership = {
+      name: user.name,
       id: user.id,
       userId: user.id,
       teamId,

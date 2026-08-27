@@ -58,7 +58,6 @@ If any lower-priority document conflicts with this constitution, the constitutio
 
 - Firestore writes are admin-only by default.
 - Team membership roles are limited to Member and Admin.
-- Super-admin is a separate user-level flag used only for explicitly scoped cross-team capabilities.
 - UI and logic must not hardcode role strings when permission helpers exist.
 
 ## 8. Delivery and Quality Rules
