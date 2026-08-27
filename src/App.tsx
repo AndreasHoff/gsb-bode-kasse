@@ -458,7 +458,7 @@ function App() {
           </button>
           <div className="app-navbar__brand">
             <p className="app-title app-title--compact">GSB Bødekasse</p>
-            <p className="app-subtitle text-xs">{appVersion}</p>
+            <p className="app-subtitle text-xs">v1.0.0 beta</p>
           </div>
           <div className="app-navbar__user">
             <button
