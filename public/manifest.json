@@ -2,7 +2,7 @@
   "name": "GSB Bødekasse",
   "short_name": "GSB Bødekasse",
   "description": "Greve Badminton Club fine tracking platform",
-  "start_url": "/",
+  "start_url": "/gsb-bode-kasse/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
