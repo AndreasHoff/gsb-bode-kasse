@@ -383,7 +383,16 @@ function App() {
     { tab: "evangeliet", label: "Evangeliet", emoji: "📜" },
     { tab: "activity", label: "Historik", emoji: "📊" },
   ];
-  const menuItems = [...primaryMenuItems];
+  
+  // Bottom navbar items - filter out evangeliet for non-admins
+  const bottomNavbarItems = primaryMenuItems.filter(
+    (item) => item.tab !== "evangeliet" || userRole === "admin"
+  );
+  
+  // Sidemenu starts with primary items, also filtered for evangeliet
+  const menuItems = primaryMenuItems.filter(
+    (item) => item.tab !== "evangeliet" || userRole === "admin"
+  );
 
   if (canAssignFines(userRole)) {
     menuItems.splice(1, 0, { tab: "assign-fine", label: "Giv bøde", emoji: "🎯" });
@@ -575,7 +584,7 @@ function App() {
       )}
 
       <BottomNavbar
-        items={primaryMenuItems}
+        items={bottomNavbarItems}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
