@@ -40,6 +40,9 @@ export interface Season {
   startDate: string;
   endDate?: string;
   isActive: boolean;
+  totalApprovedBalance?: number;
+  totalPendingBalance?: number;
+  totalOutstanding?: number;
 }
 
 export interface FineRule {
@@ -90,6 +93,17 @@ export interface ActivityLog {
   entityId: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
+}
+
+export interface UserSeasonBalance {
+  id: string;
+  userId: string;
+  teamId: string;
+  seasonId: string;
+  outstandingBalance: number;
+  pendingBalance: number;
+  approvedBalance: number;
+  updatedAt: string;
 }
 
 export type ProposalStatus =

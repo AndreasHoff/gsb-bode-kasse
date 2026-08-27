@@ -18,6 +18,7 @@ import type {
   PaymentStatus,
   ProposalStatus,
   Role,
+  UserSeasonBalance,
 } from "../../types/domain";
 
 // ---------------------------------------------------------------------------
@@ -81,6 +82,19 @@ interface SeasonDoc extends DocumentData {
   startDate: Timestamp;
   endDate?: Timestamp;
   isActive: boolean;
+  totalApprovedBalance?: number;
+  totalPendingBalance?: number;
+  totalOutstanding?: number;
+}
+
+interface UserSeasonBalanceDoc extends DocumentData {
+  userId: string;
+  teamId: string;
+  seasonId: string;
+  outstandingBalance: number;
+  pendingBalance: number;
+  approvedBalance: number;
+  updatedAt: Timestamp;
 }
 
 interface FineRuleDoc extends DocumentData {
@@ -240,6 +254,15 @@ export const seasonConverter: FirestoreDataConverter<Season, SeasonDoc> = {
         endDate: Timestamp.fromDate(new Date(s.endDate)),
       }),
       isActive: s.isActive,
+      ...(s.totalApprovedBalance !== undefined && {
+        totalApprovedBalance: s.totalApprovedBalance,
+      }),
+      ...(s.totalPendingBalance !== undefined && {
+        totalPendingBalance: s.totalPendingBalance,
+      }),
+      ...(s.totalOutstanding !== undefined && {
+        totalOutstanding: s.totalOutstanding,
+      }),
     };
   },
   fromFirestore(snapshot: QueryDocumentSnapshot<SeasonDoc>): Season {
@@ -251,6 +274,40 @@ export const seasonConverter: FirestoreDataConverter<Season, SeasonDoc> = {
       startDate: toIso(d.startDate),
       endDate: toIsoOpt(d.endDate),
       isActive: d.isActive,
+      totalApprovedBalance: d.totalApprovedBalance,
+      totalPendingBalance: d.totalPendingBalance,
+      totalOutstanding: d.totalOutstanding,
+    };
+  },
+};
+
+export const userSeasonBalanceConverter: FirestoreDataConverter<
+  UserSeasonBalance,
+  UserSeasonBalanceDoc
+> = {
+  toFirestore(modelObject: WithFieldValue<UserSeasonBalance>): UserSeasonBalanceDoc {
+    const b = modelObject as UserSeasonBalance;
+    return {
+      userId: b.userId,
+      teamId: b.teamId,
+      seasonId: b.seasonId,
+      outstandingBalance: b.outstandingBalance,
+      pendingBalance: b.pendingBalance,
+      approvedBalance: b.approvedBalance,
+      updatedAt: Timestamp.fromDate(new Date(b.updatedAt)),
+    };
+  },
+  fromFirestore(snapshot: QueryDocumentSnapshot<UserSeasonBalanceDoc>): UserSeasonBalance {
+    const d = snapshot.data();
+    return {
+      id: snapshot.id,
+      userId: d.userId,
+      teamId: d.teamId,
+      seasonId: d.seasonId,
+      outstandingBalance: d.outstandingBalance ?? 0,
+      pendingBalance: d.pendingBalance ?? 0,
+      approvedBalance: d.approvedBalance ?? 0,
+      updatedAt: toIso(d.updatedAt),
     };
   },
 };

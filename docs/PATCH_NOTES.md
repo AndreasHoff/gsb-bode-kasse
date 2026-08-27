@@ -4,6 +4,21 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v0.24.2 — 27. august 2026
+
+**Test: Omfattende testdækning for F024 balance tracking**
+
+- Tilføjet 36 tests fordelt på 3 testfiler til fuld dækning af balance tracking funktionalitet
+- `balances.test.ts` (15 tests): Enhedstests for kernefunktioner til balance opdatering og håndtering
+- `payments-balance.test.ts` (11 tests): Integrationstests for alle betalingsoperationer (godkend, afvis, refundér, afstem)
+- `fines-balance.test.ts` (10 tests): Integrationstests for bøde-operationer (slet, gendan) med balance opdateringer
+- Dækker alle balance-tilstandsovergange (outstanding ↔ pending ↔ approved)
+- Tester delte bøder med flere brugere og forskellige betalingsstatusser
+- Verificerer korrekt opdatering af season totaler (totalOutstanding, totalPendingBalance, totalApprovedBalance)
+- Alle tests bestået — beskytter mod regression af kritiske balance tracking bugs
+
+---
+
 ## v0.24.1 — 15. august 2026
 
 **Fix: Hvid skærm ved retur fra MobilePay (kritisk)**

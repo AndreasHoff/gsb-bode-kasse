@@ -4,6 +4,7 @@ import { paymentsCol, paymentDoc, activityLogCol } from "./refs";
 import type { Payment, ActivityLog } from "../../types/domain";
 import { getFine } from "./fines";
 import { getActiveSeason } from "./seasons";
+import { updateUserSeasonBalance } from "./balances";
 
 /**
  * Helper to get fine IDs from a payment, handling backward compatibility.
@@ -75,6 +76,7 @@ export async function createPayment(
 /**
  * Transitions payment status from "unpaid" → "pending".
  * Writes an ActivityLog entry atomically.
+ * Updates UserSeasonBalance (F024).
  */
 export async function initiatePayment(
   teamId: string,
@@ -83,6 +85,13 @@ export async function initiatePayment(
 ): Promise<Payment> {
   const existing = await getPayment(teamId, paymentId);
   if (!existing) throw new Error(`Payment ${paymentId} not found in team ${teamId}`);
+
+  // Get season ID from one of the fines
+  const fineIds = getFineIdsFromPayment(existing);
+  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
+  
+  const firstFine = await getFine(teamId, fineIds[0]);
+  if (!firstFine) throw new Error("Associated fine not found");
 
   const batch = writeBatch(db);
 
@@ -96,7 +105,6 @@ export async function initiatePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
-  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -109,6 +117,20 @@ export async function initiatePayment(
   };
   batch.set(logRef, logEntry);
 
+  // Update balance: move from outstanding to pending
+  await updateUserSeasonBalance(
+    existing.userId,
+    teamId,
+    firstFine.seasonId,
+    {
+      outstandingBalance: -existing.amount,
+      pendingBalance: existing.amount,
+    },
+    "payment.initiated",
+    actorId,
+    batch,
+  );
+
   await batch.commit();
   return updated;
 }
@@ -117,6 +139,7 @@ export async function initiatePayment(
  * Creates a combined payment for multiple fines and sets status to "pending".
  * Used when a member pays multiple fines at once via MobilePay Box.
  * Writes an ActivityLog entry atomically.
+ * Updates UserSeasonBalance (F024).
  */
 export async function createCombinedPayment(
   teamId: string,
@@ -201,6 +224,20 @@ export async function createCombinedPayment(
   };
   batch.set(logRef, logEntry);
 
+  // Update balance: move from outstanding to pending
+  await updateUserSeasonBalance(
+    userId,
+    teamId,
+    activeSeason.id,
+    {
+      outstandingBalance: -totalAmount,
+      pendingBalance: totalAmount,
+    },
+    "payment.initiated",
+    actorId,
+    batch,
+  );
+
   await batch.commit();
   return payment;
 }
@@ -209,6 +246,7 @@ export async function createCombinedPayment(
  * Transitions payment status from "pending" → "approved".
  * Only admins may call this.
  * Writes an ActivityLog entry atomically.
+ * Updates UserSeasonBalance (F024).
  */
 export async function approvePayment(
   teamId: string,
@@ -223,6 +261,13 @@ export async function approvePayment(
     throw new Error("Kan kun godkende betalinger med status 'pending'");
   }
 
+  // Get season ID from one of the fines
+  const fineIds = getFineIdsFromPayment(existing);
+  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
+  
+  const firstFine = await getFine(teamId, fineIds[0]);
+  if (!firstFine) throw new Error("Associated fine not found");
+
   const batch = writeBatch(db);
 
   const pRef = paymentDoc(teamId, paymentId);
@@ -236,7 +281,6 @@ export async function approvePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
-  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -249,13 +293,29 @@ export async function approvePayment(
   };
   batch.set(logRef, logEntry);
 
+  // Update balance: move from pending to approved
+  await updateUserSeasonBalance(
+    existing.userId,
+    teamId,
+    firstFine.seasonId,
+    {
+      pendingBalance: -existing.amount,
+      approvedBalance: existing.amount,
+    },
+    "payment.approved",
+    actorId,
+    batch,
+  );
+
   await batch.commit();
   return updated;
 }
 
 /**
- * Transitions payment status to "disputed".
+ * Transitions payment status from "pending" → "disputed".
+ * Only admins may call this.
  * Writes an ActivityLog entry atomically.
+ * Updates UserSeasonBalance (F024).
  */
 export async function disputePayment(
   teamId: string,
@@ -270,6 +330,13 @@ export async function disputePayment(
     throw new Error("Kan kun afvise betalinger med status 'pending'");
   }
 
+  // Get season ID from one of the fines
+  const fineIds = getFineIdsFromPayment(existing);
+  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
+  
+  const firstFine = await getFine(teamId, fineIds[0]);
+  if (!firstFine) throw new Error("Associated fine not found");
+
   const batch = writeBatch(db);
 
   const pRef = paymentDoc(teamId, paymentId);
@@ -278,7 +345,6 @@ export async function disputePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
-  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -290,6 +356,20 @@ export async function disputePayment(
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
+
+  // Update balance: move from pending to outstanding
+  await updateUserSeasonBalance(
+    existing.userId,
+    teamId,
+    firstFine.seasonId,
+    {
+      pendingBalance: -existing.amount,
+      outstandingBalance: existing.amount,
+    },
+    "payment.disputed",
+    actorId,
+    batch,
+  );
 
   await batch.commit();
   return updated;
@@ -323,6 +403,7 @@ export async function getPaymentsForReconciliation(teamId: string): Promise<Paym
 /**
  * Refunds an approved payment: resets status to "unpaid" and clears approval fields.
  * Writes a payment.refunded ActivityLog entry atomically.
+ * Updates UserSeasonBalance (F024).
  */
 export async function refundPayment(
   teamId: string,
@@ -331,6 +412,13 @@ export async function refundPayment(
 ): Promise<Payment> {
   const existing = await getPayment(teamId, paymentId);
   if (!existing) throw new Error(`Payment ${paymentId} not found in team ${teamId}`);
+
+  // Get season ID from one of the fines
+  const fineIds = getFineIdsFromPayment(existing);
+  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
+  
+  const firstFine = await getFine(teamId, fineIds[0]);
+  if (!firstFine) throw new Error("Associated fine not found");
 
   const batch = writeBatch(db);
 
@@ -343,7 +431,6 @@ export async function refundPayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
-  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -355,6 +442,20 @@ export async function refundPayment(
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
+
+  // Update balance: move from approved to outstanding
+  await updateUserSeasonBalance(
+    existing.userId,
+    teamId,
+    firstFine.seasonId,
+    {
+      approvedBalance: -existing.amount,
+      outstandingBalance: existing.amount,
+    },
+    "payment.refunded",
+    actorId,
+    batch,
+  );
 
   await batch.commit();
   return updated;
@@ -399,6 +500,28 @@ export async function reconcilePayment(
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
+
+  // Get season ID from one of the fines
+  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
+  
+  const firstFine = await getFine(teamId, fineIds[0]);
+  if (!firstFine) throw new Error("Associated fine not found");
+
+  // Update balance based on previous status
+  const delta =
+    existing.status === "pending"
+      ? { pendingBalance: -existing.amount, approvedBalance: existing.amount }
+      : { outstandingBalance: -existing.amount, approvedBalance: existing.amount };
+
+  await updateUserSeasonBalance(
+    existing.userId,
+    teamId,
+    firstFine.seasonId,
+    delta,
+    "payment.reconciled",
+    actorId,
+    batch,
+  );
 
   await batch.commit();
   return updated;

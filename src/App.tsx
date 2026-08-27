@@ -9,6 +9,7 @@ import ActivityLog from "./features/activity/ActivityLog";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
+import MemberProfile from "./features/personal/MemberProfile";
 import BottomNavbar from "./components/BottomNavbar";
 import UndoToast from "./components/UndoToast";
 import AdminSettings from "./features/settings/AdminSettings";
@@ -58,6 +59,10 @@ function App() {
   const [teamId, setTeamId] = useState("");
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [userId, setUserId] = useState("");
+  const [viewingMember, setViewingMember] = useState<{
+    userId: string;
+    name: string;
+  } | null>(null);
   const [lastAssignedFines, setLastAssignedFines] = useState<{
     teamId: string;
     fineIds: string[];
@@ -489,17 +494,25 @@ function App() {
 
       {/* Page content */}
       <main className="app-main">
-        {activeTab === "overview" && (
+        {viewingMember && (
+          <MemberProfile
+            userId={viewingMember.userId}
+            userName={viewingMember.name}
+            teamId={teamId}
+            onBack={() => setViewingMember(null)}
+          />
+        )}
+        {!viewingMember && activeTab === "overview" && (
           <TeamOverview
             teamId={teamId}
             userRole={userRole}
             onOpenAdminApprovals={() => setActiveTab("settings")}
-            onMemberSelect={() => {
-              // Member detail view removed - Profil tab now shows account settings only
+            onMemberSelect={(memberId, memberName) => {
+              setViewingMember({ userId: memberId, name: memberName });
             }}
           />
         )}
-        {activeTab === "assign-fine" && (
+        {!viewingMember && activeTab === "assign-fine" && (
           <AssignFine
             teamId={teamId}
             actorId={userId}
@@ -515,7 +528,7 @@ function App() {
             }}
           />
         )}
-        {activeTab === "personal" && (
+        {!viewingMember && activeTab === "personal" && (
           <UserProfile
             userId={userId}
             teamId={teamId}
@@ -524,17 +537,17 @@ function App() {
             onNameChange={setDisplayName}
           />
         )}
-        {activeTab === "fine-rules" && (
+        {!viewingMember && activeTab === "fine-rules" && (
           <FineRulesCatalog
             teamId={teamId}
             userRole={userRole}
             userId={userId}
           />
         )}
-        {activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}
-        {activeTab === "activity" && <ActivityLog teamId={teamId} />}
-        {activeTab === "proposals" && <Proposals />}
-        {activeTab === "settings" && (
+        {!viewingMember && activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}
+        {!viewingMember && activeTab === "activity" && <ActivityLog teamId={teamId} />}
+        {!viewingMember && activeTab === "proposals" && <Proposals />}
+        {!viewingMember && activeTab === "settings" && (
           <AdminSettings
             teamId={teamId}
             actorId={userId}
