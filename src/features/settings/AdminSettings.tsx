@@ -48,7 +48,7 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
             Refunder
           </button>
         )}
-        {showSeason && (
+        {/* {showSeason && (
           <button
             type="button"
             className={`admin-settings__tab${activeTab === "fines" ? " admin-settings__tab--active" : ""}`}
@@ -56,7 +56,7 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
           >
             Bøder
           </button>
-        )}
+        )} */}
         {showSeason && (
           <button
             type="button"
@@ -97,9 +97,9 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
         {activeTab === "refunds" && showPayments && (
           <RefundReconcile teamId={teamId} actorId={actorId} />
         )}
-        {activeTab === "fines" && showSeason && (
+        {/* {activeTab === "fines" && showSeason && (
           <ImportFineRules teamId={teamId} actorId={actorId} />
-        )}
+        )} */}
         {activeTab === "season" && showSeason && (
           <SeasonManagement teamId={teamId} actorId={actorId} />
         )}

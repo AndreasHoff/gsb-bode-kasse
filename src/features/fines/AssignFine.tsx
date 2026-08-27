@@ -372,31 +372,11 @@ export default function AssignFine({
       >
         <div className="form-group">
           <label htmlFor="assign-rule" className="form-label">
-            Bødetype
+            Bøde
           </label>
           <select
             id="assign-rule"
             className="form-select"
-            value={selectedRuleId}
-            onChange={(event) => setSelectedRuleId(event.target.value)}
-            disabled={submitting}
-          >
-            {rules.map((rule) => (
-              <option key={rule.id} value={rule.id}>
-                {rule.emoji ? `${rule.emoji} ` : ""}
-                {rule.title} ({formatAmount(rule.amount)})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="assign-rule" className="block text-sm font-semibold mb-1">
-            Bødetype
-          </label>
-          <select
-            id="assign-rule"
-            className="field__input"
             value={selectedRuleId}
             onChange={(event) => setSelectedRuleId(event.target.value)}
             disabled={submitting}
