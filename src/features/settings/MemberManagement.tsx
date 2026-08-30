@@ -1,12 +1,12 @@
 // Feature: Member Management (F022)
 // Admin can view all members, change roles, and remove members (cascading their fines).
+import { changeMemberRole } from "../../services/membershipService";
 
 import { useCallback, useEffect, useState } from "react";
 import type { Membership, User, Role } from "../../types/domain";
 import {
   getMemberships,
   getUsers,
-  upsertMembership,
   removeMember,
 } from "../../lib/firestore";
 
@@ -75,10 +75,10 @@ export default function MemberManagement({ teamId, actorId }: Props) {
     try {
       const row = rows.find((r) => r.membership.userId === userId);
       if (!row) return;
-      await upsertMembership(
-        { ...row.membership, role: newRole },
+      await changeMemberRole(
+        row.membership,
+        newRole,
         actorId,
-        "member.roleChanged",
       );
       setRows((prev) =>
         prev.map((r) =>
@@ -91,6 +91,7 @@ export default function MemberManagement({ teamId, actorId }: Props) {
       setError("Rolleændring mislykkedes.");
     } finally {
       setProcessingId(null);
+      console.log("Finished processing role change for user:", rows.find((member) => member.membership.userId === userId)?.user.name);
     }
   }
 
