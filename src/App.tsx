@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
 import patchNotesMarkdown from "../docs/PATCH_NOTES.md?raw";
 import TeamOverview from "./features/overview/TeamOverview";
@@ -6,6 +6,7 @@ import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
 import AssignFine from "./features/fines/AssignFine";
 import Evangeliet from "./features/evangeliet/Evangeliet";
 import ActivityLog from "./features/activity/ActivityLog";
+import { changeMemberRole } from "./services/membershipService";
 import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
@@ -24,12 +25,11 @@ import {
 import {
   ensureUserProfile,
   getActiveMembershipsForUser,
-  getTeam,
   getTeams,
   bulkSoftDeleteFines,
   upsertMembership,
 } from "./lib/firestore";
-import type { Role } from "./types/domain";
+import type { Role, Membership } from "./types/domain";
 import "./App.css";
 
 type Tab =
@@ -55,9 +55,9 @@ function App() {
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [teamName, setTeamName] = useState("");
   const [teamId, setTeamId] = useState("");
   const [userRole, setUserRole] = useState<Role | null>(null);
+  const [membership, setMembership] = useState<Membership | null>(null);
   const [userId, setUserId] = useState("");
   const [viewingMember, setViewingMember] = useState<{
     userId: string;
@@ -118,7 +118,6 @@ function App() {
         setStatus("signed-out");
         setDisplayName("");
         setUserEmail("");
-        setTeamName("");
         setTeamId("");
         setUserRole(null);
         setUserId("");
@@ -156,7 +155,6 @@ function App() {
 
           if (!defaultTeam) {
             setDisplayName(userProfile.name);
-            setTeamName("");
             setTeamId("");
             setUserRole(null);
             setUserId(user.uid);
@@ -201,13 +199,11 @@ function App() {
           setTeamId(defaultTeam.id);
           setUserRole(createdMembership.role);
           setDisplayName(userProfile.name);
-          setTeamName(defaultTeam.name || "Mit hold");
           setStatus("ready");
           return;
         }
 
         const primaryMembership = memberships[0];
-        const team = await getTeam(primaryMembership.teamId);
 
         console.log("[auth] Session trace:", {
           authUid: user.uid,
@@ -226,14 +222,13 @@ function App() {
             userId: primaryMembership.userId,
             isActive: primaryMembership.isActive,
           },
-          teamName: team?.name || "Mit hold",
         });
-
+        
+        setMembership(primaryMembership);
         setUserId(user.uid);
         setTeamId(primaryMembership.teamId);
         setUserRole(primaryMembership.role);
         setDisplayName(userProfile.name);
-        setTeamName(team?.name || "Mit hold");
         setStatus("ready");
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -258,14 +253,7 @@ function App() {
     window.localStorage.setItem(THEME_STORAGE_KEY, colorTheme);
   }, [colorTheme]);
 
-  const headerTitle = useMemo(() => {
-    if (teamName.trim().length > 0) {
-      return teamName;
-    }
-
-    return "GSB Bødekasse";
-  }, [teamName]);
-  const appVersion = getCurrentVersionFromPatchNotes(patchNotesMarkdown);
+  //const appVersion = getCurrentVersionFromPatchNotes(patchNotesMarkdown);
 
   async function handleUndoLastAssignedFines(): Promise<void> {
     if (!lastAssignedFines || !userId) {
@@ -408,6 +396,36 @@ function App() {
     );
   }
 
+  const toggleRole = async () => {
+    if (!membership) {
+      console.error("No membership loaded");
+      return;
+    }
+
+    console.log("Current role:", userRole);
+    const newRole = membership.role === "admin"
+      ? "member"
+      : "admin";
+
+    try {
+      await changeMemberRole(
+        membership,
+        newRole,
+        userId
+      );
+
+      setUserRole(newRole);
+
+      setMembership({
+        ...membership,
+        role: newRole,
+      });
+      console.log("Role changed successfully to:", newRole);
+  } catch (error) {
+    console.error("Failed to change role:", error);
+  }
+  };
+
   return (
     <div className="app-shell">
       {isSideMenuOpen && (
@@ -421,8 +439,11 @@ function App() {
       {isSideMenuOpen && (
         <aside id="app-side-menu" className="app-side-menu app-side-menu--open">
           <div className="app-side-menu__header">
-            <p className="app-title app-title--compact">Menu</p>
-            <p className="app-subtitle text-xs">{headerTitle}</p>
+            {userEmail === "mchoffn@hotmail.com" && (
+              <button type="button" onClick={toggleRole}>
+                Skift rolle {userRole}
+              </button>
+            )}
           </div>
           <nav className="app-side-menu__nav">
             {menuItems.map((item) => (
@@ -663,3 +684,7 @@ function getErrorCode(error: unknown): string | null {
   const maybeCode = (error as { code?: unknown }).code;
   return typeof maybeCode === "string" ? maybeCode : null;
 }
+function setChangeRole(arg0: (userRole: any) => "member" | "admin") {
+  throw new Error("Function not implemented.");
+}
+

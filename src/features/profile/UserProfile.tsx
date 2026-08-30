@@ -8,7 +8,7 @@ import {
   updateUserProfile,
 } from "../../lib/firestore";
 import { formatAmount } from "../../lib/utils";
-import InstallAppOption from "../pwa-install/InstallAppOption";
+// import InstallAppOption from "../pwa-install/InstallAppOption";
 import "./profile.css";
 
 interface UserProfileProps {
@@ -534,7 +534,7 @@ export default function UserProfile({
         </div>
       </div>
 
-      <InstallAppOption />
+      {/* <InstallAppOption /> */}
     </div>
   );
 }
