@@ -30,6 +30,7 @@ import {
   getTeams,
   bulkSoftDeleteFines,
   upsertMembership,
+  getActiveSeason,
 } from "./lib/firestore";
 import type { Role, Membership } from "./types/domain";
 import "./App.css";
@@ -74,6 +75,7 @@ function App() {
   const [isUndoingAssign, setIsUndoingAssign] = useState(false);
   const [colorTheme, setColorTheme] = useState<ColorTheme>(() => getInitialTheme());
   const [isVersionUpdating, setIsVersionUpdating] = useState(false);
+  const [activeSeasonId, setActiveSeasonId] = useState("");
   // Holds the name entered during registration so syncUserSession can use it
   // before Firebase Auth's onAuthStateChanged fires (before updateProfile runs).
   const pendingNameRef = useRef<string | null>(null);
@@ -255,6 +257,35 @@ function App() {
     document.documentElement.setAttribute("data-theme", colorTheme);
     window.localStorage.setItem(THEME_STORAGE_KEY, colorTheme);
   }, [colorTheme]);
+
+  useEffect(() => {
+    if (!teamId) {
+      setActiveSeasonId("");
+      return;
+    }
+
+    let isAlive = true;
+
+    const loadActiveSeason = async () => {
+      try {
+        const season = await getActiveSeason(teamId);
+        if (isAlive) {
+          setActiveSeasonId(season?.id || "");
+        }
+      } catch (error) {
+        console.error("[app] Failed to load active season:", error);
+        if (isAlive) {
+          setActiveSeasonId("");
+        }
+      }
+    };
+
+    void loadActiveSeason();
+
+    return () => {
+      isAlive = false;
+    };
+  }, [teamId]);
 
   //const appVersion = getCurrentVersionFromPatchNotes(patchNotesMarkdown);
 
@@ -582,6 +613,8 @@ function App() {
             teamId={teamId}
             userRole={userRole}
             userId={userId}
+            userName={displayName}
+            activeSeasonId={activeSeasonId}
           />
         )}
         {!viewingMember && activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}

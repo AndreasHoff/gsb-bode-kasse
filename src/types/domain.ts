@@ -57,6 +57,24 @@ export interface FineRule {
   createdAt: string;
 }
 
+export type FineRuleProposalStatus = "pending" | "approved" | "denied";
+
+export interface FineRuleProposal {
+  id: string;
+  teamId: string;
+  seasonId: string;
+  title: string;
+  description?: string;
+  amount: number;
+  emoji?: string;
+  status: FineRuleProposalStatus;
+  proposedBy: string;
+  proposedByName: string;
+  createdAt: string;
+  approvedAt?: string;
+  deniedAt?: string;
+}
+
 export interface Fine {
   id: string;
   teamId: string;

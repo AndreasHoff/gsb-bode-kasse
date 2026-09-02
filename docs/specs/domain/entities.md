@@ -114,6 +114,42 @@ A reusable template defining a fine type.
 
 ---
 
+## FineRuleProposal
+
+A member-submitted proposal for a new fine rule to be added to the catalogue.
+
+| Field        | Type     | Description                                        |
+|--------------|----------|----------------------------------------------------|
+| id           | string   | Unique identifier                                  |
+| teamId       | string   | Reference to Team                                  |
+| seasonId     | string   | Reference to Season (when proposed)                |
+| title        | string   | Proposed fine rule title                           |
+| description  | string?  | Optional explanation of rule                       |
+| amount       | number   | Proposed fine amount in DKK                        |
+| emoji        | string?  | Optional emoji for social flair                    |
+| status       | enum     | Lifecycle status (pending, approved, denied)       |
+| proposedBy   | string   | Reference to User (proposer)                       |
+| proposedByName | string | Snapshot of proposer display name                  |
+| createdAt    | datetime | When proposal was submitted                        |
+| approvedAt   | datetime?| When admin approved (if applicable)                |
+| deniedAt     | datetime?| When admin denied (if applicable)                  |
+
+**Status values:**
+- `pending` — awaiting admin review
+- `approved` — approved and converted to FineRule
+- `denied` — rejected by admin
+
+**Business Rules:**
+- Proposals belong to a team and cannot be shared across teams
+- Proposals are hard-deleted after approval or denial (not kept for audit trail)
+- `proposedByName` is a snapshot of the user's name at proposal time
+- Proposals are scoped to the active season at the time of submission
+- All members can submit proposals; only admins can review/approve/deny
+- When a proposal is approved, a new FineRule is created with `createdBy` set to the approving admin (not the proposer)
+- ActivityLog entries track proposal creation, approval, and denial (see ActivityLog actions below)
+
+---
+
 ## Fine
 
 A fine assigned to one or more users.
@@ -187,10 +223,14 @@ Immutable audit trail of all significant actions.
 | metadata     | object?  | Optional additional context                |
 | createdAt    | datetime | When the action occurred                   |
 
-**Action types:**, `payment.refunded`, `payment.reconciled`
+**Action types:**
+- `fine.assigned`, `fine.deleted`, `payment.initiated`, `payment.approved`, `payment.disputed`, `payment.refunded`, `payment.reconciled`
 - `member.added`, `member.removed`, `member.role_changed`
 - `season.created`, `season.closed`
 - `rule.created`, `rule.deactivated`
+- `rule.proposal_created` (F026 — member submits proposal)
+- `rule.proposal_approved` (F026 — admin approves proposal, creates FineRule)
+- `rule.proposal_denied` (F026 — admin denies proposal)
 - `balance.updated` (F024)
 
 **Business Rules:**

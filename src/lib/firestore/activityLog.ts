@@ -26,7 +26,10 @@ export type ActivityLogAction =
   | "member.roleChanged"
   | "rule.created"
   | "rule.updated"
-  | "rule.deactivated";
+  | "rule.deactivated"
+  | "rule.proposal_created"
+  | "rule.proposal_approved"
+  | "rule.proposal_denied";
 
 export type LogActivityInput = {
   teamId: string;

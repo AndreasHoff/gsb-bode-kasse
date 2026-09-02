@@ -54,6 +54,17 @@ export function canManageProposals(role: Role | null): boolean {
   return hasAdminAccess(role);
 }
 
+/** Returns true if the given role can propose fine rules */
+export function canProposeFineRules(role: Role | null): boolean {
+  // All members can propose fine rules
+  return role !== null;
+}
+
+/** Returns true if the given role can review fine rule proposals */
+export function canReviewFineRuleProposals(role: Role | null): boolean {
+  return hasAdminAccess(role);
+}
+
 /** Returns true only for the designated proposal owner email. */
 export function canExportAndManageProposalStatus(
   email: string | null | undefined,

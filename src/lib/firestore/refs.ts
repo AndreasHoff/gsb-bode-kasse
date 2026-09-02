@@ -69,6 +69,12 @@ export const fineRulesCol = (teamId: string) =>
 export const fineRuleDoc = (teamId: string, ruleId: string) =>
   doc(db, "teams", teamId, "fineRules", ruleId).withConverter(fineRuleConverter);
 
+export const fineRuleProposalsCol = (teamId: string) =>
+  collection(db, "teams", teamId, "fineRuleProposals");
+
+export const fineRuleProposalDoc = (teamId: string, proposalId: string) =>
+  doc(db, "teams", teamId, "fineRuleProposals", proposalId);
+
 export const finesCol = (teamId: string) =>
   collection(db, "teams", teamId, "fines").withConverter(fineConverter);
 
