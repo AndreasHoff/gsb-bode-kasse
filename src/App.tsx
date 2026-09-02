@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
 import patchNotesMarkdown from "../docs/PATCH_NOTES.md?raw";
+import { VersionBadge } from "patch-notes";
 import TeamOverview from "./features/overview/TeamOverview";
 import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
 import AssignFine from "./features/fines/AssignFine";
@@ -11,6 +12,7 @@ import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
 import MemberProfile from "./features/personal/MemberProfile";
+import PatchNotesPage from "./features/patch-notes/PatchNotes";
 import BottomNavbar from "./components/BottomNavbar";
 import UndoToast from "./components/UndoToast";
 import AdminSettings from "./features/settings/AdminSettings";
@@ -40,6 +42,7 @@ type Tab =
   | "evangeliet"
   | "activity"
   | "proposals"
+  | "patch-notes"
   | "settings";
 type AppStatus = "checking" | "signed-out" | "ready" | "no-membership";
 type ColorTheme = "green" | "violet";
@@ -396,6 +399,11 @@ function App() {
     );
   }
 
+  // Add patch notes to menu for all users
+  menuItems.push(
+    { tab: "patch-notes", label: "Patchnoter", emoji: "📝" },
+  );
+
   const toggleRole = async () => {
     if (!membership) {
       console.error("No membership loaded");
@@ -463,6 +471,15 @@ function App() {
               </button>
             ))}
           </nav>
+          <button
+            type="button"
+            onClick={() => {
+              void handleSignOut();
+            }}
+            className="btn-secondary px-3 py-1.5 text-xs"
+          >
+            Log ud
+          </button>
         </aside>
       )}
       <header className="app-header">
@@ -479,7 +496,12 @@ function App() {
           </button>
           <div className="app-navbar__brand">
             <p className="app-title app-title--compact">GSB Bødekasse</p>
-            <p className="app-subtitle text-xs">v1.0.0 beta</p>
+            <VersionBadge
+              version={getCurrentVersionFromPatchNotes(patchNotesMarkdown)}
+              onClick={() => setActiveTab("patch-notes")}
+              title="Se patchnoter"
+              className="app-version-link"
+            />
           </div>
           <div className="app-navbar__user">
             <button
@@ -505,19 +527,7 @@ function App() {
             </button>
             <div className="app-navbar__user-info">
               <p className="app-subtitle app-navbar__user-name">{displayName}</p>
-              {userRole === "admin" && (
-                <p className="app-navbar__user-role">admin</p>
-              )}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                void handleSignOut();
-              }}
-              className="btn-secondary px-3 py-1.5 text-xs"
-            >
-              Log ud
-            </button>
           </div>
         </div>
       </header>
@@ -577,6 +587,9 @@ function App() {
         {!viewingMember && activeTab === "evangeliet" && <Evangeliet teamId={teamId} />}
         {!viewingMember && activeTab === "activity" && <ActivityLog teamId={teamId} />}
         {!viewingMember && activeTab === "proposals" && <Proposals />}
+        {!viewingMember && activeTab === "patch-notes" && (
+          <PatchNotesPage colorTheme={colorTheme} />
+        )}
         {!viewingMember && activeTab === "settings" && (
           <AdminSettings
             teamId={teamId}

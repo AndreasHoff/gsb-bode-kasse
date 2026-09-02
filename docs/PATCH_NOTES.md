@@ -4,6 +4,25 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.0.1 — 2. september 2026
+
+**Feature: Patchnoter-visning**
+
+- Tilføjet fuldt integreret patchnoter-feature med paginering og GitHub-issue-linkering
+- Brugere kan se hele ændringshistorikken via nyt "Patchnoter 📝" menu-item i sidenavigation
+- Versionsnummeret i navbaren er nu klikkabelt og navigerer til patchnoter-siden
+
+---
+
+## v1.0.0 — 1. september 2026
+
+**Release: Første offentlige version til hele klubben**
+
+- Stabil, produktionsklar version med alle kernefunktioner
+- Klar til brug af alle medlemmer i GSB Bødekasse
+
+---
+
 ## v0.25.0 — 27. august 2026
 
 **Feature: PWA installation prompt (F025)**

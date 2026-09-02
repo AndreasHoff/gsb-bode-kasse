@@ -78,7 +78,13 @@ ALWAYS bump the app version and update the changelog when shipping a feature or 
 1. `package.json` — bump the version (semver: patch for fixes, minor for features)
 2. `docs/PATCH_NOTES.md` — add a new entry with version, date, and bullet points (in Danish)
 
-In-app display of patch notes is deferred — to be designed and implemented later.
+**Important:** Patch notes are for **users**, not developers. Write from the user perspective:
+- ✅ What users can now DO ("Brugere kan se hele ændringshistorikken via nyt menu-item")
+- ✅ What changed FOR users ("Versionsnummeret er nu klikkabelt")
+- ❌ Implementation details ("Reusable npm-package", "CSS custom properties", "markdown parser")
+- ❌ Technical architecture ("Paginering med 5 items", "GitHub-issue-referencer bliver linkeret")
+
+Focus on user value and behavior, not technical implementation.
 
 ## Build & Dev
 

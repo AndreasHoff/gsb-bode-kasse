@@ -1,0 +1,30 @@
+{
+  "name": "patch-notes",
+  "version": "1.0.0",
+  "description": "Reusable patch notes component package for React + Vite projects",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts"
+    }
+  },
+  "keywords": [
+    "patch-notes",
+    "changelog",
+    "release-notes",
+    "react",
+    "vite"
+  ],
+  "author": "GSB Bødekasse Contributors",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0"
+  }
+}
