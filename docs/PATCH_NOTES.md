@@ -16,7 +16,6 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 - Administrators kan gennemgå, godkende eller afvise medlemsforslag
 - Godkendte forslag bliver automatisk oprettet som nye bødetype i katalogen
 - Alle forslag-handlinger logges i aktivitetsloggen for fuld revision trail
-- Real-timeUI opdateringer når forslag bliver processet
 
 ---
 
