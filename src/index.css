@@ -9,7 +9,7 @@
   --color-surface: #FFFFFF;
   --color-surface-muted: #F1F5F9;
   --color-text: #1F2937;
-  --color-text-muted: #6B7280;
+  --color-text-muted: #F1F5F9;
   --color-primary: #005AA9;
   --color-primary-strong: #0077CC;
   --color-primary-contrast: #FFFFFF;
@@ -17,7 +17,7 @@
   --color-accent-light: #FFD447;
   --color-error: #EF4444;
   --color-success: #22C55E;
-  --color-warning: #F59E0B;
+  --color-warning: #F59E0B; 
   --color-info: #0077CC;
   --color-border: #E5E7EB;
   --color-bg-glow-cool: rgba(0, 90, 169, 0.08);
