@@ -74,6 +74,10 @@ service cloud.firestore {
         allow read, write: if isSignedIn();
       }
 
+      match /fineRuleProposals/{proposalId} {
+        allow read, write: if isSignedIn();
+      }
+
       match /{document=**} {
         allow read, write: if isSignedIn();
       }

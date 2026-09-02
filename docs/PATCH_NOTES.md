@@ -4,6 +4,22 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.1.0 — 3. september 2026
+
+**Feature: Medlems bødefinansieringsforslag (F026)**
+
+- Medlemmer kan nu foreslå nye bødetype til holdet via "Ny forslag" knap
+- Forslag udfyldes med titel, beløb (DKK), emoji og optional beskrivelse
+- Medlemmer kan se deres egne forslag under "Mine forslag" med status (Afventer/Godkendt/Afvist)
+- Medlemmer kan redigere afventende forslag eller trække dem tilbage når som helst
+- Administrators får nyt "Nye forslag {X}" knap med live badge der viser antal afventende forslag
+- Administrators kan gennemgå, godkende eller afvise medlemsforslag
+- Godkendte forslag bliver automatisk oprettet som nye bødetype i katalogen
+- Alle forslag-handlinger logges i aktivitetsloggen for fuld revision trail
+- Real-timeUI opdateringer når forslag bliver processet
+
+---
+
 ## v1.0.1 — 2. september 2026
 
 **Feature: Patchnoter-visning**
