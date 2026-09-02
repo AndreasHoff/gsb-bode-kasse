@@ -11,6 +11,7 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 - Tilføjet fuldt integreret patchnoter-feature med paginering og GitHub-issue-linkering
 - Brugere kan se hele ændringshistorikken via nyt "Patchnoter 📝" menu-item i sidenavigation
 - Versionsnummeret i navbaren er nu klikkabelt og navigerer til patchnoter-siden
+- Logout knap flyttet til bunden af side menu
 
 ---
 
