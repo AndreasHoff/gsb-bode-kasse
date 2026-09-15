@@ -4,6 +4,15 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.2.1 — 15. september 2026
+
+**Forbedring: Medlemsantal i Hold-tab**
+
+- Medlemmer kan nu se det totale antal medlemmer på holdet via et nyt label øverst på medlemslisten
+- Medlemmertallet opdateres automatisk når nye medlemmer tilføjes eller fjernes
+
+---
+
 ## v1.2.0 — 15. september 2026
 
 **Feature: Forbedringer til medlemsbødefinansieringsforslag (F026)**
