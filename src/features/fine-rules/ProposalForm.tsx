@@ -1,8 +1,10 @@
 // Feature: Member Fine Rule Proposals (F026)
-// Form for members to submit new fine rule proposals
+// Form for members to submit new fine rule proposals or edit existing ones
 
 import { useEffect, useState } from "react";
+import type { FineRuleProposal } from "../../types/domain";
 import { useProposalSubmit } from "./useProposalSubmit";
+import { useProposalEdit } from "./useProposalEdit";
 import { formatAmount } from "../../lib/utils";
 
 interface Props {
@@ -10,6 +12,8 @@ interface Props {
   seasonId: string;
   userId: string;
   userName: string;
+  proposalId?: string; // For editing
+  existingProposal?: FineRuleProposal; // For editing
   onSave: (proposalId: string) => void;
   onCancel: () => void;
 }
@@ -19,16 +23,24 @@ export default function ProposalForm({
   seasonId,
   userId,
   userName,
+  proposalId,
+  existingProposal,
   onSave,
   onCancel,
 }: Props) {
-  const [title, setTitle] = useState("");
-  const [amountStr, setAmountStr] = useState("");
-  const [emoji, setEmoji] = useState("");
-  const [description, setDescription] = useState("");
+  const isEditing = !!proposalId && !!existingProposal;
+  
+  const [title, setTitle] = useState(existingProposal?.title || "");
+  const [amountStr, setAmountStr] = useState(existingProposal?.amount.toString() || "");
+  const [emoji, setEmoji] = useState(existingProposal?.emoji || "");
+  const [description, setDescription] = useState(existingProposal?.description || "");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const { loading: submitting, error, submit } = useProposalSubmit();
+  const { loading: submitting, error: submitError, submit } = useProposalSubmit();
+  const { loading: updating, error: updateError, updateProposal } = useProposalEdit();
+
+  const loading = submitting || updating;
+  const error = submitError || updateError;
 
   useEffect(() => {
     if (toastMessage) {
@@ -42,24 +54,33 @@ export default function ProposalForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!isValid || submitting) return;
+    if (!isValid || loading) return;
+
+    const data = {
+      title: title.trim(),
+      amount,
+      emoji: emoji.trim() || undefined,
+      description: description.trim() || undefined,
+    };
 
     try {
-      const proposalId = await submit(teamId, seasonId, userId, userName, {
-        title: title.trim(),
-        amount,
-        emoji: emoji.trim() || undefined,
-        description: description.trim() || undefined,
-      });
-
-      setToastMessage("Dit forslag er modtaget ✓");
-
-      // Redirect after a brief delay
-      setTimeout(() => {
-        onSave(proposalId);
-      }, 1500);
+      if (isEditing && proposalId) {
+        // Edit existing proposal
+        await updateProposal(teamId, proposalId, data);
+        setToastMessage("Forslaget er opdateret ✓");
+        setTimeout(() => {
+          onSave(proposalId);
+        }, 1500);
+      } else {
+        // Create new proposal
+        const newProposalId = await submit(teamId, seasonId, userId, userName, data);
+        setToastMessage("Dit forslag er modtaget ✓");
+        setTimeout(() => {
+          onSave(newProposalId);
+        }, 1500);
+      }
     } catch {
-      // Error is already set by the hook
+      // Error is already set by the hooks
     }
   }
 
@@ -74,8 +95,10 @@ export default function ProposalForm({
       </button>
 
       <div className="mb-6">
-        <h1 className="app-title">Nyt bøde forslag</h1>
-        <p className="app-subtitle">Foreslå en ny bødetype til holdet</p>
+        <h1 className="app-title">{isEditing ? "Rediger bøde forslag" : "Nyt bøde forslag"}</h1>
+        <p className="app-subtitle">
+          {isEditing ? "Opdater dit forslag til holdet" : "Foreslå en ny bødetype til holdet"}
+        </p>
       </div>
 
       <form
@@ -159,9 +182,13 @@ export default function ProposalForm({
         <button
           type="submit"
           className="btn-primary w-full py-3 rounded-2xl"
-          disabled={submitting || !isValid}
+          disabled={loading || !isValid}
         >
-          {submitting ? "Gemmer..." : "Opret forslag"}
+          {loading
+            ? "Gemmer..."
+            : isEditing
+              ? "Gem ændringer"
+              : "Opret forslag"}
         </button>
       </form>
     </div>

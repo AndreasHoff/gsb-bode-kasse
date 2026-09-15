@@ -82,16 +82,32 @@ export default function ProposalDetail({
     }
   };
 
-  const getStatusBadgeClass = (status: FineRuleProposal["status"]) => {
+  const getStatusBadgeStyle = (status: FineRuleProposal["status"]): React.CSSProperties => {
     switch (status) {
       case "pending":
-        return "bg-yellow-100 text-yellow-900";
+        return {
+          backgroundColor: "#FBBF24",
+          color: "#000000",
+          fontWeight: "bold",
+        };
       case "approved":
-        return "bg-green-100 text-green-900";
+        return {
+          backgroundColor: "#10B981",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
       case "denied":
-        return "bg-gray-100 text-gray-900";
+        return {
+          backgroundColor: "#6B7280",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
       default:
-        return "bg-gray-100 text-gray-900";
+        return {
+          backgroundColor: "#6B7280",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
     }
   };
 
@@ -138,6 +154,8 @@ export default function ProposalDetail({
         seasonId={seasonId}
         userId={userId}
         userName={userName}
+        proposalId={proposalId}
+        existingProposal={proposal}
         onSave={() => {
           setIsEditing(false);
           onBack();
@@ -184,7 +202,10 @@ export default function ProposalDetail({
             <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase mb-1">
               Status
             </p>
-            <span className={`inline-block text-sm font-semibold px-3 py-1 rounded-lg ${getStatusBadgeClass(proposal.status)}`}>
+            <span
+              style={getStatusBadgeStyle(proposal.status)}
+              className="inline-block text-sm px-3 py-1 rounded-lg"
+            >
               {getStatusText(proposal.status)}
             </span>
           </div>

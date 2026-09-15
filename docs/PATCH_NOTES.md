@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.2.0 — 15. september 2026
+
+**Feature: Forbedringer til medlemsbødefinansieringsforslag (F026)**
+
+- Medlemmer kan nu redigere deres afventende forslag direkte fra detaljesiden
+- Forbedret visuel feedback med konsistente badge-stilarter for status (Afventer/Godkendt/Afvist)
+- Dynamiske knaptitler i form ("Opret forslag" vs "Gem ændringer") afhængigt af om det er nyt eller redigering
+- Bedre validering og feedback under gem-processen
+- Testdokumentation tilføjet for proposal-funktionaliteten
+
+---
+
 ## v1.1.0 — 3. september 2026
 
 **Feature: Medlems bødefinansieringsforslag (F026)**
