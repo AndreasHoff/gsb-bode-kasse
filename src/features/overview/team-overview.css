@@ -79,6 +79,16 @@
 }
 
 /* Member list */
+.member-list-header {
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--color-text-muted);
+	margin-bottom: 0.75rem;
+	margin-top: 1rem;
+}
+
 .team-member-list {
 	display: flex;
 	flex-direction: column;
