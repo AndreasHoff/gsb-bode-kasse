@@ -279,6 +279,7 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
 
           {/* Member list */}
           <section aria-label="Holdoversigt">
+            <h2 className="member-list-header">Medlemmer ({sortedMembers.length})</h2>
             <ul className="team-member-list">
               {sortedMembers.map((item) => {
                 const initials = item.user.name
