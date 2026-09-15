@@ -264,13 +264,22 @@ function FineRulesList({
 
         {/* Member buttons */}
         {!canManageRules && canPropose && (
-          <button
-            type="button"
-            className="btn-primary btn-small shrink-0"
-            onClick={onPropose}
-          >
-            + Ny forslag
-          </button>
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              className="btn-primary btn-small shrink-0"
+              onClick={onPropose}
+            >
+              + Ny forslag
+            </button>
+            <button
+              type="button"
+              className="btn-secondary btn-small shrink-0"
+              onClick={onMyProposals}
+            >
+              Mine forslag
+            </button>
+          </div>
         )}
       </div>
 

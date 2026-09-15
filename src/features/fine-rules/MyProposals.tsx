@@ -61,16 +61,32 @@ export default function MyProposals({
     return () => unsubscribe();
   }, [teamId, userId]);
 
-  const getStatusBadgeClass = (status: FineRuleProposal["status"]) => {
+  const getStatusBadgeStyle = (status: FineRuleProposal["status"]): React.CSSProperties => {
     switch (status) {
       case "pending":
-        return "bg-yellow-100 text-yellow-900";
+        return {
+          backgroundColor: "#FBBF24",
+          color: "#000000",
+          fontWeight: "bold",
+        };
       case "approved":
-        return "bg-green-100 text-green-900";
+        return {
+          backgroundColor: "#10B981",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
       case "denied":
-        return "bg-gray-100 text-gray-900";
+        return {
+          backgroundColor: "#6B7280",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
       default:
-        return "bg-gray-100 text-gray-900";
+        return {
+          backgroundColor: "#6B7280",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
     }
   };
 
@@ -136,16 +152,32 @@ interface CardProps {
 }
 
 function ProposalCard({ proposal, onSelect }: CardProps) {
-  const getStatusBadgeClass = (status: FineRuleProposal["status"]) => {
+  const getStatusBadgeStyle = (status: FineRuleProposal["status"]): React.CSSProperties => {
     switch (status) {
       case "pending":
-        return "bg-yellow-100 text-yellow-900";
+        return {
+          backgroundColor: "#FBBF24",
+          color: "#000000",
+          fontWeight: "bold",
+        };
       case "approved":
-        return "bg-green-100 text-green-900";
+        return {
+          backgroundColor: "#10B981",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
       case "denied":
-        return "bg-gray-100 text-gray-900";
+        return {
+          backgroundColor: "#6B7280",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
       default:
-        return "bg-gray-100 text-gray-900";
+        return {
+          backgroundColor: "#6B7280",
+          color: "#FFFFFF",
+          fontWeight: "bold",
+        };
     }
   };
 
@@ -192,7 +224,10 @@ function ProposalCard({ proposal, onSelect }: CardProps) {
           <span className="text-sm font-bold text-[var(--color-primary-contrast)] bg-[var(--color-primary)] px-2.5 py-1 rounded-xl">
             {formatAmount(proposal.amount)}
           </span>
-          <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${getStatusBadgeClass(proposal.status)}`}>
+          <span
+            style={getStatusBadgeStyle(proposal.status)}
+            className="text-xs px-2 py-1 rounded-lg"
+          >
             {getStatusText(proposal.status)}
           </span>
         </div>
