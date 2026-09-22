@@ -6,9 +6,10 @@ import {
   collectionGroup,
   query,
   where,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { membersCol, memberDoc, activityLogCol, finesCol, teamsCol } from "./refs";
+import { membersCol, memberDoc, activityLogCol, finesCol, teamsCol, userDoc } from "./refs";
 import { membershipConverter } from "./converters";
 import { getUsers } from "./users";
 import type { Membership, ActivityLog, Fine } from "../../types/domain";
@@ -207,4 +208,7 @@ export async function removeMember(
   if (opsCount > 0) {
     await fineBatch.commit();
   }
+
+  // Delete the user document from the users collection
+  await deleteDoc(userDoc(userId));
 }

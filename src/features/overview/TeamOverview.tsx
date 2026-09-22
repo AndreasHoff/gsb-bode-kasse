@@ -116,8 +116,7 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
           if (acc) acc.paid += payment.amount;
         } else if (
           payment.status === "unpaid" ||
-          payment.status === "pending" ||
-          payment.status === "disputed"
+          payment.status === "pending"
         ) {
           aggOwed += payment.amount;
           if (acc) acc.debt += payment.amount;
@@ -131,7 +130,9 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
           if (acc) acc.hasDisputed = true;
         }
 
-        aggIssued += payment.amount;
+        if (payment.status !== "disputed") {
+          aggIssued += payment.amount;
+        }
       }
 
       setTotalIssued(aggIssued);
@@ -305,7 +306,6 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
                           <p className="team-member-info__name">
                             {item.user.name}
                             {item.hasPending && <span className="badge badge--pending">Afventer</span>}
-                            {item.hasDisputed && <span className="badge badge--disputed">Anket</span>}
                           </p>
                           <p className="team-member-info__role">{roleLabel}</p>
                         </div>
