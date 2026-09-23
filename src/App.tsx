@@ -570,6 +570,8 @@ function App() {
             userId={viewingMember.userId}
             userName={viewingMember.name}
             teamId={teamId}
+            actorId={userId}
+            actorRole={userRole}
             onBack={() => setViewingMember(null)}
           />
         )}
