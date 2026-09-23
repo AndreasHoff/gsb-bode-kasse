@@ -20,6 +20,7 @@ import {
 import { canAssignFines } from "../../lib/permissions";
 import { formatAmount } from "../../lib/utils";
 import BulkOperationProgress from "../../components/BulkOperationProgress";
+import SearchableFineRuleSelect from "./SearchableFineRuleSelect";
 import "./assign-fine.css";
 
 interface AssignFineProps {
@@ -374,20 +375,12 @@ export default function AssignFine({
           <label htmlFor="assign-rule" className="form-label">
             Bøde
           </label>
-          <select
-            id="assign-rule"
-            className="form-select"
-            value={selectedRuleId}
-            onChange={(event) => setSelectedRuleId(event.target.value)}
+          <SearchableFineRuleSelect
+            rules={rules}
+            selectedRuleId={selectedRuleId}
+            onChange={setSelectedRuleId}
             disabled={submitting}
-          >
-            {rules.map((rule) => (
-              <option key={rule.id} value={rule.id}>
-                {rule.emoji ? `${rule.emoji} ` : ""}
-                {rule.title} ({formatAmount(rule.amount)})
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         {mode === "single" && (

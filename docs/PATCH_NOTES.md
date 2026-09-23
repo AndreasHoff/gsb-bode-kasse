@@ -4,6 +4,19 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.3.1 — 23. september 2026
+
+**Feature: Søgbar bødetype-valg ved tildeling (F028)**
+
+- Administratorer kan nu søge efter bødetyper når de skal tildele bøder til medlemmer
+- Hurtig søgning i øjeblikkelig tid — filtrerer efter titel, beskrivelse eller beløb
+- Søgningen håndterer danske tegn korrekt (æ, ø, å)
+- Moderne dropdown med tastaturnavigation (pil op/ned, Enter, Escape)
+- Mobilvennlig — fungerer perfekt på små skærme op til 430px
+- Tomt søgeresultat viser klart "Ingen regler fundet"
+
+---
+
 ## v1.3.0 — 23. september 2026
 
 **Feature: Administratorer kan slette bøder fra medlemsprofil (F027)**
