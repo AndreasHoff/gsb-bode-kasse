@@ -332,6 +332,111 @@ export async function restoreFine(
 }
 
 /**
+ * Removes a specific member from a fine's assignedTo array.
+ * If assignedTo becomes empty, soft-deletes the fine.
+ * Otherwise, updates the fine with the new assignedTo array.
+ * Writes an ActivityLog entry atomically (F027).
+ * Updates UserSeasonBalance based on payment status.
+ */
+export async function removeMemberFromFine(
+  teamId: string,
+  fineId: string,
+  userId: string,
+  actorId: string,
+): Promise<void> {
+  const existing = await getFine(teamId, fineId);
+  if (!existing) throw new Error(`Fine ${fineId} not found in team ${teamId}`);
+
+  if (!existing.assignedTo.includes(userId)) {
+    throw new Error(`User ${userId} is not assigned to fine ${fineId}`);
+  }
+
+  // Get payment for this user and fine
+  let payment: Payment | null = null;
+  
+  // Try new fineIds format
+  const q = query(
+    paymentsCol(teamId),
+    where("userId", "==", userId),
+    where("fineIds", "array-contains", fineId),
+  );
+  const snap = await getDocs(q);
+  if (snap.docs.length > 0) {
+    payment = snap.docs[0].data();
+  } else {
+    // Try legacy fineId format
+    const qLegacy = query(
+      paymentsCol(teamId),
+      where("userId", "==", userId),
+      where("fineId", "==", fineId),
+    );
+    const snapLegacy = await getDocs(qLegacy);
+    if (snapLegacy.docs.length > 0) {
+      payment = snapLegacy.docs[0].data();
+    }
+  }
+
+  const batch = writeBatch(db);
+
+  // Remove user from assignedTo
+  const newAssignedTo = existing.assignedTo.filter((id) => id !== userId);
+
+  if (newAssignedTo.length === 0) {
+    // If no more assignees, soft-delete the entire fine
+    const fRef = fineDoc(teamId, fineId);
+    const deleted: Fine = { ...existing, deletedAt: new Date().toISOString() };
+    batch.set(fRef, deleted);
+  } else {
+    // Otherwise, just update the assignedTo array
+    const fRef = fineDoc(teamId, fineId);
+    const updated: Fine = { ...existing, assignedTo: newAssignedTo };
+    batch.set(fRef, updated);
+  }
+
+  // Create activity log entry
+  const logColRef = activityLogCol(teamId);
+  const logRef = doc(logColRef);
+  const logEntry: ActivityLog = {
+    id: logRef.id,
+    teamId,
+    actorId,
+    action: "fine.memberRemoved",
+    entityType: "fine",
+    entityId: fineId,
+    metadata: {
+      title: existing.title,
+      amount: existing.amount,
+      removedUserId: userId,
+      remainingAssignees: newAssignedTo.length,
+    },
+    createdAt: new Date().toISOString(),
+  };
+  batch.set(logRef, logEntry);
+
+  // Update user's season balance if payment exists
+  if (payment) {
+    const delta =
+      payment.status === "approved"
+        ? { approvedBalance: -payment.amount }
+        : payment.status === "pending"
+          ? { pendingBalance: -payment.amount }
+          : { outstandingBalance: -payment.amount }; // unpaid or disputed
+
+    await updateUserSeasonBalance(
+      userId,
+      teamId,
+      existing.seasonId,
+      delta,
+      "fine.memberRemoved",
+      actorId,
+      batch,
+    );
+  }
+
+  await batch.commit();
+}
+
+/**
  * Bulk soft-delete multiple fines with progress tracking.
  * Batches are committed in chunks of 450 operations (safe limit for Firestore).
  * Returns successfully deleted fine IDs.

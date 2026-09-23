@@ -4,15 +4,19 @@ import {
   getActiveSeason,
   getFinesForUser,
   getPaymentsForUser,
+  removeMemberFromFine,
 } from "../../lib/firestore";
+import { canDeleteFines } from "../../lib/permissions";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
-import type { UserSeasonBalance, Fine, Payment } from "../../types/domain";
+import type { UserSeasonBalance, Fine, Payment, Role } from "../../types/domain";
 import "../profile/profile.css";
 
 interface MemberProfileProps {
   userId: string;
   userName: string;
   teamId: string;
+  actorId: string;
+  actorRole: Role | null;
   onBack: () => void;
 }
 
@@ -20,10 +24,18 @@ type FineWithPayment = Fine & {
   paymentStatus: "unpaid" | "pending" | "approved" | "disputed";
 };
 
+interface DeleteConfirmation {
+  fineId: string;
+  fineTitle: string;
+  fineAmount: number;
+}
+
 export default function MemberProfile({
   userId,
   userName,
   teamId,
+  actorId,
+  actorRole,
   onBack,
 }: MemberProfileProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -31,6 +43,8 @@ export default function MemberProfile({
   const [balance, setBalance] = useState<UserSeasonBalance | null>(null);
   const [fines, setFines] = useState<FineWithPayment[]>([]);
   const [seasonName, setSeasonName] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -103,6 +117,27 @@ export default function MemberProfile({
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  async function handleDeleteConfirmed(): Promise<void> {
+    if (!deleteConfirm || isDeleting) return;
+
+    setIsDeleting(true);
+    setErrorMessage(null);
+    try {
+      await removeMemberFromFine(teamId, deleteConfirm.fineId, userId, actorId);
+      setFines((prev) => prev.filter((f) => f.id !== deleteConfirm.fineId));
+      setDeleteConfirm(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ukendt fejl";
+      setErrorMessage(`Kunne ikke slette bøde (${message}).`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function handleDeleteClick(fineId: string, fineTitle: string, fineAmount: number): void {
+    setDeleteConfirm({ fineId, fineTitle, fineAmount });
+  }
 
   const outstanding = balance?.outstandingBalance ?? 0;
   const pending = balance?.pendingBalance ?? 0;
@@ -199,8 +234,58 @@ export default function MemberProfile({
                     {fine.note && (
                       <div className="fine-item__note">{fine.note}</div>
                     )}
+                    {canDeleteFines(actorRole) && (
+                      <div className="fine-item__actions mt-2">
+                        <button
+                          type="button"
+                          className="btn-danger btn-sm w-full"
+                          disabled={isDeleting}
+                          onClick={() =>
+                            handleDeleteClick(fine.id, fine.title, fine.amount)
+                          }
+                        >
+                          {isDeleting ? "Sletter…" : "Slet bøde"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {deleteConfirm && (
+              <div className="modal-overlay">
+                <div className="modal-dialog">
+                  <div className="modal-header">
+                    <h3 className="modal-title">Slet bøde?</h3>
+                  </div>
+                  <div className="modal-body">
+                    <p>
+                      Vil du slette bøden <strong>{deleteConfirm.fineTitle}</strong> ({formatAmount(deleteConfirm.fineAmount)}) fra {userName}?
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                      ⚠️ Denne handling kan ikke fortrydes. Betalinger bliver stående for revision.
+                    </p>
+                  </div>
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn-danger flex-1"
+                      disabled={isDeleting}
+                      onClick={() => void handleDeleteConfirmed()}
+                    >
+                      {isDeleting ? "Sletter…" : "Slet"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary flex-1"
+                      disabled={isDeleting}
+                      onClick={() => setDeleteConfirm(null)}
+                    >
+                      Nej
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </section>
