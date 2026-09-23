@@ -10,11 +10,6 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 - Administratorer kan nu søge efter bødetyper når de skal tildele bøder til medlemmer
 - Hurtig søgning i øjeblikkelig tid — filtrerer efter titel, beskrivelse eller beløb
-- Søgningen håndterer danske tegn korrekt (æ, ø, å)
-- Moderne dropdown med tastaturnavigation (pil op/ned, Enter, Escape)
-- Mobilvennlig — fungerer perfekt på små skærme op til 430px
-- Tomt søgeresultat viser klart "Ingen regler fundet"
-
 ---
 
 ## v1.3.0 — 23. september 2026
@@ -26,9 +21,6 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 - Bøden soft-deletes (gemmes i databasen med `deletedAt` timestamp for revision)
 - Betalingsjournal bevares for revision selvom bøde slettes
 - Medlemmets saldo opdateres automatisk efter sletning
-- Understøtter både enkel og multipel tildeling (kun angivet medlem fjernes ved multipel tildeling)
-- Fejlhåndtering ved netværksfejl med mulighed for retry
-- Fuld aktivitetslog-integration med `fine.memberRemoved` event
 
 ---
 
