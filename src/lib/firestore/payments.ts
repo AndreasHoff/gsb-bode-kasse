@@ -208,7 +208,7 @@ export async function createCombinedPayment(
   const payment: Payment = {
     id: paymentRef.id,
     fineIds,
-    interestChargeIds: interestChargeIds.length > 0 ? interestChargeIds : undefined,
+    ...(interestChargeIds.length > 0 && { interestChargeIds }),
     userId,
     amount: totalAmount,
     status: "pending",
@@ -225,7 +225,11 @@ export async function createCombinedPayment(
     action: "payment.initiated",
     entityType: "payment",
     entityId: payment.id,
-    metadata: { fineIds, interestChargeIds: interestChargeIds.length > 0 ? interestChargeIds : undefined, amount: totalAmount },
+    metadata: { 
+      fineIds, 
+      ...(interestChargeIds.length > 0 && { interestChargeIds }),
+      amount: totalAmount 
+    },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
