@@ -1,6 +1,6 @@
 import { getDocs, getDoc, doc, writeBatch, query, where } from "firebase/firestore";
 import { db } from "../firebase";
-import { finesCol, fineDoc, activityLogCol, paymentsCol, paymentDoc } from "./refs";
+import { finesCol, fineDoc, activityLogCol, paymentsCol } from "./refs";
 import type { Fine, ActivityLog, Payment } from "../../types/domain";
 import { getActiveSeason } from "./seasons";
 import { updateUserSeasonBalance } from "./balances";

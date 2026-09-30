@@ -14,6 +14,11 @@ import { membershipConverter } from "./converters";
 import { getUsers } from "./users";
 import type { Membership, ActivityLog, Fine } from "../../types/domain";
 
+type MembershipWriteData = Pick<
+  Membership,
+  "userId" | "role" | "joinedAt" | "isActive"
+>;
+
 export async function getMemberships(teamId: string): Promise<Membership[]> {
   const snap = await getDocs(membersCol(teamId));
   return snap.docs.map((d) => d.data());
@@ -49,24 +54,34 @@ export async function getActiveMembershipsForUser(
  * The Firestore document ID is always the `userId` so that security rules can
  * resolve role via `get(/teams/{teamId}/members/{request.auth.uid})`.
  * This enforces one active membership per user per team at the document level.
+ *
+ * Note: `name` and `teamId` are deprecated fields no longer stored with membership.
+ * TeamId is derived from the collection path. Name is always fetched from User.name.
  */
 export async function upsertMembership(
-  data: Omit<Membership, "id">,
+  data: MembershipWriteData,
   actorId: string,
   action: "member.added" | "member.roleChanged",
+  teamId: string,
 ): Promise<Membership> {
   const batch = writeBatch(db);
 
   // Use userId as the document ID to enable efficient security rule lookups
-  const memberRef = memberDoc(data.teamId, data.userId);
-  const membership: Membership = { ...data, id: data.userId };
-  batch.set(memberRef, membership);
+  const memberRef = memberDoc(teamId, data.userId);
+  const membershipDoc: MembershipWriteData = {
+    userId: data.userId,
+    role: data.role,
+    joinedAt: data.joinedAt,
+    isActive: data.isActive,
+  };
+  const membership: Membership = { ...membershipDoc, id: data.userId, teamId };
+  batch.set(memberRef, membershipDoc);
 
-  const logColRef = activityLogCol(data.teamId);
+  const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
   const logEntry: ActivityLog = {
     id: logRef.id,
-    teamId: data.teamId,
+    teamId,
     actorId,
     action,
     entityType: "membership",
@@ -106,7 +121,6 @@ export async function backfillTeamMembershipsForAllUsers(
     }
 
     const membership: Membership = {
-      name: user.name,
       id: user.id,
       userId: user.id,
       teamId,
@@ -115,7 +129,12 @@ export async function backfillTeamMembershipsForAllUsers(
       isActive: true,
     };
 
-    batch.set(memberDoc(teamId, user.id), membership);
+    batch.set(memberDoc(teamId, user.id), {
+      userId: membership.userId,
+      role: membership.role,
+      joinedAt: membership.joinedAt,
+      isActive: membership.isActive,
+    });
     pendingWrites += 1;
     created += 1;
 

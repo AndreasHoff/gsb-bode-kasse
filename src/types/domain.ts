@@ -24,7 +24,6 @@ export interface Team {
 }
 
 export interface Membership {
-  name: string;
   id: string;
   userId: string;
   teamId: string;

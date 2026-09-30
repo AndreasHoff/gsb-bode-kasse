@@ -1,27 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getActiveSeason,
-  getFines,
   getMemberships,
-  getPayments,
   getUsers,
+  getSeasonBalances,
+  getPaymentsForReconciliation,
 } from "../../lib/firestore";
 import { formatAmount } from "../../lib/utils";
-import type { Membership, User, Role, Payment } from "../../types/domain";
+import type { Membership, User, Role, UserSeasonBalance } from "../../types/domain";
 import "./team-overview.css";
-
-/**
- * Helper to get fine IDs from a payment, handling backward compatibility.
- */
-function getFineIdsFromPayment(payment: Payment): string[] {
-  if (payment.fineIds && payment.fineIds.length > 0) {
-    return payment.fineIds;
-  }
-  if (payment.fineId) {
-    return [payment.fineId];
-  }
-  return [];
-}
 
 interface TeamOverviewProps {
   teamId: string;
@@ -82,57 +69,38 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       setNoSeason(false);
       setSeasonName(season.name);
 
-      const [fines, payments] = await Promise.all([
-        getFines(teamId),
-        getPayments(teamId),
+      // Fetch season balances (authoritative source of truth) and check for pending/disputed statuses
+      const [seasonBalanceData, paymentsForReconciliation] = await Promise.all([
+        getSeasonBalances(teamId, season.id),
+        getPaymentsForReconciliation(teamId),
       ]);
 
-      const seasonFineIds = new Set<string>();
-      for (const fine of fines) {
-        if (fine.seasonId === season.id) {
-          seasonFineIds.add(fine.id);
-        }
+      // Build lookup for user balances
+      const balanceByUserId = new Map<string, UserSeasonBalance>();
+      for (const balance of seasonBalanceData) {
+        balanceByUserId.set(balance.userId, balance);
       }
 
-      type UserAcc = { debt: number; paid: number; hasPending?: boolean; hasDisputed?: boolean };
-      const accByUser = new Map<string, UserAcc>();
-      for (const user of users) {
-        accByUser.set(user.id, { debt: 0, paid: 0, hasPending: false, hasDisputed: false });
-      }
-
-      let aggIssued = 0;
-      let aggOwed = 0;
-      let aggPaid = 0;
-
-      for (const payment of payments) {
-        const fineIds = getFineIdsFromPayment(payment);
-        // Skip if none of the fines belong to this season
-        if (!fineIds.some(fid => seasonFineIds.has(fid))) continue;
-
-        const acc = accByUser.get(payment.userId);
-
-        if (payment.status === "approved") {
-          aggPaid += payment.amount;
-          if (acc) acc.paid += payment.amount;
-        } else if (
-          payment.status === "unpaid" ||
-          payment.status === "pending"
-        ) {
-          aggOwed += payment.amount;
-          if (acc) acc.debt += payment.amount;
-        }
-
+      // Build lookup for pending/disputed statuses
+      const userHasPending = new Set<string>();
+      const userHasDisputed = new Set<string>();
+      for (const payment of paymentsForReconciliation) {
         if (payment.status === "pending") {
-          if (acc) acc.hasPending = true;
+          userHasPending.add(payment.userId);
         }
-
         if (payment.status === "disputed") {
-          if (acc) acc.hasDisputed = true;
+          userHasDisputed.add(payment.userId);
         }
+      }
 
-        if (payment.status !== "disputed") {
-          aggIssued += payment.amount;
-        }
+      // Use season totals from database for team aggregates
+      const aggOwed = (season.totalOutstanding ?? 0) + (season.totalPendingBalance ?? 0);
+      const aggPaid = season.totalApprovedBalance ?? 0;
+      
+      // Calculate totalIssued from season balances: it's the sum of all balances
+      let aggIssued = 0;
+      for (const balance of seasonBalanceData) {
+        aggIssued += balance.outstandingBalance + balance.pendingBalance + balance.approvedBalance;
       }
 
       setTotalIssued(aggIssued);
@@ -140,16 +108,21 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       setTotalPaid(aggPaid);
 
       const stats: MemberStat[] = users.map((user) => {
-        const acc = accByUser.get(user.id) ?? { debt: 0, paid: 0, hasPending: false, hasDisputed: false };
+        const balance = balanceByUserId.get(user.id);
         const membership = membershipByUserId.get(user.id);
         const role: MemberRole = membership?.role === "admin" ? "admin" : "member";
+
+        // totalDebt = outstanding + pending (both are unpaid)
+        const totalDebt = (balance?.outstandingBalance ?? 0) + (balance?.pendingBalance ?? 0);
+        const paidAmount = balance?.approvedBalance ?? 0;
+
         return {
           user,
-          totalDebt: acc.debt,
-          paidAmount: acc.paid,
+          totalDebt,
+          paidAmount,
           role,
-          hasPending: !!acc.hasPending,
-          hasDisputed: !!acc.hasDisputed,
+          hasPending: userHasPending.has(user.id),
+          hasDisputed: userHasDisputed.has(user.id),
         };
       });
 

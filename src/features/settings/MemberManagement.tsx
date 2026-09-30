@@ -79,6 +79,7 @@ export default function MemberManagement({ teamId, actorId }: Props) {
         row.membership,
         newRole,
         actorId,
+        teamId,
       );
       setRows((prev) =>
         prev.map((r) =>

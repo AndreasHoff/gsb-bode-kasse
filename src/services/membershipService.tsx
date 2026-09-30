@@ -5,6 +5,7 @@ export async function changeMemberRole(
   membership: Membership,
   newRole: Role,
   actorId: string,
+  teamId: string,
 ): Promise<Membership> {
   const updatedMembership: Membership = {
     ...membership,
@@ -15,6 +16,7 @@ export async function changeMemberRole(
     updatedMembership,
     actorId,
     "member.roleChanged",
+    teamId,
   );
 
   return updatedMembership;

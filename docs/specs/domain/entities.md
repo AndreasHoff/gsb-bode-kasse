@@ -51,19 +51,20 @@ Join entity between User and Team.
 
 | Field        | Type     | Description                                |
 |--------------|----------|--------------------------------------------|
-| id           | string   | Unique identifier                          |
-| name         | string   | Member name copied for team-local display  |
+| id           | string   | Unique identifier (same as userId)         |
 | userId       | string   | Reference to User                          |
-| teamId       | string   | Reference to Team                          |
+| teamId       | string   | Reference to Team (derived from path)      |
 | role         | Role     | User's role within the team                |
 | joinedAt     | datetime | When the user joined the team              |
 | isActive     | boolean  | Whether membership is active               |
 
 **Business Rules:**
 - A user can only have one active membership per team
-- Membership name is a denormalized copy and must stay aligned with the user profile name when updated
+- Member name is **NOT stored** — always fetch from User.name
+- TeamId is derived from the collection path `teams/{teamId}/members/{userId}` for normalization
 - Role must be one of: Member, Admin
 - Only Admins can deactivate memberships
+- Use `getMemberSnapshot()` to conveniently fetch a member with all their financial data for a season
 
 ---
 
@@ -176,7 +177,11 @@ A fine assigned to one or more users.
 - Deleted fines are soft-deleted, not removed from DB
 - Shared fines are shown collectively but tracked individually
 
----one or more fines assigned to a specific user.
+---
+
+## Payment
+
+Represents one or more fines assigned to a specific user.
 
 | Field        | Type           | Description                                  |
 |--------------|----------------|----------------------------------------------|
@@ -199,11 +204,9 @@ A fine assigned to one or more users.
 **Business Rules:**
 - New payments use `fineIds[]` to support combined payments (F023)
 - Legacy payments may have only `fineId` - code must handle both
+- Each (`fineId`, `userId`) pair has exactly one Payment record
 - Only Admins can approve payments
 - Approved payments can be refunded via F015 (creates audit log entry)
-**Business Rules:**
-- Each (fineId, userId) pair has exactly one Payment record
-- Only Admins can approve payments
 - Approved payments cannot be reversed without creating an audit log entry
 
 ---
@@ -225,7 +228,7 @@ Immutable audit trail of all significant actions.
 
 **Action types:**
 - `fine.assigned`, `fine.deleted`, `payment.initiated`, `payment.approved`, `payment.disputed`, `payment.refunded`, `payment.reconciled`
-- `member.added`, `member.removed`, `member.role_changed`
+- `member.added`, `member.removed`, `member.roleChanged`
 - `season.created`, `season.closed`
 - `rule.created`, `rule.deactivated`
 - `rule.proposal_created` (F026 — member submits proposal)

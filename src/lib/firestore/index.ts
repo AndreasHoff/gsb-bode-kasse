@@ -17,6 +17,9 @@ export {
   removeMember,
 } from "./members";
 
+export type { MemberSnapshot } from "./members-snapshot";
+export { getMemberSnapshot, getTeamMemberSnapshots } from "./members-snapshot";
+
 export {
   getSeasons,
   getActiveSeason,

@@ -4,6 +4,17 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.3.2 — 30. september 2026
+
+**Forbedring: Mere pålidelige medlemsdata og saldo-overblik**
+
+- Medlemsdata hentes nu mere konsistent, så holdtilknytning altid følger det rigtige hold
+- Forbedret datakvalitet i baggrunden, så gamle medlemsfelter ikke længere skaber støj i systemet
+- Rettet beregning i medlemsoversigter, så valg om at medtage slettede bøder nu respekteres korrekt
+- Forbedret intern logning ved login, så fejlsøgning af medlemsadgang er mere præcis
+
+---
+
 ## v1.3.1 — 23. september 2026
 
 **Feature: Søgbar bødetype-valg ved tildeling (F028)**

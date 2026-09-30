@@ -170,14 +170,13 @@ function App() {
           const createdMembership = await upsertMembership(
             {
               userId: user.uid,
-              name: userProfile.name,
-              teamId: defaultTeam.id,
               role: "member",
               joinedAt: new Date().toISOString(),
               isActive: true,
             },
             user.uid,
             "member.added",
+            defaultTeam.id,
           );
 
           console.log("[auth] Session trace:", {
@@ -191,9 +190,7 @@ function App() {
             },
             membershipDocumentPath: `teams/${defaultTeam.id}/members/${createdMembership.id}`,
             membershipDocument: {
-              name: createdMembership.name,
               role: createdMembership.role,
-              teamId: createdMembership.teamId,
               userId: createdMembership.userId,
               isActive: createdMembership.isActive,
             },
@@ -221,9 +218,7 @@ function App() {
           },
           membershipDocumentPath: `teams/${primaryMembership.teamId}/members/${primaryMembership.id}`,
           membershipDocument: {
-            name: primaryMembership.name,
             role: primaryMembership.role,
-            teamId: primaryMembership.teamId,
             userId: primaryMembership.userId,
             isActive: primaryMembership.isActive,
           },
@@ -450,7 +445,8 @@ function App() {
       await changeMemberRole(
         membership,
         newRole,
-        userId
+        userId,
+        teamId,
       );
 
       setUserRole(newRole);

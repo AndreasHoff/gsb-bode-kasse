@@ -68,9 +68,9 @@ interface TeamDoc extends DocumentData {
 }
 
 interface MembershipDoc extends DocumentData {
-  name: string;
+  name?: string; // Legacy field, deprecated. Use User.name instead.
   userId: string;
-  teamId: string;
+  teamId?: string; // Legacy field, deprecated. Derive from collection path instead.
   role: Role;
   joinedAt: Timestamp;
   isActive: boolean;
@@ -203,9 +203,7 @@ export const membershipConverter: FirestoreDataConverter<Membership, MembershipD
   toFirestore(modelObject: WithFieldValue<Membership>): MembershipDoc {
     const m = modelObject as Membership;
     return {
-      name: m.name,
       userId: m.userId,
-      teamId: m.teamId,
       role: m.role,
       joinedAt: Timestamp.fromDate(new Date(m.joinedAt)),
       isActive: m.isActive,
@@ -213,9 +211,24 @@ export const membershipConverter: FirestoreDataConverter<Membership, MembershipD
   },
   fromFirestore(snapshot: QueryDocumentSnapshot<MembershipDoc>): Membership {
     const d = snapshot.data() as Record<string, unknown>;
-    
+
+    // Extract teamId from the document path: teams/{teamId}/members/{userId}
+    const pathSegments = snapshot.ref.path.split("/");
+    const isValidMembershipPath =
+      pathSegments.length >= 4 &&
+      pathSegments[0] === "teams" &&
+      pathSegments[2] === "members";
+
+    if (!isValidMembershipPath) {
+      throw new Error(
+        `Invalid membership document path '${snapshot.ref.path}'. Expected teams/{teamId}/members/{userId}.`,
+      );
+    }
+
+    const teamId = pathSegments[1];
+
     let role = (d.role as string) || "member";
-    
+
     // Backward compatibility: Check for old admin field names if role is not set
     // This handles legacy data that still has isTeamAdmin, isSuperAdmin, or isAdmin fields
     if (role === "member" && (d.isTeamAdmin === true || d.isSuperAdmin === true || d.isAdmin === true)) {
@@ -225,17 +238,15 @@ export const membershipConverter: FirestoreDataConverter<Membership, MembershipD
       if (d.isAdmin === true) oldFields.push("isAdmin");
       console.log(`[converter] Converting legacy admin fields to role:admin`, {
         userId: d.userId,
-        teamId: d.teamId,
         legacyFields: oldFields,
       });
       role = "admin";
     }
-    
+
     return {
-      name: typeof d.name === "string" ? d.name : "",
       id: snapshot.id,
       userId: d.userId as string,
-      teamId: d.teamId as string,
+      teamId,
       role: role as "member" | "admin",
       joinedAt: toIso(d.joinedAt as Timestamp),
       isActive: typeof d.isActive === "boolean" ? d.isActive : true,

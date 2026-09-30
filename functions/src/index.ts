@@ -391,7 +391,6 @@ export const migrateMembershipRoles = onCall<
 
       const normalized = {
         userId,
-        teamId: teamDoc.id,
         role,
         joinedAt: raw.joinedAt ?? new Date(),
         isActive: typeof raw.isActive === "boolean" ? raw.isActive : true,
@@ -399,10 +398,10 @@ export const migrateMembershipRoles = onCall<
 
       const needsRekey = memberDoc.id !== userId;
       const needsRoleNormalize = raw.role !== role;
-      const needsTeamIdNormalize = raw.teamId !== teamDoc.id;
+      const needsTeamIdCleanup = Object.prototype.hasOwnProperty.call(raw, "teamId");
       const needsActiveNormalize = typeof raw.isActive !== "boolean";
 
-      if (!needsRekey && !needsRoleNormalize && !needsTeamIdNormalize && !needsActiveNormalize) {
+      if (!needsRekey && !needsRoleNormalize && !needsTeamIdCleanup && !needsActiveNormalize) {
         continue;
       }
 
