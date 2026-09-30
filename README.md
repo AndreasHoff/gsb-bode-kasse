@@ -103,6 +103,7 @@ docs/
 | F026 | Member Fine Rule Proposal | Spec complete |
 | F027 | Cancel Fine from Member Profile | Spec complete |
 | F028 | Searchable Fine Rule Selection | Spec complete |
+| F029 | Daily Interest on Outstanding Fines | Spec complete |
 
 ---
 

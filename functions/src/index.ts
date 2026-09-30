@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
@@ -687,3 +688,247 @@ function normalizeMembershipRole(role: unknown): MembershipRole | null {
   const normalized = LEGACY_ROLE_MAP[role.trim().toLowerCase()];
   return normalized ?? null;
 }
+
+/**
+ * Daily scheduled function that charges 5 DKK interest to members with unpaid fines
+ * from the previous calendar month.
+ * Runs at 00:01 UTC every day, starting 2026-10-01.
+ */
+export const chargeOutstandingFineInterest = onSchedule(
+  {
+    schedule: "1 0 * * *", // 00:01 UTC every day
+    region: "europe-west1",
+  },
+  async (context) => {
+    const db = getFirestore();
+    console.log("[chargeOutstandingFineInterest] Starting daily interest processing", {
+      timestamp: new Date().toISOString(),
+    });
+
+    const today = new Date();
+    const todayIso = today.toISOString().split("T")[0]; // YYYY-MM-DD
+    const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const previousMonthStr = previousMonth.toISOString().substring(0, 7); // YYYY-MM
+
+    let membersChargedCount = 0;
+    let chargesCreatedCount = 0;
+    const errors: string[] = [];
+
+    try {
+      // 1. Get all teams
+      const teamsSnap = await db.collection("teams").get();
+      const teams = teamsSnap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      console.log(`[chargeOutstandingFineInterest] Processing ${teams.length} teams`);
+
+      for (const team of teams) {
+        const teamId = team.id;
+
+        try {
+          // Get active season for this team
+          const seasonSnap = await db
+            .collection("teams")
+            .doc(teamId)
+            .collection("seasons")
+            .where("isActive", "==", true)
+            .get();
+
+          if (seasonSnap.empty) {
+            console.log(
+              `[chargeOutstandingFineInterest] No active season for team ${teamId}`,
+            );
+            continue;
+          }
+
+          const seasonId = seasonSnap.docs[0].id;
+
+          // OPTIMIZATION: Fetch all payments for this team once, reuse for all members
+          const allPaymentsSnap = await db
+            .collection("teams")
+            .doc(teamId)
+            .collection("payments")
+            .get();
+          const allPayments = allPaymentsSnap.docs.map((doc) => doc.data());
+
+          // Get all members in the team
+          const membersSnap = await db
+            .collection("teams")
+            .doc(teamId)
+            .collection("members")
+            .where("isActive", "==", true)
+            .get();
+
+          const members = membersSnap.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+
+          console.log(
+            `[chargeOutstandingFineInterest] Processing ${members.length} members in team ${teamId}`,
+          );
+
+          // 2. For each member, check for unpaid fines from previous month
+          for (const member of members) {
+            const userId = (member as Record<string, unknown>).userId as string;
+
+            try {
+              // Get all unpaid fines for this user from the previous month
+              const finesSnap = await db
+                .collection("teams")
+                .doc(teamId)
+                .collection("fines")
+                .where("assignedTo", "array-contains", userId)
+                .where("seasonId", "==", seasonId)
+                .get();
+
+              const finesFromPreviousMonth = finesSnap.docs.filter((doc) => {
+                const fine = doc.data() as Record<string, unknown>;
+                // Check if fine is from previous month
+                const createdAt = fine.createdAt as { toDate: () => Date };
+                const fineCreatedMonth = createdAt.toDate().toISOString().substring(0, 7);
+                return fineCreatedMonth === previousMonthStr && !fine.deletedAt;
+              });
+
+              if (finesFromPreviousMonth.length === 0) {
+                continue;
+              }
+
+              // Check if any of these fines have unpaid payments
+              let hasUnpaidFines = false;
+
+              for (const fineDoc of finesFromPreviousMonth) {
+                const fineId = fineDoc.id;
+
+                // Filter allPayments for this fine (no additional fetch)
+                const finePayments = allPayments.filter((payment) => {
+                  const fineIds = (payment.fineIds as string[] | undefined) || [];
+                  const legacyFineId = (payment.fineId as string | undefined) || "";
+                  return fineIds.includes(fineId) || legacyFineId === fineId;
+                });
+
+                // Check if any payment is in a state that blocks interest
+                // Interest is blocked if: pending OR approved
+                // Interest is NOT blocked if: unpaid OR disputed
+                const blockedPayment = finePayments.find((payment) => {
+                  const status = (payment.status as string) || "";
+                  return status === "pending" || status === "approved";
+                });
+
+                if (!blockedPayment) {
+                  hasUnpaidFines = true;
+                  break;
+                }
+              }
+
+              if (!hasUnpaidFines) {
+                continue;
+              }
+
+              // 3. Check if interest charge already exists for this user, team, month, and date
+              const existingChargesSnap = await db
+                .collection("teams")
+                .doc(teamId)
+                .collection("interestCharges")
+                .where("userId", "==", userId)
+                .where("month", "==", previousMonthStr)
+                .where("chargedOn", "==", todayIso)
+                .get();
+
+              if (!existingChargesSnap.empty) {
+                console.log(
+                  `[chargeOutstandingFineInterest] Interest already charged for user ${userId}, month ${previousMonthStr}, team ${teamId}`,
+                );
+                continue;
+              }
+
+              // 4. Create InterestCharge atomically with ActivityLog
+              const batch = db.batch();
+
+              const chargeRef = db
+                .collection("teams")
+                .doc(teamId)
+                .collection("interestCharges")
+                .doc();
+
+              const chargeId = chargeRef.id;
+              const charge = {
+                userId,
+                teamId,
+                seasonId,
+                amount: 5,
+                chargedOn: todayIso,
+                month: previousMonthStr,
+                reason: "daily_outstanding_fine_interest",
+                createdAt: new Date(),
+              };
+
+              batch.set(chargeRef, charge);
+
+              // Add ActivityLog entry
+              const logRef = db
+                .collection("teams")
+                .doc(teamId)
+                .collection("activityLog")
+                .doc();
+
+              const logEntry = {
+                teamId,
+                actorId: "system",
+                action: "interest.charged",
+                entityType: "interestCharge",
+                entityId: chargeId,
+                metadata: {
+                  userId,
+                  amount: 5,
+                  month: previousMonthStr,
+                  chargedOn: todayIso,
+                },
+                createdAt: new Date(),
+              };
+
+              batch.set(logRef, logEntry);
+
+              await batch.commit();
+
+              chargesCreatedCount++;
+              membersChargedCount++;
+
+              console.log(
+                `[chargeOutstandingFineInterest] Created interest charge for user ${userId}, team ${teamId}`,
+              );
+            } catch (memberError) {
+              const errorMsg = `Error processing member ${member.id} in team ${teamId}: ${
+                memberError instanceof Error ? memberError.message : String(memberError)
+              }`;
+              console.error(errorMsg);
+              errors.push(errorMsg);
+            }
+          }
+        } catch (teamError) {
+          const errorMsg = `Error processing team ${teamId}: ${
+            teamError instanceof Error ? teamError.message : String(teamError)
+          }`;
+          console.error(errorMsg);
+          errors.push(errorMsg);
+        }
+      }
+
+      console.log("[chargeOutstandingFineInterest] Completed", {
+        membersChargedCount,
+        chargesCreatedCount,
+        errorsCount: errors.length,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (errors.length > 0) {
+        console.warn("[chargeOutstandingFineInterest] Errors occurred:", errors);
+      }
+    } catch (error) {
+      console.error("[chargeOutstandingFineInterest] Fatal error:", error);
+      throw error;
+    }
+  },
+);

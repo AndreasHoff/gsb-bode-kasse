@@ -76,6 +76,13 @@ export {
   reconcilePayment,
 } from "./payments";
 
+export {
+  getInterestChargesForUser,
+  getInterestChargesForSeason,
+  getInterestCharges,
+  createInterestCharge,
+} from "./interest-charges";
+
 export type { CreateProposalInput, UpdateProposalInput } from "./proposals";
 export {
   getProposals,

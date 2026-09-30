@@ -8,6 +8,7 @@ import {
   fineRuleConverter,
   fineConverter,
   paymentConverter,
+  interestChargeConverter,
   activityLogConverter,
   featureProposalConverter,
   userSeasonBalanceConverter,
@@ -86,6 +87,12 @@ export const paymentsCol = (teamId: string) =>
 
 export const paymentDoc = (teamId: string, paymentId: string) =>
   doc(db, "teams", teamId, "payments", paymentId).withConverter(paymentConverter);
+
+export const interestChargesCol = (teamId: string) =>
+  collection(db, "teams", teamId, "interestCharges").withConverter(interestChargeConverter);
+
+export const interestChargeDoc = (teamId: string, chargeId: string) =>
+  doc(db, "teams", teamId, "interestCharges", chargeId).withConverter(interestChargeConverter);
 
 // activityLog is append-only — never update or delete entries
 export const activityLogCol = (teamId: string) =>

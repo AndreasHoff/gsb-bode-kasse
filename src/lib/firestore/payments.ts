@@ -147,9 +147,10 @@ export async function createCombinedPayment(
   userId: string,
   totalAmount: number,
   actorId: string,
+  interestChargeIds: string[] = [],
 ): Promise<Payment> {
-  if (fineIds.length === 0) {
-    throw new Error("Kan ikke oprette betaling uden bøder");
+  if (fineIds.length === 0 && interestChargeIds.length === 0) {
+    throw new Error("Kan ikke oprette betaling uden bøder eller rentegebyr");
   }
 
   // 1. Validate active season exists (cheapest: 1 cached read, fails fast on bad setup)
@@ -177,10 +178,14 @@ export async function createCombinedPayment(
     throw new Error("Alle bøder skal tilhøre den aktive sæson");
   }
 
-  // 5. Validate amount matches sum of fines (pure computation, no I/O)
-  const actualTotal = fines.reduce((sum, f) => sum + (f?.amount ?? 0), 0);
+  // 5. Validate amount matches sum of fines + interest charges (pure computation, no I/O)
+  const actualFineTotal = fines.reduce((sum, f) => sum + (f?.amount ?? 0), 0);
+  // Interest charges are always 5 DKK each
+  const actualInterestTotal = interestChargeIds.length * 5;
+  const actualTotal = actualFineTotal + actualInterestTotal;
+  
   if (actualTotal !== totalAmount) {
-    throw new Error("Beløbet matcher ikke bødernes samlede værdi");
+    throw new Error("Beløbet matcher ikke bødernes og rentegebyrenes samlede værdi");
   }
 
   // 6. Check for duplicate pending payments (most expensive: full table scan, done last)
@@ -203,6 +208,7 @@ export async function createCombinedPayment(
   const payment: Payment = {
     id: paymentRef.id,
     fineIds,
+    interestChargeIds: interestChargeIds.length > 0 ? interestChargeIds : undefined,
     userId,
     amount: totalAmount,
     status: "pending",
@@ -219,7 +225,7 @@ export async function createCombinedPayment(
     action: "payment.initiated",
     entityType: "payment",
     entityId: payment.id,
-    metadata: { fineIds, amount: totalAmount },
+    metadata: { fineIds, interestChargeIds: interestChargeIds.length > 0 ? interestChargeIds : undefined, amount: totalAmount },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);

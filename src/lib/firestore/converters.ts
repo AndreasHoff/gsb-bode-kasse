@@ -13,6 +13,7 @@ import type {
   FineRule,
   Fine,
   Payment,
+  InterestCharge,
   ActivityLog,
   FeatureProposal,
   PaymentStatus,
@@ -125,12 +126,24 @@ interface FineDoc extends DocumentData {
 interface PaymentDoc extends DocumentData {
   fineId?: string; // Legacy: single fine (deprecated)
   fineIds?: string[]; // V2: supports combined payments
+  interestChargeIds?: string[]; // Interest charges included in this payment
   userId: string;
   amount: number;
   status: PaymentStatus;
   initiatedAt?: Timestamp;
   approvedAt?: Timestamp;
   approvedBy?: string;
+}
+
+interface InterestChargeDoc extends DocumentData {
+  userId: string;
+  teamId: string;
+  seasonId: string;
+  amount: number;
+  chargedOn: string; // ISO 8601 date (YYYY-MM-DD) - stored as string for date comparison
+  month: string; // YYYY-MM (e.g., "2026-09")
+  reason: string;
+  createdAt: Timestamp;
 }
 
 interface ActivityLogDoc extends DocumentData {
@@ -397,6 +410,7 @@ export const paymentConverter: FirestoreDataConverter<Payment, PaymentDoc> = {
     return {
       ...(p.fineId !== undefined && { fineId: p.fineId }),
       ...(p.fineIds !== undefined && { fineIds: p.fineIds }),
+      ...(p.interestChargeIds !== undefined && { interestChargeIds: p.interestChargeIds }),
       userId: p.userId,
       amount: p.amount,
       status: p.status,
@@ -415,12 +429,46 @@ export const paymentConverter: FirestoreDataConverter<Payment, PaymentDoc> = {
       id: snapshot.id,
       fineId: d.fineId,
       fineIds: d.fineIds,
+      interestChargeIds: d.interestChargeIds,
       userId: d.userId,
       amount: d.amount,
       status: d.status,
       initiatedAt: toIsoOpt(d.initiatedAt),
       approvedAt: toIsoOpt(d.approvedAt),
       approvedBy: d.approvedBy,
+    };
+  },
+};
+
+export const interestChargeConverter: FirestoreDataConverter<
+  InterestCharge,
+  InterestChargeDoc
+> = {
+  toFirestore(modelObject: WithFieldValue<InterestCharge>): InterestChargeDoc {
+    const ic = modelObject as InterestCharge;
+    return {
+      userId: ic.userId,
+      teamId: ic.teamId,
+      seasonId: ic.seasonId,
+      amount: ic.amount,
+      chargedOn: ic.chargedOn,
+      month: ic.month,
+      reason: ic.reason,
+      createdAt: Timestamp.fromDate(new Date(ic.createdAt)),
+    };
+  },
+  fromFirestore(snapshot: QueryDocumentSnapshot<InterestChargeDoc>): InterestCharge {
+    const d = snapshot.data();
+    return {
+      id: snapshot.id,
+      userId: d.userId,
+      teamId: d.teamId,
+      seasonId: d.seasonId,
+      amount: d.amount,
+      chargedOn: d.chargedOn,
+      month: d.month,
+      reason: d.reason,
+      createdAt: toIso(d.createdAt),
     };
   },
 };

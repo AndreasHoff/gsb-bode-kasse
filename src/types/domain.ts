@@ -93,12 +93,25 @@ export interface Payment {
   id: string;
   fineId?: string; // Legacy: single fine (deprecated, kept for backward compatibility)
   fineIds?: string[]; // V2: supports combined payments
+  interestChargeIds?: string[]; // Interest charges included in this payment
   userId: string;
   amount: number;
   status: PaymentStatus;
   initiatedAt?: string;
   approvedAt?: string;
   approvedBy?: string;
+}
+
+export interface InterestCharge {
+  id: string;
+  userId: string;
+  teamId: string;
+  seasonId: string;
+  amount: number; // Always 5 DKK
+  chargedOn: string; // ISO 8601 date (YYYY-MM-DD)
+  month: string; // YYYY-MM (e.g., "2026-09" for Sept fines)
+  reason: string; // Always "daily_outstanding_fine_interest"
+  createdAt: string;
 }
 
 export interface ActivityLog {

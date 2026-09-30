@@ -1,5 +1,5 @@
-// Feature: Admin Settings (F021, F022, F015, F023)
-// Tabbed admin panel: payment approval, refunds/reconciliation, season management, member management, team configuration.
+// Feature: Admin Settings (F021, F022, F015, F023, F029)
+// Tabbed admin panel: payment approval, refunds/reconciliation, season management, member management, team configuration, interest charges.
 
 import { useState } from "react";
 import type { Role } from "../../types/domain";
@@ -10,9 +10,10 @@ import MemberManagement from "./MemberManagement";
 import RefundReconcile from "./RefundReconcile";
 import ImportFineRules from "./ImportFineRules";
 import TeamConfiguration from "./TeamConfiguration";
+import AdminInterestCharges from "../interest-charges/AdminInterestCharges";
 import "./admin-settings.css";
 
-type AdminTab = "payments" | "refunds" | "fines" | "season" | "members" | "config";
+type AdminTab = "payments" | "refunds" | "fines" | "season" | "members" | "config" | "interest-charges";
 
 interface Props {
   teamId: string;
@@ -84,6 +85,15 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
             Indstillinger
           </button>
         )}
+        {showPayments && (
+          <button
+            type="button"
+            className={`admin-settings__tab${activeTab === "interest-charges" ? " admin-settings__tab--active" : ""}`}
+            onClick={() => setActiveTab("interest-charges")}
+          >
+            Rentegebyr
+          </button>
+        )}
       </nav>
 
       <div className="admin-settings__content">
@@ -108,6 +118,9 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
         )}
         {activeTab === "config" && showSeason && (
           <TeamConfiguration teamId={teamId} />
+        )}
+        {activeTab === "interest-charges" && showPayments && (
+          <AdminInterestCharges teamId={teamId} />
         )}
       </div>
     </div>

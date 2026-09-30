@@ -4,6 +4,19 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.5.0 — 1. oktober 2026
+
+**Feature: Daglige rentegebyr på ubetalt gæld (F029)**
+
+- Medlemmer med ubetalt gæld fra forrige måned begynder nu at få opkrævet 5 kr. i rentegebyr dagligt
+- Rentegebyrerne vises sammen med bøderne i medlemmets "Mine bøder" sektion — medlemmerne kan nu betale både bøder og renter i en betaling
+- Administratorer har nu et nyt "Rentegebyr" område i admin-panelet, hvor de kan se hvor meget hver medlem skylder i rente og hvilke måneder der er påkrævet betaling
+- Administratorer kan klikke på et medlem for at se alle opkrævede rentegebyr med datoer
+- Rentegebyrerne stopper når et medlem initierer betaling (status "afventer godkendelse") eller betalingen godkendes
+- Hvis en betaling bliver bestridet, genstartes rentegebyrerne fra næste dag
+
+---
+
 ## v1.4.0 — 30. september 2026
 
 **Feature: Forbedret arbejdsgang ved tildeling af bøder**

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Fine, Payment, PaymentStatus, User } from "../../types/domain";
+import type { Fine, Payment, PaymentStatus, User, InterestCharge } from "../../types/domain";
 import {
   getActiveSeason,
   getFinesForUser,
@@ -7,6 +7,7 @@ import {
   getTeam,
   getUsers,
   createCombinedPayment,
+  getInterestChargesForUser,
 } from "../../lib/firestore";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
 import "./personal-overview.css";
@@ -25,6 +26,11 @@ type FineWithPayment = {
   effectiveStatus: PaymentStatus;
 };
 
+type InterestChargeRow = {
+  charge: InterestCharge;
+  effectiveStatus: PaymentStatus;
+};
+
 export default function PersonalOverview({ teamId, userId, viewerName }: PersonalOverviewProps) {
   const isViewerMode = !!viewerName;
   const [loading, setLoading] = useState(true);
@@ -40,11 +46,13 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
   const [showPostPayDialog, setShowPostPayDialog] = useState(false);
   const [pendingPaymentData, setPendingPaymentData] = useState<{
     fineIds: string[];
+    interestChargeIds: string[];
     amount: number;
     titles: string[];
   } | null>(null);
 
   const [fineRows, setFineRows] = useState<FineWithPayment[]>([]);
+  const [interestCharges, setInterestCharges] = useState<InterestChargeRow[]>([]);
 
   /**
    * Helper to get fine IDs from a payment, handling backward compatibility.
@@ -62,6 +70,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
   const loadData = useCallback(async () => {
     if (!teamId || !userId) {
       setFineRows([]);
+      setInterestCharges([]);
       setLoading(false);
       return;
     }
@@ -70,17 +79,33 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
     setError(null);
 
     try {
-      const [season, fines, payments, team, users] = await Promise.all([
+      const [season, fines, payments, team, users, charges] = await Promise.all([
         getActiveSeason(teamId),
         getFinesForUser(teamId, userId),
         getPaymentsForUser(teamId, userId),
         getTeam(teamId),
         getUsers(),
+        getInterestChargesForUser(teamId, userId),
       ]);
 
       const activeSeasonFines = season
         ? fines.filter((fine) => fine.seasonId === season.id)
         : [];
+
+      // Filter interest charges to active season only
+      const activeSeasonCharges = season
+        ? charges.filter((charge) => charge.seasonId === season.id)
+        : [];
+
+      // Build a map of interest charge IDs that are in approved payments (paid interest)
+      const approvedInterestChargeIds = new Set<string>();
+      for (const payment of payments) {
+        if (payment.status === "approved" && payment.interestChargeIds) {
+          for (const chargeId of payment.interestChargeIds) {
+            approvedInterestChargeIds.add(chargeId);
+          }
+        }
+      }
 
       // Build a map of fineId -> pending Payment (if any)
       const pendingPaymentByFineId = new Map<string, Payment>();
@@ -132,7 +157,17 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         })
         .sort((a, b) => b.fine.createdAt.localeCompare(a.fine.createdAt));
 
+      // Build interest charge rows (only unpaid interest charges)
+      const chargeRows: InterestChargeRow[] = activeSeasonCharges
+        .filter((charge) => !approvedInterestChargeIds.has(charge.id))
+        .map((charge) => ({
+          charge,
+          effectiveStatus: "unpaid" as PaymentStatus,
+        }))
+        .sort((a, b) => b.charge.chargedOn.localeCompare(a.charge.chargedOn));
+
       setFineRows(rows);
+      setInterestCharges(chargeRows);
       setMobilePayBoxUrl(isViewerMode ? null : (team?.mobilePayBoxUrl?.trim() || null));
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : "Ukendt fejl";
@@ -179,10 +214,11 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
     [fineRows],
   );
 
-  const unpaidTotal = useMemo(
-    () => unpaidRows.reduce((sum, row) => sum + row.fine.amount, 0),
-    [unpaidRows],
-  );
+  const unpaidTotal = useMemo(() => {
+    const finesTotal = unpaidRows.reduce((sum, row) => sum + row.fine.amount, 0);
+    const interestTotal = interestCharges.reduce((sum, row) => sum + row.charge.amount, 0);
+    return finesTotal + interestTotal;
+  }, [unpaidRows, interestCharges]);
 
   const paidTotal = useMemo(
     () => paidRows.reduce((sum, row) => sum + row.fine.amount, 0),
@@ -191,8 +227,8 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
 
   const totalFinesCount = fineRows.length;
 
-  const canPay = unpaidTotal > 0 && unpaidRows.length > 0;
-  const hasMultipleFines = unpaidRows.length > 1;
+  const canPay = unpaidTotal > 0 && (unpaidRows.length > 0 || interestCharges.length > 0);
+  const hasMultipleFines = unpaidRows.length + interestCharges.length > 1;
   const mobilePayConfigured = !!mobilePayBoxUrl;
 
   function handlePaySingleClick(row: FineWithPayment): void {
@@ -202,6 +238,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
 
     setPendingPaymentData({
       fineIds: [row.fine.id],
+      interestChargeIds: [],
       amount: row.fine.amount,
       titles: [row.fine.title],
     });
@@ -213,10 +250,18 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       return;
     }
 
+    const fineIds = unpaidRows.map((r) => r.fine.id);
+    const interestChargeIds = interestCharges.map((r) => r.charge.id);
+    const titles = [
+      ...unpaidRows.map((r) => r.fine.title),
+      ...interestCharges.map(() => "Rentegebyr (5 kr)"),
+    ];
+
     setPendingPaymentData({
-      fineIds: unpaidRows.map((r) => r.fine.id),
+      fineIds,
+      interestChargeIds,
       amount: unpaidTotal,
-      titles: unpaidRows.map((r) => r.fine.title),
+      titles,
     });
     setShowPrePayDialog(true);
   }
@@ -270,6 +315,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         userId,
         pendingPaymentData.amount,
         userId,
+        pendingPaymentData.interestChargeIds,
       );
       await loadData();
     } catch (payError) {
@@ -380,6 +426,20 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
                     ? undefined
                     : () => handlePaySingleClick(row)
                 }
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!loading && interestCharges.length > 0 && (
+        <section className="personal-section" aria-label="Rentegebyr">
+          <h2 className="personal-section__title">Rentegebyr</h2>
+          <div className="item-list">
+            {interestCharges.map((row) => (
+              <InterestChargeRowCard
+                key={row.charge.id}
+                charge={row.charge}
               />
             ))}
           </div>
@@ -538,6 +598,33 @@ function FineRowCard({
           {actionLabel}
         </button>
       )}
+    </article>
+  );
+}
+
+interface InterestChargeRowCardProps {
+  charge: InterestCharge;
+}
+
+function InterestChargeRowCard({ charge }: InterestChargeRowCardProps) {
+  return (
+    <article className="personal-fine-card">
+      <div className="personal-fine-card__header">
+        <div className="personal-fine-card__info">
+          <p className="personal-fine-card__title">Rentegebyr</p>
+          <p className="personal-fine-card__meta">
+            Opkrævet {formatRelativeTime(charge.createdAt)}
+          </p>
+        </div>
+
+        <p className="personal-fine-card__amount">
+          {formatAmount(charge.amount)}
+        </p>
+      </div>
+
+      <p className="personal-fine-card__note">
+        Daglig rente på {charge.amount} kr. for ubetalt bøde fra {charge.month}
+      </p>
     </article>
   );
 }
