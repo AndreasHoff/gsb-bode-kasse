@@ -32,10 +32,11 @@ export {
   getUserSeasonBalance,
   getOrCreateUserSeasonBalance,
   updateUserSeasonBalance,
+  applySeasonDeltas,
   getSeasonBalances,
   getUserBalances,
 } from "./balances";
-export type { BalanceDelta } from "./balances";
+export type { BalanceDelta, SeasonDeltaAccumulator } from "./balances";
 
 export {
   getFineRules,
@@ -84,3 +85,6 @@ export {
   updateProposalStatus,
   approveProposal,
 } from "./proposals";
+
+export type { ReconciliationResult } from "./reconciliation";
+export { reconcileSeasonTotals, reconcileAllSeasons } from "./reconciliation";

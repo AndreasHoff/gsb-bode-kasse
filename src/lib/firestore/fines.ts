@@ -3,7 +3,7 @@ import { db } from "../firebase";
 import { finesCol, fineDoc, activityLogCol, paymentsCol } from "./refs";
 import type { Fine, ActivityLog, Payment } from "../../types/domain";
 import { getActiveSeason } from "./seasons";
-import { updateUserSeasonBalance } from "./balances";
+import { updateUserSeasonBalance, applySeasonDeltas, type SeasonDeltaAccumulator } from "./balances";
 
 export async function getFines(
   teamId: string,
@@ -99,7 +99,7 @@ export async function assignFineWithPayment(
 
   const total = targetUserIds.length;
   const MAX_OPS_PER_BATCH = 450;
-  const OPS_PER_FINE = 7; // fine + payment + payment log + fine log + balance + season + balance log
+  const OPS_PER_FINE = 8; // fine + payment + payment log + fine log + balance + season + balance log + season delta application
   const maxFinesPerBatch = Math.floor(MAX_OPS_PER_BATCH / OPS_PER_FINE);
 
   const allFines: Fine[] = [];
@@ -113,6 +113,9 @@ export async function assignFineWithPayment(
 
     const fines: Fine[] = [];
     const payments: Payment[] = [];
+    
+    // Use accumulator to avoid stale reads when updating multiple users' balances
+    const seasonDeltaAccumulator: SeasonDeltaAccumulator = {};
 
     for (const targetUserId of batchUserIds) {
       const createdAt = new Date().toISOString();
@@ -183,8 +186,12 @@ export async function assignFineWithPayment(
         "fine.assigned",
         actorId,
         batch,
+        seasonDeltaAccumulator,
       );
     }
+
+    // Apply accumulated season deltas in a single atomic operation
+    await applySeasonDeltas(data.teamId, data.seasonId, seasonDeltaAccumulator, batch);
 
     await batch.commit();
     
@@ -240,6 +247,9 @@ export async function softDeleteFine(
   };
   batch.set(logRef, logEntry);
 
+  // Use accumulator to avoid stale reads when updating multiple users' balances
+  const seasonDeltaAccumulator: SeasonDeltaAccumulator = {};
+
   // Update balances for each payment based on status
   for (const payment of payments) {
     const delta =
@@ -257,8 +267,12 @@ export async function softDeleteFine(
       "fine.deleted",
       actorId,
       batch,
+      seasonDeltaAccumulator,
     );
   }
+
+  // Apply accumulated season deltas in a single atomic operation
+  await applySeasonDeltas(teamId, existing.seasonId, seasonDeltaAccumulator, batch);
 
   await batch.commit();
 }
@@ -308,6 +322,9 @@ export async function restoreFine(
   };
   batch.set(logRef, logEntry);
 
+  // Use accumulator to avoid stale reads when updating multiple users' balances
+  const seasonDeltaAccumulator: SeasonDeltaAccumulator = {};
+
   // Update balances for each payment (reverse the delete operation)
   for (const payment of payments) {
     const delta =
@@ -325,8 +342,12 @@ export async function restoreFine(
       "fine.restored",
       actorId,
       batch,
+      seasonDeltaAccumulator,
     );
   }
+
+  // Apply accumulated season deltas in a single atomic operation
+  await applySeasonDeltas(teamId, existing.seasonId, seasonDeltaAccumulator, batch);
 
   await batch.commit();
 }

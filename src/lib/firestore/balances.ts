@@ -82,10 +82,22 @@ export interface BalanceDelta {
 }
 
 /**
+ * Accumulator for season-level balance deltas.
+ * Used when multiple balance updates affect the same season to avoid stale reads.
+ */
+export interface SeasonDeltaAccumulator {
+  [seasonId: string]: BalanceDelta;
+}
+
+/**
  * Updates a UserSeasonBalance by applying deltas to balance fields.
  * Also updates the corresponding Season balance fields.
  * Writes a balance.updated ActivityLog entry.
  * All operations are performed atomically within the provided batch.
+ * 
+ * NOTE: When called multiple times in a loop with the same season,
+ * use the accumulator parameter to collect season deltas and apply them once
+ * at the end via applySeasonDeltas() to avoid stale reads.
  */
 export async function updateUserSeasonBalance(
   userId: string,
@@ -95,6 +107,7 @@ export async function updateUserSeasonBalance(
   trigger: string,
   actorId: string,
   batch: WriteBatch,
+  seasonDeltaAccumulator?: SeasonDeltaAccumulator,
 ): Promise<void> {
   // 1. Get or create user balance record
   const balance = await getOrCreateUserSeasonBalance(userId, teamId, seasonId, batch);
@@ -112,21 +125,32 @@ export async function updateUserSeasonBalance(
   const balanceRef = userSeasonBalanceDoc(teamId, balance.id);
   batch.set(balanceRef, updated);
 
-  // 3. Update season totals
-  const seasonRef = seasonDoc(teamId, seasonId);
-  const seasonSnap = await getDoc(seasonRef);
-  if (seasonSnap.exists()) {
-    const season = seasonSnap.data() as Season;
-    const updatedSeason: Season = {
-      ...season,
-      totalOutstanding:
-        (season.totalOutstanding ?? 0) + (delta.outstandingBalance ?? 0),
-      totalPendingBalance:
-        (season.totalPendingBalance ?? 0) + (delta.pendingBalance ?? 0),
-      totalApprovedBalance:
-        (season.totalApprovedBalance ?? 0) + (delta.approvedBalance ?? 0),
+  // 3. Accumulate or apply season deltas
+  if (seasonDeltaAccumulator) {
+    // Accumulate delta for batch application later
+    const current = seasonDeltaAccumulator[seasonId] || {};
+    seasonDeltaAccumulator[seasonId] = {
+      outstandingBalance: (current.outstandingBalance ?? 0) + (delta.outstandingBalance ?? 0),
+      pendingBalance: (current.pendingBalance ?? 0) + (delta.pendingBalance ?? 0),
+      approvedBalance: (current.approvedBalance ?? 0) + (delta.approvedBalance ?? 0),
     };
-    batch.set(seasonRef, updatedSeason);
+  } else {
+    // Legacy: apply season update immediately (single update case)
+    const seasonRef = seasonDoc(teamId, seasonId);
+    const seasonSnap = await getDoc(seasonRef);
+    if (seasonSnap.exists()) {
+      const season = seasonSnap.data() as Season;
+      const updatedSeason: Season = {
+        ...season,
+        totalOutstanding:
+          (season.totalOutstanding ?? 0) + (delta.outstandingBalance ?? 0),
+        totalPendingBalance:
+          (season.totalPendingBalance ?? 0) + (delta.pendingBalance ?? 0),
+        totalApprovedBalance:
+          (season.totalApprovedBalance ?? 0) + (delta.approvedBalance ?? 0),
+      };
+      batch.set(seasonRef, updatedSeason);
+    }
   }
 
   // 4. Write activity log
@@ -148,6 +172,36 @@ export async function updateUserSeasonBalance(
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
+}
+
+/**
+ * Applies accumulated season deltas to a season document in a single atomic operation.
+ * This prevents stale reads when multiple UserSeasonBalance updates affect the same season.
+ */
+export async function applySeasonDeltas(
+  teamId: string,
+  seasonId: string,
+  accumulator: SeasonDeltaAccumulator,
+  batch: WriteBatch,
+): Promise<void> {
+  const delta = accumulator[seasonId];
+  if (!delta) return; // No changes for this season
+
+  const seasonRef = seasonDoc(teamId, seasonId);
+  const seasonSnap = await getDoc(seasonRef);
+  if (seasonSnap.exists()) {
+    const season = seasonSnap.data() as Season;
+    const updatedSeason: Season = {
+      ...season,
+      totalOutstanding:
+        (season.totalOutstanding ?? 0) + (delta.outstandingBalance ?? 0),
+      totalPendingBalance:
+        (season.totalPendingBalance ?? 0) + (delta.pendingBalance ?? 0),
+      totalApprovedBalance:
+        (season.totalApprovedBalance ?? 0) + (delta.approvedBalance ?? 0),
+    };
+    batch.set(seasonRef, updatedSeason);
+  }
 }
 
 /**
