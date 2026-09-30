@@ -4,6 +4,16 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.4.0 — 30. september 2026
+
+**Feature: Forbedret arbejdsgang ved tildeling af bøder**
+
+- Administratorer bliver nu på "Giv bøde" fanen efter tildeling i stedet for at blive sendt til "Hold" fanen — bedre workflow når man skal give flere bøder
+- Nye søgefunktioner: søg efter bødetyper både i "Bøder" kataloget og i "Historik" fanen
+- Administratorer kan nu gentage en bøde 2-10 gange ved tildeling — praktisk når en spiller har begået samme fejl flere gange på måneden (f.eks. 5 gange "glemt dusch")
+
+---
+
 ## v1.3.2 — 30. september 2026
 
 **Forbedring: Mere pålidelige medlemsdata og saldo-overblik**

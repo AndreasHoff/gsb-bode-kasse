@@ -58,6 +58,8 @@ export default function AssignFine({
   const [assignProgress, setAssignProgress] = useState<{ completed: number; total: number } | null>(
     null,
   );
+  const [repeatFine, setRepeatFine] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const hasPermission = canAssignFines(actorRole);
 
@@ -202,7 +204,13 @@ export default function AssignFine({
     setAssignProgress(null);
 
     try {
-      const selectedIds = selectedTargets.map((member) => member.id);
+      let selectedIds = selectedTargets.map((member) => member.id);
+
+      // Handle fine repetition for single mode
+      if (mode === "single" && repeatFine && quantity > 1) {
+        // Duplicate the user ID for the specified quantity
+        selectedIds = Array(quantity).fill(selectedIds[0]);
+      }
 
       if (!options?.overrideDuplicates) {
         const existingFines = await getFines(teamId);
@@ -255,6 +263,8 @@ export default function AssignFine({
       if (mode === "multiple") {
         setSelectedUserIds([]);
       }
+      setRepeatFine(false);
+      setQuantity(1);
       setDuplicateWarning(null);
       setAssignProgress(null);
 
@@ -384,28 +394,65 @@ export default function AssignFine({
         </div>
 
         {mode === "single" && (
-          <div className="form-group">
-            <label htmlFor="assign-member" className="form-label">
-              Spiller
-            </label>
-            <select
-              id="assign-member"
-              className="form-select"
-              value={selectedUserId}
-              onChange={(event) => {
-                const value = event.target.value;
-                setSelectedUserId(value);
-                setSelectedUserIds(value ? [value] : []);
-              }}
-              disabled={submitting}
-            >
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div className="form-group">
+              <label htmlFor="assign-member" className="form-label">
+                Spiller
+              </label>
+              <select
+                id="assign-member"
+                className="form-select"
+                value={selectedUserId}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSelectedUserId(value);
+                  setSelectedUserIds(value ? [value] : []);
+                }}
+                disabled={submitting}
+              >
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={repeatFine}
+                  onChange={(event) => {
+                    setRepeatFine(event.target.checked);
+                    if (!event.target.checked) {
+                      setQuantity(1);
+                    } else {
+                      setQuantity(2);
+                    }
+                  }}
+                  disabled={submitting}
+                  className="w-4 h-4 cursor-pointer"
+                />
+                <span>Gentag bøde</span>
+              </label>
+              {repeatFine && (
+                <select
+                  className="form-select mt-2"
+                  value={quantity}
+                  onChange={(event) => setQuantity(parseInt(event.target.value, 10))}
+                  disabled={submitting}
+                  aria-label="Antal gange bøden skal gentages"
+                >
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <option key={num} value={num}>
+                      {num} gange
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </>
         )}
 
         {mode === "multiple" && (
@@ -467,10 +514,24 @@ export default function AssignFine({
                 : `${selectedTargets.length} spillere`}
             </span>
           </div>
+          {mode === "single" && repeatFine && quantity > 1 && (
+            <div className="assign-fine-summary__row">
+              <span className="assign-fine-summary__label">Antal bøder:</span>
+              <span className="assign-fine-summary__value assign-fine-summary__value--highlight">
+                {quantity} stk.
+              </span>
+            </div>
+          )}
           <div className="assign-fine-summary__row">
             <span className="assign-fine-summary__label">Total:</span>
             <span className="assign-fine-summary__value">
-              {selectedRule ? formatAmount(selectedRule.amount * selectedTargets.length) : "-"}
+              {selectedRule
+                ? formatAmount(
+                    selectedRule.amount *
+                      selectedTargets.length *
+                      (mode === "single" && repeatFine ? quantity : 1),
+                  )
+                : "-"}
             </span>
           </div>
         </div>

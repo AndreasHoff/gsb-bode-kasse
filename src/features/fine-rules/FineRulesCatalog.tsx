@@ -2,7 +2,7 @@
 // Shows all fine rule types for the team.
 // Normal users: read-only list + proposal button. Admin: full CRUD + proposal review.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   collection,
   query,
@@ -203,9 +203,21 @@ function FineRulesList({
   const [rules, setRules] = useState<FineRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const canManageRules = canManageFineRules(userRole);
   const canPropose = canProposeFineRules(userRole);
+
+  const filteredRules = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return rules;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return rules.filter((rule) =>
+      rule.title.toLowerCase().includes(query)
+    );
+  }, [rules, searchQuery]);
 
   const loadRules = useCallback(() => {
     setLoading(true);
@@ -226,7 +238,7 @@ function FineRulesList({
         <div>
           <h1 className="app-title">Bøder</h1>
           <p className="app-subtitle">
-            {loading ? "Henter..." : `${rules.length} bødetype${rules.length !== 1 ? "r" : ""}`}
+            {loading ? "Henter..." : `${filteredRules.length} bødetype${filteredRules.length !== 1 ? "r" : ""}`}
           </p>
         </div>
         
@@ -298,16 +310,36 @@ function FineRulesList({
       )}
 
       {!loading && rules.length > 0 && (
-        <div className="item-list">
-          {rules.map((rule) => (
-            <FineRuleCard
-              key={rule.id}
-              rule={rule}
-              canManageRules={canManageRules}
-              onEdit={onEdit ? () => onEdit(rule.id) : undefined}
+        <>
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Søg efter bødetype..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              aria-label="Søg efter bødetype"
             />
-          ))}
-        </div>
+          </div>
+
+          {filteredRules.length === 0 ? (
+            <div className="empty-state">
+              <span className="empty-state__emoji">🔍</span>
+              <p className="empty-state__text">Ingen bøder fundet.</p>
+            </div>
+          ) : (
+            <div className="item-list">
+              {filteredRules.map((rule) => (
+                <FineRuleCard
+                  key={rule.id}
+                  rule={rule}
+                  canManageRules={canManageRules}
+                  onEdit={onEdit ? () => onEdit(rule.id) : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

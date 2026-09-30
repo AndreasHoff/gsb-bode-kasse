@@ -20,6 +20,7 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [cursor, setCursor] = useState<ActivityLogCursor | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const loadInitialEntries = useCallback(async () => {
@@ -83,6 +84,11 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
   }, [loadInitialEntries]);
 
   useEffect(() => {
+    // Reset search query when switching tabs
+    setSearchQuery("");
+  }, [activeFilter]);
+
+  useEffect(() => {
     function refreshOnVisible(): void {
       if (document.visibilityState === "visible") {
         void loadInitialEntries();
@@ -109,16 +115,38 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
   ];
 
   const filteredEntries = useMemo(() => {
+    let result = entries;
+
     if (activeFilter === "all") {
-      return entries;
+      result = entries;
+    } else if (activeFilter === "fines") {
+      result = entries.filter((entry) => entry.action.startsWith("fine."));
+    } else {
+      result = entries.filter((entry) => entry.action.startsWith("payment."));
     }
 
-    if (activeFilter === "fines") {
-      return entries.filter((entry) => entry.action.startsWith("fine."));
+    // Apply search filter for fines tab
+    if (activeFilter === "fines" && searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((entry) => {
+        const metadata = entry.metadata ?? {};
+        const assignedTo = metadata.assignedTo;
+        const recipientIds = Array.isArray(assignedTo) ? (assignedTo as string[]) : [];
+        const recipientNames = recipientIds
+          .map((id) => usersById.get(id)?.name ?? "")
+          .filter((name) => name.length > 0);
+
+        // Search in recipient names or fine title
+        const title = toStringValue(metadata.title) ?? "";
+        return (
+          recipientNames.some((name) => name.toLowerCase().includes(query))
+          || title.toLowerCase().includes(query)
+        );
+      });
     }
 
-    return entries.filter((entry) => entry.action.startsWith("payment."));
-  }, [activeFilter, entries]);
+    return result;
+  }, [activeFilter, entries, searchQuery, usersById]);
 
   function handleKeyDown(e: React.KeyboardEvent, currentIndex: number) {
     let nextIndex: number | null = null;
@@ -168,6 +196,7 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
 
       {tabs.map((tab) => {
         const isVisible = activeFilter === tab.id;
+        const isFinesTab = tab.id === "fines";
         return (
           <div
             key={tab.id}
@@ -178,13 +207,27 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
           >
             {isVisible && (
               <>
+                {isFinesTab && (
+                  <div className="mt-4 mb-4">
+                    <input
+                      type="text"
+                      placeholder="Søg efter medlem eller bødetype..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                      aria-label="Søg efter medlem eller bødetype"
+                    />
+                  </div>
+                )}
                 {isLoading && <p className="status-note mt-4">Henter historik...</p>}
                 {errorMessage && <p className="status-error mt-4">{errorMessage}</p>}
 
                 {!isLoading && !errorMessage && filteredEntries.length === 0 && (
                   <div className="empty-state mt-4">
                     <p className="text-4xl mb-3">📋</p>
-                    <p className="text-sm">Ingen historik endnu.</p>
+                    <p className="text-sm">
+                      {isFinesTab && searchQuery ? "Ingen bøder fundet." : "Ingen historik endnu."}
+                    </p>
                   </div>
                 )}
 

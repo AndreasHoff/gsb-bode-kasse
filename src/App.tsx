@@ -592,8 +592,6 @@ function App() {
                 fineIds,
                 memberNames,
               });
-
-              setActiveTab("overview");
             }}
           />
         )}
