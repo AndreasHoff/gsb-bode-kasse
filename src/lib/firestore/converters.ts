@@ -410,7 +410,7 @@ export const paymentConverter: FirestoreDataConverter<Payment, PaymentDoc> = {
     return {
       ...(p.fineId !== undefined && { fineId: p.fineId }),
       ...(p.fineIds !== undefined && { fineIds: p.fineIds }),
-      ...(p.interestChargeIds !== undefined && { interestChargeIds: p.interestChargeIds }),
+      ...(p.interestChargeIds !== undefined && p.interestChargeIds.length > 0 && { interestChargeIds: p.interestChargeIds }),
       userId: p.userId,
       amount: p.amount,
       status: p.status,
@@ -476,13 +476,19 @@ export const interestChargeConverter: FirestoreDataConverter<
 export const activityLogConverter: FirestoreDataConverter<ActivityLog, ActivityLogDoc> = {
   toFirestore(modelObject: WithFieldValue<ActivityLog>): ActivityLogDoc {
     const log = modelObject as ActivityLog;
+    // Clean metadata: remove undefined values (Firestore doesn't allow them)
+    const cleanMetadata = log.metadata
+      ? Object.fromEntries(
+          Object.entries(log.metadata).filter(([, v]) => v !== undefined)
+        )
+      : undefined;
     return {
       teamId: log.teamId,
       actorId: log.actorId,
       action: log.action,
       entityType: log.entityType,
       entityId: log.entityId,
-      ...(log.metadata !== undefined && { metadata: log.metadata }),
+      ...(cleanMetadata !== undefined && Object.keys(cleanMetadata).length > 0 && { metadata: cleanMetadata }),
       createdAt: Timestamp.fromDate(new Date(log.createdAt)),
     };
   },
