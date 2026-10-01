@@ -474,11 +474,12 @@ function normalizeMembershipRole(role) {
 /**
  * Daily scheduled function that charges 5 DKK interest to members with unpaid fines
  * from the previous calendar month.
- * Runs at 00:01 UTC every day, starting 2026-10-01.
+ * Runs at 00:01 Denmark local time every day (handles daylight saving automatically).
  */
 exports.chargeOutstandingFineInterest = (0, scheduler_1.onSchedule)({
-    schedule: "1 0 * * *", // 00:01 UTC every day
+    schedule: "1 0 * * *", // 00:01 Denmark local time every day
     region: "europe-west1",
+    timeZone: "Europe/Copenhagen",
 }, async (context) => {
     const db = (0, firestore_1.getFirestore)();
     console.log("[chargeOutstandingFineInterest] Starting daily interest processing", {
