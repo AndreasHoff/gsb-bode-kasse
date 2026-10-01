@@ -9,7 +9,7 @@
   --color-surface: #FFFFFF;
   --color-surface-muted: #F1F5F9;
   --color-text: #1F2937;
-  --color-text-muted: #F1F5F9;
+  --color-text-muted: #a5aaaf;
   --color-primary: #005AA9;
   --color-primary-strong: #0077CC;
   --color-primary-contrast: #FFFFFF;
@@ -76,7 +76,7 @@
   --color-primary-contrast: #f9f8ff;
   --color-accent: #f59e0b;
   --color-accent-light: #fbbf24;
-  --color-error: #ffd4e6;
+  --color-error: #f765a2;
   --color-success: #6ee7b7;
   --color-warning: #fbbf24;
   --color-info: #a78bfa;
