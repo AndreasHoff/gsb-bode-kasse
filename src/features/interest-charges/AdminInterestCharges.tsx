@@ -5,12 +5,23 @@ import {
   getInterestChargesForSeason,
   getUsers,
   getPayments,
+  softDeleteInterestCharge,
 } from "../../lib/firestore";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
+import { canDeleteInterestCharges } from "../../lib/permissions";
 import "./interest-charges.css";
 
 interface AdminInterestChargesProps {
   teamId: string;
+  userRole?: string | null;
+  userId?: string;
+}
+
+interface DeleteConfirmation {
+  chargeId: string;
+  month: string;
+  amount: number;
+  userName: string;
 }
 
 type MemberInterestSummary = {
@@ -22,7 +33,7 @@ type MemberInterestSummary = {
   charges: InterestCharge[];
 };
 
-export default function AdminInterestCharges({ teamId }: AdminInterestChargesProps) {
+export default function AdminInterestCharges({ teamId, userRole, userId = "" }: AdminInterestChargesProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [season, setSeason] = useState<Season | null>(null);
@@ -30,6 +41,9 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
   const [payments, setPayments] = useState<Payment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -69,6 +83,32 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  async function handleDeleteConfirmed(): Promise<void> {
+    if (!deleteConfirm || isDeleting) return;
+
+    setIsDeleting(true);
+    setErrorMessage(null);
+    try {
+      await softDeleteInterestCharge(teamId, deleteConfirm.chargeId, userId);
+      setCharges((prev) => prev.filter((c) => c.id !== deleteConfirm.chargeId));
+      setDeleteConfirm(null);
+    } catch (deleteError) {
+      const message = deleteError instanceof Error ? deleteError.message : "Ukendt fejl";
+      setErrorMessage(`Kunne ikke slette rentegebyr (${message}).`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function handleDeleteClick(
+    chargeId: string,
+    month: string,
+    amount: number,
+    userName: string,
+  ): void {
+    setDeleteConfirm({ chargeId, month, amount, userName });
+  }
 
   // Build summary data
   const memberSummaries = useMemo(() => {
@@ -247,12 +287,72 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
                           {formatAmount(charge.amount)}
                         </p>
                       </div>
+                      {canDeleteInterestCharges(userRole as any) && (
+                        <div className="interest-charge-card__actions">
+                          <button
+                            type="button"
+                            className="btn-small btn-danger"
+                            onClick={() =>
+                              handleDeleteClick(
+                                charge.id,
+                                charge.month,
+                                charge.amount,
+                                selectedMemberSummary.userName,
+                              )
+                            }
+                          >
+                            Slet
+                          </button>
+                        </div>
+                      )}
                     </article>
                   ))}
               </div>
             </section>
           )}
         </>
+      )}
+
+      {errorMessage && (
+        <div className="status-error mt-4">
+          {errorMessage}
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <h3 className="modal-title">Slet rentegebyr?</h3>
+            </div>
+            <div className="modal-body">
+              <p>
+                Vil du slette rentegebyret for {deleteConfirm.userName} fra {deleteConfirm.month} ({formatAmount(deleteConfirm.amount)})?
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                ⚠️ Denne handling kan ikke fortrydes.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-danger flex-1"
+                disabled={isDeleting}
+                onClick={() => void handleDeleteConfirmed()}
+              >
+                {isDeleting ? "Sletter…" : "Slet"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary flex-1"
+                disabled={isDeleting}
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Nej
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

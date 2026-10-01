@@ -112,6 +112,7 @@ export interface InterestCharge {
   month: string; // YYYY-MM (e.g., "2026-09" for Sept fines)
   reason: string; // Always "daily_outstanding_fine_interest"
   createdAt: string;
+  deletedAt?: string;
 }
 
 export interface ActivityLog {

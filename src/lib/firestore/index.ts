@@ -81,6 +81,7 @@ export {
   getInterestChargesForSeason,
   getInterestCharges,
   createInterestCharge,
+  softDeleteInterestCharge,
 } from "./interest-charges";
 
 export type { CreateProposalInput, UpdateProposalInput } from "./proposals";

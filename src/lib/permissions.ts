@@ -49,6 +49,11 @@ export function canManageFineRules(role: Role | null): boolean {
   return hasAdminAccess(role);
 }
 
+/** Returns true if the given role can delete interest charges */
+export function canDeleteInterestCharges(role: Role | null): boolean {
+  return hasAdminAccess(role);
+}
+
 /** Returns true if the given role can manage feature proposals */
 export function canManageProposals(role: Role | null): boolean {
   return hasAdminAccess(role);

@@ -649,7 +649,10 @@ function App() {
       <BottomNavbar
         items={bottomNavbarItems}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          setViewingMember(null);
+          setActiveTab(tab);
+        }}
       />
     </div>
   );

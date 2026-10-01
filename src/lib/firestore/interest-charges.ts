@@ -1,4 +1,4 @@
-import { getDocs, doc, writeBatch, query, where } from "firebase/firestore";
+import { getDocs, doc, writeBatch, query, where, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { interestChargesCol, activityLogCol } from "./refs";
 import type { InterestCharge, ActivityLog } from "../../types/domain";
@@ -76,4 +76,48 @@ export async function createInterestCharge(
 
   await batch.commit();
   return charge;
+}
+
+/**
+ * Soft-deletes an InterestCharge by setting deletedAt timestamp.
+ * Writes an ActivityLog entry atomically to record the deletion.
+ */
+export async function softDeleteInterestCharge(
+  teamId: string,
+  chargeId: string,
+  actorId: string,
+): Promise<void> {
+  const cRef = doc(interestChargesCol(teamId), chargeId);
+  const snap = await getDoc(cRef);
+
+  if (!snap.exists()) {
+    throw new Error(`Interest charge ${chargeId} not found in team ${teamId}`);
+  }
+
+  const existing = snap.data() as InterestCharge;
+
+  const batch = writeBatch(db);
+
+  const deleted: InterestCharge = { ...existing, deletedAt: new Date().toISOString() };
+  batch.set(cRef, deleted);
+
+  const logColRef = activityLogCol(teamId);
+  const logRef = doc(logColRef);
+  const logEntry: ActivityLog = {
+    id: logRef.id,
+    teamId,
+    actorId,
+    action: "interest.deleted",
+    entityType: "interestCharge",
+    entityId: chargeId,
+    metadata: {
+      userId: existing.userId,
+      amount: existing.amount,
+      month: existing.month,
+    },
+    createdAt: new Date().toISOString(),
+  };
+  batch.set(logRef, logEntry);
+
+  await batch.commit();
 }

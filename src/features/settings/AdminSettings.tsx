@@ -120,7 +120,7 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
           <TeamConfiguration teamId={teamId} />
         )}
         {activeTab === "interest-charges" && showPayments && (
-          <AdminInterestCharges teamId={teamId} />
+          <AdminInterestCharges teamId={teamId} userRole={userRole} userId={actorId} />
         )}
       </div>
     </div>

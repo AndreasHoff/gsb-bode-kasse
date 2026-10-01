@@ -6,8 +6,9 @@ import {
   getPaymentsForUser,
   removeMemberFromFine,
   getInterestChargesForUser,
+  softDeleteInterestCharge,
 } from "../../lib/firestore";
-import { canDeleteFines } from "../../lib/permissions";
+import { canDeleteFines, canDeleteInterestCharges } from "../../lib/permissions";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
 import type { UserSeasonBalance, Fine, Payment, Role, InterestCharge } from "../../types/domain";
 import "../profile/profile.css";
@@ -25,10 +26,13 @@ type FineWithPayment = Fine & {
   paymentStatus: "unpaid" | "pending" | "approved" | "disputed";
 };
 
+type DeleteConfirmationType = "fine" | "interest";
+
 interface DeleteConfirmation {
-  fineId: string;
-  fineTitle: string;
-  fineAmount: number;
+  type: DeleteConfirmationType;
+  id: string;
+  title: string;
+  amount: number;
 }
 
 export default function MemberProfile({
@@ -137,19 +141,25 @@ export default function MemberProfile({
     setIsDeleting(true);
     setErrorMessage(null);
     try {
-      await removeMemberFromFine(teamId, deleteConfirm.fineId, userId, actorId);
-      setFines((prev) => prev.filter((f) => f.id !== deleteConfirm.fineId));
+      if (deleteConfirm.type === "fine") {
+        await removeMemberFromFine(teamId, deleteConfirm.id, userId, actorId);
+        setFines((prev) => prev.filter((f) => f.id !== deleteConfirm.id));
+      } else if (deleteConfirm.type === "interest") {
+        await softDeleteInterestCharge(teamId, deleteConfirm.id, actorId);
+        setInterestCharges((prev) => prev.filter((c) => c.id !== deleteConfirm.id));
+      }
       setDeleteConfirm(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Ukendt fejl";
-      setErrorMessage(`Kunne ikke slette bøde (${message}).`);
+      const typeLabel = deleteConfirm.type === "fine" ? "bøde" : "rentegebyr";
+      setErrorMessage(`Kunne ikke slette ${typeLabel} (${message}).`);
     } finally {
       setIsDeleting(false);
     }
   }
 
-  function handleDeleteClick(fineId: string, fineTitle: string, fineAmount: number): void {
-    setDeleteConfirm({ fineId, fineTitle, fineAmount });
+  function handleDeleteClick(id: string, title: string, amount: number, type: DeleteConfirmationType): void {
+    setDeleteConfirm({ type, id, title, amount });
   }
 
   const outstanding = balance?.outstandingBalance ?? 0;
@@ -260,7 +270,7 @@ export default function MemberProfile({
                           className="btn-danger btn-sm w-full"
                           disabled={isDeleting}
                           onClick={() =>
-                            handleDeleteClick(fine.id, fine.title, fine.amount)
+                            handleDeleteClick(fine.id, fine.title, fine.amount, "fine")
                           }
                         >
                           {isDeleting ? "Sletter…" : "Slet bøde"}
@@ -276,14 +286,19 @@ export default function MemberProfile({
               <div className="modal-overlay">
                 <div className="modal-dialog">
                   <div className="modal-header">
-                    <h3 className="modal-title">Slet bøde?</h3>
+                    <h3 className="modal-title">
+                      {deleteConfirm.type === "fine" ? "Slet bøde?" : "Slet rentegebyr?"}
+                    </h3>
                   </div>
                   <div className="modal-body">
                     <p>
-                      Vil du slette bøden <strong>{deleteConfirm.fineTitle}</strong> ({formatAmount(deleteConfirm.fineAmount)}) fra {userName}?
+                      Vil du slette {deleteConfirm.type === "fine" ? "bøden" : "rentegebyret"}{" "}
+                      <strong>{deleteConfirm.title}</strong> ({formatAmount(deleteConfirm.amount)}) fra{" "}
+                      {userName}?
                     </p>
                     <p className="text-xs text-[var(--color-text-muted)] mt-2">
-                      ⚠️ Denne handling kan ikke fortrydes. Betalinger bliver stående for revision.
+                      ⚠️ Denne handling kan ikke fortrydes.
+                      {deleteConfirm.type === "fine" && " Betalinger bliver stående for revision."}
                     </p>
                   </div>
                   <div className="modal-footer">
@@ -333,6 +348,25 @@ export default function MemberProfile({
                         Opkrævet {formatRelativeTime(charge.createdAt)}
                       </span>
                     </div>
+                    {canDeleteInterestCharges(actorRole) && (
+                      <div className="fine-item__actions mt-2">
+                        <button
+                          type="button"
+                          className="btn-danger btn-sm w-full"
+                          disabled={isDeleting}
+                          onClick={() =>
+                            handleDeleteClick(
+                              charge.id,
+                              `Rente fra ${charge.month}`,
+                              charge.amount,
+                              "interest",
+                            )
+                          }
+                        >
+                          {isDeleting ? "Sletter…" : "Slet rentegebyr"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
