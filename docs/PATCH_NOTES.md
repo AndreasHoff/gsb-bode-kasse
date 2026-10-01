@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.6.0 — 1. oktober 2026
+
+**Feature: Brugervenlig rentegebyr-integrazione**
+
+- Medlemmer kan nu se deres opkrævede rentegebyr i deres egen profil og betale dem sammen med bøder
+- Når du betaler rentegebyr sammen med bøder, behandles de som en samlet betaling med MobilePay
+- Administratorer kan se rentegebyrerne når de klikker på medlemmer i Hold-oversigten — hver medlemsprofil viser nu både bøder og renter
+- Holdoversigten viser nu korrekte samlet beløb: "Udestående" og "Godkendt" inkluderer nu både ubetalt gæld og rentegebyr
+- Rentegebyrerne for hver medlems profil sorteres efter dato (nyeste først) for at være nemme at gennemgå
+
+---
+
 ## v1.5.0 — 1. oktober 2026
 
 **Feature: Daglige rentegebyr på ubetalt gæld (F029)**

@@ -4,7 +4,6 @@ import {
   getActiveSeason,
   getInterestChargesForSeason,
   getUsers,
-  getTeam,
   getPayments,
 } from "../../lib/firestore";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
@@ -29,6 +28,7 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
   const [season, setSeason] = useState<Season | null>(null);
   const [charges, setCharges] = useState<InterestCharge[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -36,7 +36,7 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
     setError(null);
 
     try {
-      const [activeSeason, users, allPayments] = await Promise.all([
+      const [activeSeason, allUsers, allPayments] = await Promise.all([
         getActiveSeason(teamId),
         getUsers(),
         getPayments(teamId),
@@ -47,6 +47,7 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
         setSeason(null);
         setCharges([]);
         setPayments([]);
+        setUsers([]);
         setLoading(false);
         return;
       }
@@ -56,6 +57,7 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
       setSeason(activeSeason);
       setCharges(seasonCharges);
       setPayments(allPayments);
+      setUsers(allUsers);
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : "Ukendt fejl";
       setError(`Kunne ikke hente rentegebyr (${message}).`);
@@ -70,6 +72,12 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
 
   // Build summary data
   const memberSummaries = useMemo(() => {
+    // Create a map of userId -> userName for quick lookup
+    const userNameMap = new Map<string, string>();
+    for (const user of users) {
+      userNameMap.set(user.id, user.name);
+    }
+
     // Build a set of approved interest charge IDs (paid charges)
     const approvedInterestChargeIds = new Set<string>();
     for (const payment of payments) {
@@ -97,17 +105,19 @@ export default function AdminInterestCharges({ teamId }: AdminInterestChargesPro
 
       summaryMap.set(charge.userId, {
         userId: charge.userId,
-        userName: existing?.userName ?? "Henter navn...",
+        userName: userNameMap.get(charge.userId) ?? "Ukendt bruger",
         chargeCount: (existing?.chargeCount ?? 0) + 1,
         totalAmount: (existing?.totalAmount ?? 0) + charge.amount,
         months,
         charges: [...(existing?.charges ?? []), charge],
       });
+
+      console.log(`Updated summary for user ${charge.userId}:`, summaryMap.get(charge.userId));
     }
 
     return Array.from(summaryMap.values())
       .sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [charges, payments]);
+  }, [charges, payments, users]);
 
   // Build set of approved interest charge IDs (paid charges)
   const approvedInterestChargeIds = useMemo(() => {

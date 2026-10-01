@@ -94,6 +94,9 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       }
 
       // Use season totals from database for team aggregates
+      // Note: These already include interest charges because when payments are created
+      // with interest charges, the totalAmount (fines + interest) is used to update
+      // the UserSeasonBalance
       const aggOwed = (season.totalOutstanding ?? 0) + (season.totalPendingBalance ?? 0);
       const aggPaid = season.totalApprovedBalance ?? 0;
       
@@ -113,6 +116,8 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
         const role: MemberRole = membership?.role === "admin" ? "admin" : "member";
 
         // totalDebt = outstanding + pending (both are unpaid)
+        // Note: These already include interest charges because when payments are created
+        // with interest, the totalAmount (fines + interest) updates these balances
         const totalDebt = (balance?.outstandingBalance ?? 0) + (balance?.pendingBalance ?? 0);
         const paidAmount = balance?.approvedBalance ?? 0;
 

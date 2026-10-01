@@ -5,10 +5,11 @@ import {
   getFinesForUser,
   getPaymentsForUser,
   removeMemberFromFine,
+  getInterestChargesForUser,
 } from "../../lib/firestore";
 import { canDeleteFines } from "../../lib/permissions";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
-import type { UserSeasonBalance, Fine, Payment, Role } from "../../types/domain";
+import type { UserSeasonBalance, Fine, Payment, Role, InterestCharge } from "../../types/domain";
 import "../profile/profile.css";
 
 interface MemberProfileProps {
@@ -42,6 +43,7 @@ export default function MemberProfile({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [balance, setBalance] = useState<UserSeasonBalance | null>(null);
   const [fines, setFines] = useState<FineWithPayment[]>([]);
+  const [interestCharges, setInterestCharges] = useState<InterestCharge[]>([]);
   const [seasonName, setSeasonName] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -66,10 +68,11 @@ export default function MemberProfile({
       const userBalance = await getUserSeasonBalance(userId, teamId, season.id);
       setBalance(userBalance);
 
-      // Fetch fines and payments
-      const [allFines, allPayments] = await Promise.all([
+      // Fetch fines, payments, and interest charges
+      const [allFines, allPayments, userInterestCharges] = await Promise.all([
         getFinesForUser(teamId, userId),
         getPaymentsForUser(teamId, userId),
+        getInterestChargesForUser(teamId, userId),
       ]);
 
       // Filter to current season and non-deleted
@@ -106,6 +109,16 @@ export default function MemberProfile({
       );
 
       setFines(finesWithPayment);
+      
+      // Filter interest charges to current season and sort by date
+      const seasonInterestCharges = userInterestCharges.filter(
+        (charge) => charge.seasonId === season.id,
+      );
+      seasonInterestCharges.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+      setInterestCharges(seasonInterestCharges);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Ukendt fejl";
       setErrorMessage(`Kunne ikke hente medlemsprofil (${message}).`);
@@ -142,6 +155,12 @@ export default function MemberProfile({
   const outstanding = balance?.outstandingBalance ?? 0;
   const pending = balance?.pendingBalance ?? 0;
   const approved = balance?.approvedBalance ?? 0;
+
+  // Calculate unpaid interest charges (not included in payment)
+  const unpaidInterestTotal = interestCharges.reduce((sum, charge) => sum + charge.amount, 0);
+
+  // Total outstanding includes both fines balance and unpaid interest
+  const totalOutstanding = outstanding + unpaidInterestTotal;
 
   const initials = userName
     .split(" ")
@@ -186,7 +205,7 @@ export default function MemberProfile({
             <div className="balance-grid">
               <div className="balance-card balance-card--outstanding">
                 <div className="balance-card__label">Ubetalt</div>
-                <div className="balance-card__value">{formatAmount(outstanding)}</div>
+                <div className="balance-card__value">{formatAmount(totalOutstanding)}</div>
               </div>
               <div className="balance-card balance-card--pending">
                 <div className="balance-card__label">Afventer</div>
@@ -286,6 +305,36 @@ export default function MemberProfile({
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+          </section>
+
+          {/* Interest Charges */}
+          <section className="profile-section">
+            <h2 className="profile-section-title">Rentegebyrer</h2>
+            {interestCharges.length === 0 && (
+              <div className="empty-state py-6">
+                <p className="text-4xl mb-3">✅</p>
+                <p className="text-sm">Ingen rentegebyrer i denne sæson.</p>
+              </div>
+            )}
+            {interestCharges.length > 0 && (
+              <div className="fine-list">
+                {interestCharges.map((charge) => (
+                  <div key={charge.id} className="fine-item">
+                    <div className="fine-item__header">
+                      <span className="fine-item__title">Rente fra {charge.month}</span>
+                      <span className="fine-item__amount">
+                        {formatAmount(charge.amount)}
+                      </span>
+                    </div>
+                    <div className="fine-item__meta">
+                      <span className="fine-item__date">
+                        Opkrævet {formatRelativeTime(charge.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </section>

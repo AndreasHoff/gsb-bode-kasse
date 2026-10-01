@@ -6,7 +6,9 @@ import {
   getPaymentsForUser,
   getTeam,
   updateUserProfile,
+  getInterestChargesForUser,
 } from "../../lib/firestore";
+import type { InterestCharge } from "../../types/domain";
 import { formatAmount } from "../../lib/utils";
 // import InstallAppOption from "../pwa-install/InstallAppOption";
 import "./profile.css";
@@ -22,6 +24,12 @@ interface UserProfileProps {
 type UnpaidFineSummary = {
   id: string;
   title: string;
+  amount: number;
+};
+
+type UnpaidInterestSummary = {
+  id: string;
+  month: string;
   amount: number;
 };
 
@@ -44,7 +52,9 @@ export default function UserProfile({
   const [outstandingTotal, setOutstandingTotal] = useState<number | null>(null);
   const [pendingTotal, setPendingTotal] = useState<number | null>(null);
   const [unpaidFines, setUnpaidFines] = useState<UnpaidFineSummary[]>([]);
+  const [unpaidInterestCharges, setUnpaidInterestCharges] = useState<UnpaidInterestSummary[]>([]);
   const [selectedFineIds, setSelectedFineIds] = useState<string[]>([]);
+  const [selectedInterestChargeIds, setSelectedInterestChargeIds] = useState<string[]>([]);
   const [isRegisteringPayment, setIsRegisteringPayment] = useState(false);
   const [paymentFeedback, setPaymentFeedback] = useState<{
     type: "success" | "error";
@@ -85,33 +95,46 @@ export default function UserProfile({
       setStatsError(null);
 
       try {
-        const [fines, payments, team] = await Promise.all([
+        const [fines, payments, team, interestCharges] = await Promise.all([
           getFinesForUser(teamId, userId),
           getPaymentsForUser(teamId, userId),
           getTeam(teamId),
+          getInterestChargesForUser(teamId, userId),
         ]);
 
         if (!isActive) return;
 
         const pendingFineIds = new Set<string>();
         const approvedFineIds = new Set<string>();
+        const pendingInterestChargeIds = new Set<string>();
+        const approvedInterestChargeIds = new Set<string>();
+
         for (const p of payments) {
           const fineIds = getFineIdsFromPayment(p);
           if (p.status === "pending") {
             fineIds.forEach((id) => pendingFineIds.add(id));
+            if (p.interestChargeIds) {
+              p.interestChargeIds.forEach((id) => pendingInterestChargeIds.add(id));
+            }
           }
           if (p.status === "approved") {
             fineIds.forEach((id) => approvedFineIds.add(id));
+            if (p.interestChargeIds) {
+              p.interestChargeIds.forEach((id) => approvedInterestChargeIds.add(id));
+            }
           }
         }
 
-        // Compute totals per fine to avoid double counting when both unpaid+pending payment records exist
+        // Compute totals per fine and interest charge to avoid double counting
         let paid = 0;
         let outstanding = 0;
         let pending = 0;
         const nextUnpaidFines: UnpaidFineSummary[] = [];
+        const nextUnpaidInterestCharges: UnpaidInterestSummary[] = [];
         const unpaidIds: string[] = [];
+        const unpaidInterestIds: string[] = [];
 
+        // Process fines
         for (const fine of fines) {
           if (approvedFineIds.has(fine.id)) {
             paid += fine.amount;
@@ -128,14 +151,37 @@ export default function UserProfile({
           }
         }
 
+        // Process interest charges
+        for (const charge of interestCharges) {
+          if (approvedInterestChargeIds.has(charge.id)) {
+            paid += charge.amount;
+          } else if (pendingInterestChargeIds.has(charge.id)) {
+            pending += charge.amount;
+          } else {
+            outstanding += charge.amount;
+            unpaidInterestIds.push(charge.id);
+            nextUnpaidInterestCharges.push({
+              id: charge.id,
+              month: charge.month,
+              amount: charge.amount,
+            });
+          }
+        }
+
         setPaidTotal(paid);
         setOutstandingTotal(outstanding);
         setPendingTotal(pending);
         setUnpaidFines(nextUnpaidFines);
+        setUnpaidInterestCharges(nextUnpaidInterestCharges);
         setSelectedFineIds((previous) => {
           const unpaidSet = new Set(unpaidIds);
           const stillUnpaid = previous.filter((id) => unpaidSet.has(id));
           return stillUnpaid.length > 0 ? stillUnpaid : unpaidIds;
+        });
+        setSelectedInterestChargeIds((previous) => {
+          const unpaidSet = new Set(unpaidInterestIds);
+          const stillUnpaid = previous.filter((id) => unpaidSet.has(id));
+          return stillUnpaid.length > 0 ? stillUnpaid : unpaidInterestIds;
         });
         setMobilePayBoxUrl(team?.mobilePayBoxUrl?.trim() || undefined);
       } catch (error) {
@@ -145,7 +191,9 @@ export default function UserProfile({
         setOutstandingTotal(0);
         setPendingTotal(0);
         setUnpaidFines([]);
+        setUnpaidInterestCharges([]);
         setSelectedFineIds([]);
+        setSelectedInterestChargeIds([]);
         setMobilePayBoxUrl(undefined);
         setStatsError(`Kunne ikke hente betalingsoversigt (${message}).`);
       } finally {
@@ -188,7 +236,7 @@ export default function UserProfile({
     const rawDraft = window.sessionStorage.getItem(paymentDraftStorageKey);
     if (!rawDraft) return;
 
-    type PaymentDraft = { fineIds: string[]; amount: number };
+    type PaymentDraft = { fineIds: string[]; interestChargeIds: string[]; amount: number };
     let parsed: PaymentDraft | null = null;
     try {
       parsed = JSON.parse(rawDraft) as PaymentDraft;
@@ -197,7 +245,7 @@ export default function UserProfile({
       return;
     }
 
-    if (!parsed || parsed.fineIds.length === 0 || parsed.amount <= 0) {
+    if (!parsed || (parsed.fineIds.length === 0 && parsed.interestChargeIds.length === 0) || parsed.amount <= 0) {
       window.sessionStorage.removeItem(paymentDraftStorageKey);
       return;
     }
@@ -213,6 +261,7 @@ export default function UserProfile({
         userId,
         parsed.amount,
         userId,
+        parsed.interestChargeIds,
       );
       setPaymentFeedback({
         type: "success",
@@ -276,13 +325,13 @@ export default function UserProfile({
     };
   }, [settlePaymentDraft]);
 
-  function startPayment(fineIds: string[], amount: number): void {
-    if (!mobilePayBoxUrl || fineIds.length === 0 || amount <= 0) return;
+  function startPayment(fineIds: string[], interestChargeIds: string[], amount: number): void {
+    if (!mobilePayBoxUrl || (fineIds.length === 0 && interestChargeIds.length === 0) || amount <= 0) return;
 
     setPaymentFeedback(null);
     window.sessionStorage.setItem(
       paymentDraftStorageKey,
-      JSON.stringify({ fineIds, amount }),
+      JSON.stringify({ fineIds, interestChargeIds, amount }),
     );
 
     // Navigate the current tab to MobilePay so that iOS does not leave the
@@ -294,19 +343,26 @@ export default function UserProfile({
   }
 
   function handlePaySelected(): void {
-    if (selectedFineIds.length === 0) return;
+    if (selectedFineIds.length === 0 && selectedInterestChargeIds.length === 0) return;
     const selectedFineIdsSet = new Set(selectedFineIds);
-    const selectedAmount = unpaidFines.reduce(
-      (sum, fine) => (selectedFineIdsSet.has(fine.id) ? sum + fine.amount : sum),
-      0,
-    );
-    startPayment(selectedFineIds, selectedAmount);
+    const selectedInterestIdsSet = new Set(selectedInterestChargeIds);
+    const selectedAmount = 
+      unpaidFines.reduce(
+        (sum, fine) => (selectedFineIdsSet.has(fine.id) ? sum + fine.amount : sum),
+        0,
+      ) +
+      unpaidInterestCharges.reduce(
+        (sum, charge) => (selectedInterestIdsSet.has(charge.id) ? sum + charge.amount : sum),
+        0,
+      );
+    startPayment(selectedFineIds, selectedInterestChargeIds, selectedAmount);
   }
 
   function handlePayAll(): void {
-    if (!outstandingTotal || unpaidFines.length === 0) return;
+    if (!outstandingTotal || (unpaidFines.length === 0 && unpaidInterestCharges.length === 0)) return;
     startPayment(
       unpaidFines.map((fine) => fine.id),
+      unpaidInterestCharges.map((charge) => charge.id),
       outstandingTotal,
     );
   }
@@ -319,23 +375,30 @@ export default function UserProfile({
   const hasMobilePayBoxUrl = (mobilePayBoxUrl ?? "").trim().length > 0;
   const selectedTotal = useMemo(() => {
     const selectedFineIdsSet = new Set(selectedFineIds);
-    return unpaidFines.reduce(
-      (sum, fine) => (selectedFineIdsSet.has(fine.id) ? sum + fine.amount : sum),
-      0,
+    const selectedInterestIdsSet = new Set(selectedInterestChargeIds);
+    return (
+      unpaidFines.reduce(
+        (sum, fine) => (selectedFineIdsSet.has(fine.id) ? sum + fine.amount : sum),
+        0,
+      ) +
+      unpaidInterestCharges.reduce(
+        (sum, charge) => (selectedInterestIdsSet.has(charge.id) ? sum + charge.amount : sum),
+        0,
+      )
     );
-  }, [selectedFineIds, unpaidFines]);
+  }, [selectedFineIds, selectedInterestChargeIds, unpaidFines, unpaidInterestCharges]);
   const canPaySelected =
     !isLoadingStats &&
-    selectedFineIds.length > 0 &&
+    (selectedFineIds.length > 0 || selectedInterestChargeIds.length > 0) &&
     selectedTotal > 0 &&
     hasMobilePayBoxUrl &&
-    unpaidFines.length > 0 &&
+    (unpaidFines.length > 0 || unpaidInterestCharges.length > 0) &&
     !isRegisteringPayment;
   const canPayAll =
     !isLoadingStats &&
     (outstandingTotal ?? 0) > 0 &&
     hasMobilePayBoxUrl &&
-    unpaidFines.length > 0 &&
+    (unpaidFines.length > 0 || unpaidInterestCharges.length > 0) &&
     !isRegisteringPayment;
 
   const initials = displayName
@@ -411,6 +474,35 @@ export default function UserProfile({
                 />
                 <span>{fine.title}</span>
                 <strong>{formatAmount(fine.amount)}</strong>
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Interest charges */}
+      {!isLoadingStats && unpaidInterestCharges.length > 0 && (
+        <section className="profile-payment-section">
+          <p className="profile-section__title">Rentegebyrer</p>
+          <div className="profile-fine-selection-list">
+            {unpaidInterestCharges.map((charge) => (
+              <label key={charge.id} className="profile-fine-selection-item">
+                <input
+                  type="checkbox"
+                  checked={selectedInterestChargeIds.includes(charge.id)}
+                  onChange={(event) => {
+                    setSelectedInterestChargeIds((previous) => {
+                      if (event.target.checked) {
+                        return previous.includes(charge.id)
+                          ? previous
+                          : [...previous, charge.id];
+                      }
+                      return previous.filter((id) => id !== charge.id);
+                    });
+                  }}
+                />
+                <span>Rente fra {charge.month}</span>
+                <strong>{formatAmount(charge.amount)}</strong>
               </label>
             ))}
           </div>
