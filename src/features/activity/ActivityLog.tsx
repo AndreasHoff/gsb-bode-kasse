@@ -1,18 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getActivityLogEntries, getUsers } from "../../lib/firestore";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
 import type { ActivityLogCursor } from "../../lib/firestore";
 import type { ActivityLog as ActivityLogEntry, User } from "../../types/domain";
 import "./ActivityLog.css";
 
-type HistoryFilter = "all" | "fines" | "payments";
-
 interface ActivityLogProps {
   teamId: string;
 }
 
 export default function ActivityLog({ teamId }: ActivityLogProps) {
-  const [activeFilter, setActiveFilter] = useState<HistoryFilter>("all");
   const [entries, setEntries] = useState<ActivityLogEntry[]>([]);
   const [usersById, setUsersById] = useState<Map<string, User>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
@@ -20,8 +17,6 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [cursor, setCursor] = useState<ActivityLogCursor | null>(null);
   const [hasMore, setHasMore] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const loadInitialEntries = useCallback(async () => {
     if (!teamId) {
@@ -68,7 +63,13 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
 
     try {
       const page = await getActivityLogEntries(teamId, 20, cursor);
-      setEntries((current) => [...current, ...page.entries]);
+
+      // Deduplicate: only add entries we haven't seen before
+      setEntries((current) => {
+        const seenIds = new Set(current.map((e) => e.id));
+        const newEntries = page.entries.filter((e) => !seenIds.has(e.id));
+        return [...current, ...newEntries];
+      });
       setCursor(page.cursor);
       setHasMore(page.hasMore);
     } catch (error) {
@@ -82,11 +83,6 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
   useEffect(() => {
     void loadInitialEntries();
   }, [loadInitialEntries]);
-
-  useEffect(() => {
-    // Reset search query when switching tabs
-    setSearchQuery("");
-  }, [activeFilter]);
 
   useEffect(() => {
     function refreshOnVisible(): void {
@@ -108,159 +104,46 @@ export default function ActivityLog({ teamId }: ActivityLogProps) {
     };
   }, [loadInitialEntries]);
 
-  const tabs: Array<{ id: HistoryFilter; label: string }> = [
-    { id: "all", label: "Alle" },
-    { id: "fines", label: "Bøder" },
-    { id: "payments", label: "Betalinger" },
-  ];
-
-  const filteredEntries = useMemo(() => {
-    let result = entries;
-
-    if (activeFilter === "all") {
-      result = entries;
-    } else if (activeFilter === "fines") {
-      result = entries.filter((entry) => entry.action.startsWith("fine."));
-    } else {
-      result = entries.filter((entry) => entry.action.startsWith("payment."));
-    }
-
-    // Apply search filter for fines tab
-    if (activeFilter === "fines" && searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter((entry) => {
-        const metadata = entry.metadata ?? {};
-        const assignedTo = metadata.assignedTo;
-        const recipientIds = Array.isArray(assignedTo) ? (assignedTo as string[]) : [];
-        const recipientNames = recipientIds
-          .map((id) => usersById.get(id)?.name ?? "")
-          .filter((name) => name.length > 0);
-
-        // Search in recipient names or fine title
-        const title = toStringValue(metadata.title) ?? "";
-        return (
-          recipientNames.some((name) => name.toLowerCase().includes(query))
-          || title.toLowerCase().includes(query)
-        );
-      });
-    }
-
-    return result;
-  }, [activeFilter, entries, searchQuery, usersById]);
-
-  function handleKeyDown(e: React.KeyboardEvent, currentIndex: number) {
-    let nextIndex: number | null = null;
-    if (e.key === "ArrowRight") {
-      nextIndex = (currentIndex + 1) % tabs.length;
-    } else if (e.key === "ArrowLeft") {
-      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-    } else if (e.key === "Home") {
-      nextIndex = 0;
-    } else if (e.key === "End") {
-      nextIndex = tabs.length - 1;
-    }
-    if (nextIndex !== null) {
-      e.preventDefault();
-      setActiveFilter(tabs[nextIndex].id);
-      tabRefs.current[nextIndex]?.focus();
-    }
-  }
-
   return (
     <div className="activity-log">
       <h1 className="app-title">Historik</h1>
-      <p className="app-subtitle mb-4">Følg bøder og betalinger for aktiv sæson</p>
+      <p className="app-subtitle mb-4">Alle bøder og betalinger</p>
 
-      <div className="activity-log__tabs" role="tablist" aria-label="Historik filtre">
-        {tabs.map((tab, index) => {
-          const isActive = activeFilter === tab.id;
-          return (
-            <button
-              key={tab.id}
-              ref={(el) => { tabRefs.current[index] = el; }}
-              type="button"
-              role="tab"
-              id={`history-tab-${tab.id}`}
-              aria-selected={isActive}
-              aria-controls={`history-panel-${tab.id}`}
-              tabIndex={isActive ? 0 : -1}
-              className={`activity-log__tab ${isActive ? "activity-log__tab--active" : ""}`}
-              onClick={() => setActiveFilter(tab.id)}
-              onKeyDown={(e) => handleKeyDown(e, index)}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      {isLoading && <p className="status-note mt-4">Henter historik...</p>}
+      {errorMessage && <p className="status-error mt-4">{errorMessage}</p>}
 
-      {tabs.map((tab) => {
-        const isVisible = activeFilter === tab.id;
-        const isFinesTab = tab.id === "fines";
-        return (
-          <div
-            key={tab.id}
-            role="tabpanel"
-            id={`history-panel-${tab.id}`}
-            aria-labelledby={`history-tab-${tab.id}`}
-            hidden={!isVisible}
-          >
-            {isVisible && (
-              <>
-                {isFinesTab && (
-                  <div className="mt-4 mb-4">
-                    <input
-                      type="text"
-                      placeholder="Søg efter medlem eller bødetype..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      aria-label="Søg efter medlem eller bødetype"
-                    />
-                  </div>
-                )}
-                {isLoading && <p className="status-note mt-4">Henter historik...</p>}
-                {errorMessage && <p className="status-error mt-4">{errorMessage}</p>}
+      {!isLoading && !errorMessage && entries.length === 0 && (
+        <div className="empty-state mt-4">
+          <p className="text-4xl mb-3">📋</p>
+          <p className="text-sm">Ingen historik endnu.</p>
+        </div>
+      )}
 
-                {!isLoading && !errorMessage && filteredEntries.length === 0 && (
-                  <div className="empty-state mt-4">
-                    <p className="text-4xl mb-3">📋</p>
-                    <p className="text-sm">
-                      {isFinesTab && searchQuery ? "Ingen bøder fundet." : "Ingen historik endnu."}
-                    </p>
-                  </div>
-                )}
+      {!isLoading && !errorMessage && entries.length > 0 && (
+        <div className="space-y-3 mt-4">
+          {entries.map((entry) => (
+            <ActivityRow
+              key={entry.id}
+              entry={entry}
+              actor={usersById.get(entry.actorId) ?? null}
+              usersById={usersById}
+            />
+          ))}
+        </div>
+      )}
 
-                {!isLoading && !errorMessage && filteredEntries.length > 0 && (
-                  <div className="space-y-3 mt-4">
-                    {filteredEntries.map((entry) => (
-                      <ActivityRow
-                        key={entry.id}
-                        entry={entry}
-                        actor={usersById.get(entry.actorId) ?? null}
-                        usersById={usersById}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {!isLoading && !errorMessage && hasMore && (
-                  <button
-                    type="button"
-                    className="btn-secondary w-full mt-4"
-                    disabled={isLoadingMore}
-                    onClick={() => {
-                      void loadMoreEntries();
-                    }}
-                  >
-                    {isLoadingMore ? "Indlæser..." : "Indlæs flere"}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        );
-      })}
+      {!isLoading && !errorMessage && hasMore && (
+        <button
+          type="button"
+          className="btn-secondary w-full mt-4"
+          disabled={isLoadingMore}
+          onClick={() => {
+            void loadMoreEntries();
+          }}
+        >
+          {isLoadingMore ? "Indlæser..." : "Indlæs flere"}
+        </button>
+      )}
     </div>
   );
 }
@@ -326,6 +209,9 @@ function getActionIcon(action: string): string {
   if (action === "rule.created") return "📋";
   if (action === "rule.updated") return "✏️";
   if (action === "rule.deactivated") return "⏸️";
+  if (action === "rule.proposal_created") return "📝";
+  if (action === "rule.proposal_approved") return "✅";
+  if (action === "rule.proposal_denied") return "❌";
   return "📌";
 }
 
@@ -408,6 +294,20 @@ function getActionText(
 
   if (entry.action === "rule.deactivated") {
     return `${actorName} deaktiverede bødetypen ${title}.`;
+  }
+
+  if (entry.action === "rule.proposal_created") {
+    return `${actorName} foreslog en ny bødetype ${title}${amount !== null ? ` på ${formatAmount(amount)}` : ""}.`;
+  }
+
+  if (entry.action === "rule.proposal_approved") {
+    return `${actorName} godkendte forslaget for bødetypen ${title}.`;
+  }
+
+  if (entry.action === "rule.proposal_denied") {
+    const reason = toStringValue(metadata.denialReason);
+    const reasonText = reason ? ` (${reason})` : "";
+    return `${actorName} afviste forslaget for bødetypen ${title}${reasonText}.`;
   }
 
   return `${actorName} udførte handlingen ${entry.action}.`;
