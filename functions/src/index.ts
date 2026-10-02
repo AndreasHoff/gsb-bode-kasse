@@ -708,8 +708,6 @@ export const chargeOutstandingFineInterest = onSchedule(
 
     const today = new Date();
     const todayIso = today.toISOString().split("T")[0]; // YYYY-MM-DD
-    const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const previousMonthStr = previousMonth.toISOString().substring(0, 7); // YYYY-MM
 
     let membersChargedCount = 0;
     let chargesCreatedCount = 0;
@@ -771,12 +769,16 @@ export const chargeOutstandingFineInterest = onSchedule(
             `[chargeOutstandingFineInterest] Processing ${members.length} members in team ${teamId}`,
           );
 
-          // 2. For each member, check for unpaid fines from previous month
+          // 2. For each member, check for unpaid fines from the previous month
           for (const member of members) {
             const userId = (member as Record<string, unknown>).userId as string;
 
             try {
-              // Get all unpaid fines for this user from the previous month
+              // Calculate previous month
+              const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+              const previousMonthStr = previousMonth.toISOString().substring(0, 7); // YYYY-MM
+
+              // Get all fines for this user from the previous month
               const finesSnap = await db
                 .collection("teams")
                 .doc(teamId)
@@ -797,7 +799,7 @@ export const chargeOutstandingFineInterest = onSchedule(
                 continue;
               }
 
-              // Check if any of these fines have unpaid payments
+              // Check if any of these previous-month fines have unpaid payments
               let hasUnpaidFines = false;
 
               for (const fineDoc of finesFromPreviousMonth) {
@@ -828,19 +830,19 @@ export const chargeOutstandingFineInterest = onSchedule(
                 continue;
               }
 
-              // 3. Check if interest charge already exists for this user, team, month, and date
+              // 3. Check if interest charge already exists for TODAY (daily deduplication)
+              // This ensures we only charge once per day per user as long as previous month fines are unpaid
               const existingChargesSnap = await db
                 .collection("teams")
                 .doc(teamId)
                 .collection("interestCharges")
                 .where("userId", "==", userId)
-                .where("month", "==", previousMonthStr)
                 .where("chargedOn", "==", todayIso)
                 .get();
 
               if (!existingChargesSnap.empty) {
                 console.log(
-                  `[chargeOutstandingFineInterest] Interest already charged for user ${userId}, month ${previousMonthStr}, team ${teamId}`,
+                  `[chargeOutstandingFineInterest] Interest already charged for user ${userId}, date ${todayIso}, team ${teamId}`,
                 );
                 continue;
               }
@@ -861,7 +863,6 @@ export const chargeOutstandingFineInterest = onSchedule(
                 seasonId,
                 amount: 5,
                 chargedOn: todayIso,
-                month: previousMonthStr,
                 reason: "daily_outstanding_fine_interest",
                 createdAt: new Date(),
               };
@@ -884,7 +885,6 @@ export const chargeOutstandingFineInterest = onSchedule(
                 metadata: {
                   userId,
                   amount: 5,
-                  month: previousMonthStr,
                   chargedOn: todayIso,
                 },
                 createdAt: new Date(),
