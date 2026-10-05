@@ -707,7 +707,13 @@ export const chargeOutstandingFineInterest = onSchedule(
     });
 
     const today = new Date();
-    const todayIso = today.toISOString().split("T")[0]; // YYYY-MM-DD
+    // Format date in Europe/Copenhagen timezone (not UTC) to match Cloud Scheduler's timezone
+    const todayIso = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Copenhagen",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(today); // YYYY-MM-DD in Copenhagen time
 
     let membersChargedCount = 0;
     let chargesCreatedCount = 0;
