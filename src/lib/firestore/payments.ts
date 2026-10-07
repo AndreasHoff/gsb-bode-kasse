@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { paymentsCol, paymentDoc, activityLogCol } from "./refs";
 import type { Payment, ActivityLog } from "../../types/domain";
 import { getFine } from "./fines";
+import { getInterestCharge } from "./interest-charges";
 import { getActiveSeason } from "./seasons";
 import { updateUserSeasonBalance } from "./balances";
 
@@ -18,6 +19,30 @@ function getFineIdsFromPayment(payment: Payment): string[] {
     return [payment.fineId];
   }
   return [];
+}
+
+/**
+ * Helper to get the seasonId from a payment.
+ * Tries to get it from fines first, then from interest charges.
+ */
+async function getSeasonIdFromPayment(
+  teamId: string,
+  payment: Payment,
+): Promise<string> {
+  const fineIds = getFineIdsFromPayment(payment);
+  
+  if (fineIds.length > 0) {
+    const firstFine = await getFine(teamId, fineIds[0]);
+    if (firstFine) return firstFine.seasonId;
+  }
+
+  // If no fines, try interest charges
+  if (payment.interestChargeIds && payment.interestChargeIds.length > 0) {
+    const firstCharge = await getInterestCharge(teamId, payment.interestChargeIds[0]);
+    if (firstCharge) return firstCharge.seasonId;
+  }
+
+  throw new Error("Payment has no associated fines or interest charges");
 }
 
 export async function getPayments(teamId: string): Promise<Payment[]> {
@@ -86,12 +111,8 @@ export async function initiatePayment(
   const existing = await getPayment(teamId, paymentId);
   if (!existing) throw new Error(`Payment ${paymentId} not found in team ${teamId}`);
 
-  // Get season ID from one of the fines
-  const fineIds = getFineIdsFromPayment(existing);
-  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
-  
-  const firstFine = await getFine(teamId, fineIds[0]);
-  if (!firstFine) throw new Error("Associated fine not found");
+  // Get season ID from either fines or interest charges
+  const seasonId = await getSeasonIdFromPayment(teamId, existing);
 
   const batch = writeBatch(db);
 
@@ -105,6 +126,7 @@ export async function initiatePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -112,7 +134,11 @@ export async function initiatePayment(
     action: "payment.initiated",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineIds, amount: existing.amount },
+    metadata: { 
+      fineIds, 
+      ...(existing.interestChargeIds && existing.interestChargeIds.length > 0 && { interestChargeIds: existing.interestChargeIds }),
+      amount: existing.amount 
+    },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
@@ -121,7 +147,7 @@ export async function initiatePayment(
   await updateUserSeasonBalance(
     existing.userId,
     teamId,
-    firstFine.seasonId,
+    seasonId,
     {
       outstandingBalance: -existing.amount,
       pendingBalance: existing.amount,
@@ -271,12 +297,8 @@ export async function approvePayment(
     throw new Error("Kan kun godkende betalinger med status 'pending'");
   }
 
-  // Get season ID from one of the fines
-  const fineIds = getFineIdsFromPayment(existing);
-  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
-  
-  const firstFine = await getFine(teamId, fineIds[0]);
-  if (!firstFine) throw new Error("Associated fine not found");
+  // Get season ID from either fines or interest charges
+  const seasonId = await getSeasonIdFromPayment(teamId, existing);
 
   const batch = writeBatch(db);
 
@@ -291,6 +313,7 @@ export async function approvePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -298,7 +321,12 @@ export async function approvePayment(
     action: "payment.approved",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineIds, amount: existing.amount, userId: existing.userId },
+    metadata: { 
+      fineIds, 
+      ...(existing.interestChargeIds && existing.interestChargeIds.length > 0 && { interestChargeIds: existing.interestChargeIds }),
+      amount: existing.amount, 
+      userId: existing.userId 
+    },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
@@ -307,7 +335,7 @@ export async function approvePayment(
   await updateUserSeasonBalance(
     existing.userId,
     teamId,
-    firstFine.seasonId,
+    seasonId,
     {
       pendingBalance: -existing.amount,
       approvedBalance: existing.amount,
@@ -340,12 +368,8 @@ export async function disputePayment(
     throw new Error("Kan kun afvise betalinger med status 'pending'");
   }
 
-  // Get season ID from one of the fines
-  const fineIds = getFineIdsFromPayment(existing);
-  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
-  
-  const firstFine = await getFine(teamId, fineIds[0]);
-  if (!firstFine) throw new Error("Associated fine not found");
+  // Get season ID from either fines or interest charges
+  const seasonId = await getSeasonIdFromPayment(teamId, existing);
 
   const batch = writeBatch(db);
 
@@ -355,6 +379,7 @@ export async function disputePayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -362,7 +387,12 @@ export async function disputePayment(
     action: "payment.disputed",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineIds, amount: existing.amount, userId: existing.userId },
+    metadata: { 
+      fineIds, 
+      ...(existing.interestChargeIds && existing.interestChargeIds.length > 0 && { interestChargeIds: existing.interestChargeIds }),
+      amount: existing.amount, 
+      userId: existing.userId 
+    },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
@@ -371,7 +401,7 @@ export async function disputePayment(
   await updateUserSeasonBalance(
     existing.userId,
     teamId,
-    firstFine.seasonId,
+    seasonId,
     {
       pendingBalance: -existing.amount,
       outstandingBalance: existing.amount,
@@ -423,12 +453,8 @@ export async function refundPayment(
   const existing = await getPayment(teamId, paymentId);
   if (!existing) throw new Error(`Payment ${paymentId} not found in team ${teamId}`);
 
-  // Get season ID from one of the fines
-  const fineIds = getFineIdsFromPayment(existing);
-  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
-  
-  const firstFine = await getFine(teamId, fineIds[0]);
-  if (!firstFine) throw new Error("Associated fine not found");
+  // Get season ID from either fines or interest charges
+  const seasonId = await getSeasonIdFromPayment(teamId, existing);
 
   const batch = writeBatch(db);
 
@@ -441,6 +467,7 @@ export async function refundPayment(
 
   const logColRef = activityLogCol(teamId);
   const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
   const logEntry: ActivityLog = {
     id: logRef.id,
     teamId,
@@ -448,7 +475,12 @@ export async function refundPayment(
     action: "payment.refunded",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineIds, amount: existing.amount, userId: existing.userId },
+    metadata: { 
+      fineIds, 
+      ...(existing.interestChargeIds && existing.interestChargeIds.length > 0 && { interestChargeIds: existing.interestChargeIds }),
+      amount: existing.amount, 
+      userId: existing.userId 
+    },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
@@ -457,7 +489,7 @@ export async function refundPayment(
   await updateUserSeasonBalance(
     existing.userId,
     teamId,
-    firstFine.seasonId,
+    seasonId,
     {
       approvedBalance: -existing.amount,
       outstandingBalance: existing.amount,
@@ -506,16 +538,18 @@ export async function reconcilePayment(
     action: "payment.reconciled",
     entityType: "payment",
     entityId: paymentId,
-    metadata: { fineIds, amount: existing.amount, userId: existing.userId },
+    metadata: { 
+      fineIds, 
+      ...(existing.interestChargeIds && existing.interestChargeIds.length > 0 && { interestChargeIds: existing.interestChargeIds }),
+      amount: existing.amount, 
+      userId: existing.userId 
+    },
     createdAt: new Date().toISOString(),
   };
   batch.set(logRef, logEntry);
 
-  // Get season ID from one of the fines
-  if (fineIds.length === 0) throw new Error("Payment has no associated fines");
-  
-  const firstFine = await getFine(teamId, fineIds[0]);
-  if (!firstFine) throw new Error("Associated fine not found");
+  // Get season ID from either fines or interest charges
+  const seasonId = await getSeasonIdFromPayment(teamId, existing);
 
   // Update balance based on previous status
   const delta =
@@ -526,7 +560,7 @@ export async function reconcilePayment(
   await updateUserSeasonBalance(
     existing.userId,
     teamId,
-    firstFine.seasonId,
+    seasonId,
     delta,
     "payment.reconciled",
     actorId,

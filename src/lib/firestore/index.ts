@@ -80,6 +80,7 @@ export {
   getInterestChargesForUser,
   getInterestChargesForSeason,
   getInterestCharges,
+  getInterestCharge,
   createInterestCharge,
   softDeleteInterestCharge,
 } from "./interest-charges";

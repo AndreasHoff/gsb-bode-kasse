@@ -36,6 +36,17 @@ export async function getInterestCharges(teamId: string): Promise<InterestCharge
 }
 
 /**
+ * Gets a single interest charge by ID.
+ */
+export async function getInterestCharge(
+  teamId: string,
+  chargeId: string,
+): Promise<InterestCharge | null> {
+  const snap = await getDoc(doc(interestChargesCol(teamId), chargeId));
+  return snap.exists() ? snap.data() : null;
+}
+
+/**
  * Creates an InterestCharge and writes an ActivityLog entry atomically.
  * Called by the daily Cloud Function when a member has unpaid fines from the previous month.
  */
