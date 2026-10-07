@@ -384,6 +384,7 @@ function FineRuleListItem({
             <button
               type="button"
               className="btn-secondary px-2 py-0.5 text-xs rounded-lg"
+              style={{ margin: 0 }}
               onClick={onEdit}
               aria-label={`Rediger ${rule.title}`}
             >
