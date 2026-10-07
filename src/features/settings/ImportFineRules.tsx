@@ -134,7 +134,7 @@ export default function ImportFineRules({ teamId, actorId }: Props) {
 
         <button
           type="button"
-          className="btn-primary w-full bg-[var(--color-error)] hover:bg-[var(--color-error-hover)]"
+          className="btn-primary w-full bg-[var(--color-error)]"
           disabled={resetLoading}
           onClick={() => void handleResetFinancialTotals()}
         >

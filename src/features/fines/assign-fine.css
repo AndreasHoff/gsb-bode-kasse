@@ -127,10 +127,6 @@
 	transition: background 0.15s ease;
 }
 
-.assign-fine-member-item:hover {
-	background: color-mix(in srgb, var(--color-surface-muted) 78%, transparent);
-}
-
 .assign-fine-member-item--selected {
 	border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
 	background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-muted) 50%);
@@ -233,11 +229,6 @@
 	text-align: left;
 }
 
-.searchable-fine-rule-button:hover:not(:disabled) {
-	border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
-	background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface) 95%);
-}
-
 .searchable-fine-rule-button:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
@@ -332,10 +323,6 @@
 
 .searchable-fine-rule-item:last-child {
 	border-bottom: none;
-}
-
-.searchable-fine-rule-item:hover:not(:disabled) {
-	background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-muted) 40%);
 }
 
 .searchable-fine-rule-item--highlighted {

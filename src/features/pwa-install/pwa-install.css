@@ -44,18 +44,10 @@
   color: var(--color-primary);
 }
 
-.install-prompt__button--primary:hover {
-  opacity: 0.95;
-}
-
 .install-prompt__button--secondary {
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.install-prompt__button--secondary:hover {
-  background: rgba(255, 255, 255, 0.25);
 }
 
 .install-prompt__manual {
@@ -78,10 +70,6 @@
   transition: background 0.15s ease;
   width: 100%;
   text-align: left;
-}
-
-.install-prompt__accordion:hover {
-  background: rgba(255, 255, 255, 0.2);
 }
 
 .install-prompt__accordion-icon {
@@ -209,10 +197,6 @@
   transition: background 0.15s ease;
 }
 
-.install-modal__close:hover {
-  background: var(--color-surface-muted);
-}
-
 .install-modal__content {
   color: var(--color-text);
 }
@@ -266,10 +250,6 @@
   color: white;
 }
 
-.install-modal__button--primary:hover {
-  opacity: 0.9;
-}
-
 .install-modal__button--primary:active {
   transform: scale(0.97);
 }
@@ -277,10 +257,6 @@
 .install-modal__button--secondary {
   background: var(--color-surface-muted);
   color: var(--color-text);
-}
-
-.install-modal__button--secondary:hover {
-  opacity: 0.9;
 }
 
 .install-modal__button--secondary:active {

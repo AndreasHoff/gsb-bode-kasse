@@ -67,12 +67,7 @@
   color: var(--color-auth-segment-text);
 }
 
-.segment__button:hover {
-  background: var(--color-auth-segment-hover);
-}
-
-.segment__button--active,
-.segment__button--active:hover {
+.segment__button--active {
   background: var(--color-auth-segment-active-bg);
   color: var(--color-auth-segment-active-text);
 }

@@ -24,6 +24,7 @@ type MemberStat = {
   user: User;
   totalDebt: number;
   paidAmount: number;
+  totalIssued: number;
   role: MemberRole;
   hasPending?: boolean;
   hasDisputed?: boolean;
@@ -137,10 +138,14 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
         const totalDebt = baseDebt + interestDebt;
         const paidAmount = balance?.approvedBalance ?? 0;
 
+        // totalIssued = all fines issued (paid + unpaid) + interest
+        const totalIssued = totalDebt + paidAmount;
+
         return {
           user,
           totalDebt,
           paidAmount,
+          totalIssued,
           role,
           hasPending: userHasPending.has(user.id),
           hasDisputed: userHasDisputed.has(user.id),
@@ -185,6 +190,11 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
     [memberStats],
   );
 
+  const topIssuedMembers = useMemo(
+    () => [...memberStats].sort((a, b) => b.totalIssued - a.totalIssued),
+    [memberStats],
+  );
+
   return (
     <div className="app-page">
       <h1 className="app-title">Hold</h1>
@@ -219,10 +229,10 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
             <p className="team-saldo-card__value">{formatAmount(totalPaid)}</p>
           </div>
 
-          {/* Podium - Top 3 members by debt */}
-          {sortedMembers.length >= 3 && sortedMembers.some(m => m.totalDebt > 0) && (
+          {/* Podium - Top 3 members by total issued fines */}
+          {sortedMembers.length >= 3 && topIssuedMembers.some(m => m.totalIssued > 0) && (
             <div className="podium">
-              {sortedMembers.slice(0, 3).map((item, idx) => {
+              {topIssuedMembers.slice(0, 3).map((item, idx) => {
                 const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
                 const initials = item.user.name
                   .split(" ")
@@ -235,7 +245,7 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
                     <div className="podium-rank">{medal}</div>
                     <div className="podium-avatar">{initials}</div>
                     <div className="podium-name">{item.user.name}</div>
-                    <div className="podium-amount">{formatAmount(item.totalDebt)}</div>
+                    <div className="podium-amount">{formatAmount(item.totalIssued)}</div>
                   </div>
                 );
               })}

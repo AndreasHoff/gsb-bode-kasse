@@ -179,10 +179,6 @@
 	transition: background 0.15s ease;
 }
 
-.personal-paid-toggle:hover {
-	background: color-mix(in srgb, var(--color-surface-muted) 78%, transparent);
-}
-
 .personal-paid-toggle__text {
 	font-size: 0.84rem;
 	font-weight: 600;

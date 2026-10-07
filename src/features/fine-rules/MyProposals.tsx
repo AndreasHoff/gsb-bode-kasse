@@ -107,7 +107,7 @@ export default function MyProposals({
     <div className="app-page pb-8">
       <button
         type="button"
-        className="mb-2 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        className="mb-2 text-sm font-semibold text-[var(--color-text-muted)]"
         onClick={onBack}
       >
         ← Tilbage
@@ -198,7 +198,7 @@ function ProposalCard({ proposal, onSelect }: CardProps) {
     <button
       type="button"
       onClick={onSelect}
-      className="app-card p-4 w-full text-left hover:shadow-md transition-shadow"
+      className="app-card p-4 w-full text-left transition-shadow"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">

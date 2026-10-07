@@ -111,12 +111,6 @@
 	font-family: inherit;
 }
 
-.team-member-row:hover {
-	transform: translateX(3px);
-	border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
 .team-member-row:active {
 	opacity: 0.75;
 	transform: translateX(1px);
@@ -223,11 +217,6 @@
 	text-align: center;
 	transition: transform 0.2s ease, box-shadow 0.2s ease;
 	cursor: pointer;
-}
-
-.podium-slot:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .podium-slot--rank-1 {

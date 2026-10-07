@@ -52,7 +52,7 @@ const THEME_STORAGE_KEY = "gsb-color-theme";
 const APP_VERSION_STORAGE_KEY = "gsb-last-seen-version";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<Tab>("personal");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [status, setStatus] = useState<AppStatus>("checking");
   const [authError, setAuthError] = useState<string | null>(null);

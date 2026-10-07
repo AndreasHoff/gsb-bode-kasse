@@ -54,10 +54,6 @@
   row-gap: 0.9rem;
 }
 
-.proposal-filter:hover {
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-}
-
 .proposal-filter--active {
   border-color: color-mix(in srgb, var(--color-primary) 45%, white);
   background: color-mix(in srgb, var(--color-primary) 42%, transparent);
@@ -223,10 +219,6 @@
   transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.proposal-chip:hover {
-  transform: translateY(-1px);
-}
-
 .proposal-form-stack {
   display: flex;
   flex-direction: column;
@@ -245,12 +237,6 @@
   text-align: left;
   transition: transform 0.15s ease, border-color 0.2s ease, background-color 0.2s ease,
     box-shadow 0.2s ease;
-}
-
-.proposal-card:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
-  box-shadow: 0 18px 38px rgba(5, 15, 15, 0.34);
 }
 
 .proposal-card__rail {

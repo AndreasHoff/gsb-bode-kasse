@@ -24,17 +24,12 @@
 	transition: color 0.2s ease, border-color 0.2s ease;
 }
 
-.activity-log__tab:hover {
-	color: color-mix(in srgb, var(--color-primary) 75%, var(--color-text));
-}
-
 .activity-log__tab:focus-visible {
 	outline: 2px solid color-mix(in srgb, var(--color-primary) 50%, white);
 	outline-offset: -2px;
 }
 
-.activity-log__tab--active,
-.activity-log__tab--active:hover {
+.activity-log__tab--active {
 	color: color-mix(in srgb, var(--color-primary) 85%, var(--color-text));
 	border-bottom-color: var(--color-primary);
 }

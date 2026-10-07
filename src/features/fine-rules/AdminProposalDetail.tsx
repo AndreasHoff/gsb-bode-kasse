@@ -114,7 +114,7 @@ export default function AdminProposalDetail({
     <div className="app-page pb-8">
       <button
         type="button"
-        className="mb-2 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        className="mb-2 text-sm font-semibold text-[var(--color-text-muted)]"
         onClick={onBack}
       >
         ← Tilbage

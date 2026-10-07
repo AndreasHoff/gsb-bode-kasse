@@ -58,7 +58,7 @@
 }
 
 .app-page {
-	padding: 1rem;
+	padding: 0rem 1rem 1rem 1rem;
 }
 
 .app-main {
@@ -102,10 +102,6 @@
 	box-shadow: none;
 }
 
-.app-navbar__burger:hover {
-	background: rgba(255, 255, 255, 0.25);
-}
-
 .app-navbar__brand {
 	text-align: center;
 	display: flex;
@@ -127,12 +123,6 @@
 	transition: all 0.2s ease;
 }
 
-.app-version-link:hover {
-	background-color: rgba(255, 255, 255, 0.25) !important;
-	border-color: rgba(255, 255, 255, 0.4) !important;
-	color: rgba(255, 255, 255, 1) !important;
-}
-
 .app-navbar__user {
 	display: flex;
 	align-items: center;
@@ -149,10 +139,6 @@
 	background: rgba(255, 255, 255, 0.15);
 	color: var(--color-primary-contrast);
 	line-height: 1;
-}
-
-.app-navbar__theme-toggle:hover {
-	background: rgba(255, 255, 255, 0.25);
 }
 
 .app-navbar__user-name {
@@ -237,8 +223,7 @@
 	font-size: 0.95rem;
 }
 
-.app-side-menu__button--active,
-.app-side-menu__button--active:hover {
+.app-side-menu__button--active {
 	border-color: color-mix(in srgb, var(--color-primary) 45%, white);
 	background: color-mix(in srgb, var(--color-primary) 44%, transparent);
 }
@@ -335,18 +320,10 @@
 	color: var(--color-primary-contrast);
 }
 
-.btn-primary:hover {
-	background: var(--color-primary-strong);
-}
-
 .btn-secondary {
 	border-color: var(--color-border);
 	background: color-mix(in srgb, var(--color-surface-muted) 82%, transparent);
 	color: var(--color-text);
-}
-
-.btn-secondary:hover {
-	background: color-mix(in srgb, var(--color-surface-muted) 96%, transparent);
 }
 
 .btn-ghost {
@@ -355,18 +332,10 @@
 	color: white;
 }
 
-.btn-ghost:hover {
-	background: rgba(255, 255, 255, 0.14);
-}
-
 .btn-danger {
 	border-color: var(--color-error);
 	background: var(--color-error);
 	color: #ffffff;
-}
-
-.btn-danger:hover {
-	background: color-mix(in srgb, var(--color-error) 88%, black);
 }
 
 .status-error {
@@ -446,11 +415,6 @@
 	background: rgba(255, 255, 255, 0.15);
 	border-color: rgba(255, 255, 255, 0.3);
 	color: var(--color-primary-contrast);
-}
-
-:root[data-theme="violet"] .app-navbar__burger:hover,
-:root[data-theme="violet"] .app-navbar__theme-toggle:hover {
-	background: rgba(255, 255, 255, 0.25);
 }
 
 :root[data-theme="violet"] .app-card {

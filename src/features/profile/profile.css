@@ -44,11 +44,6 @@
 	transition: all 0.15s ease;
 }
 
-.back-button:hover {
-	background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-	border-color: var(--color-primary);
-}
-
 .back-button:active {
 	transform: scale(0.98);
 }
@@ -315,10 +310,6 @@
 	transition: opacity 0.15s ease, transform 0.1s ease;
 }
 
-.profile-pay-btn:hover:not(:disabled) {
-	opacity: 0.88;
-}
-
 .profile-pay-btn:active:not(:disabled) {
 	transform: scale(0.98);
 }
@@ -435,10 +426,6 @@
 	cursor: pointer;
 	white-space: nowrap;
 	transition: background 0.15s ease;
-}
-
-.profile-name-save-btn:hover:not(:disabled) {
-	background: color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .profile-name-save-btn:disabled {
