@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.7.0 — 7. oktober 2026
+
+**Feature: Administratorer kan genvinde forældede ventende betalinger (F030)**
+
+- Administratorer ser nu betalinger, der har ventet over 24 timer, i deres eget afsnit under "Godkend betalinger"
+- Forældede betalinger vises med en advarsel (⏰ Forældet) så administratorer hurtigt kan se hvilke betalinger der mangler opmærksomhed
+- Administratorer kan godkende eller afvise forældede betalinger direkte — når medlemmer forlader MobilePay uden at vende tilbage til appen
+- Hver foræld betaling viser hvor længe den har ventet, navn på medlem, beløb og hvilken bøde der er tale om
+- Dine saldo-oversigter opdateres automatisk når en forældet betaling bliver løst
+
+---
+
 ## v1.6.1 — 7. oktober 2026
 
 **Bugfix: Rentegebyr vises nu korrekt i Hold-oversigt**

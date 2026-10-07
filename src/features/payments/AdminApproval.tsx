@@ -17,6 +17,7 @@ type PaymentWithDetails = {
   payment: Payment;
   userName?: string;
   fineTitles: string[];
+  isStale: boolean;
 };
 
 /**
@@ -30,6 +31,18 @@ function getFineIdsFromPayment(payment: Payment): string[] {
     return [payment.fineId];
   }
   return [];
+}
+
+/**
+ * Helper to check if a payment is stale (pending for more than 24 hours).
+ */
+function isPaymentStale(payment: Payment): boolean {
+  if (!payment.initiatedAt) return false;
+  const initiatedTime = new Date(payment.initiatedAt);
+  const now = new Date();
+  const diffMs = now.getTime() - initiatedTime.getTime();
+  const diffHours = diffMs / 3_600_000;
+  return diffHours > 24;
 }
 
 export default function AdminApproval({ teamId, actorId, userRole }: Props) {
@@ -57,7 +70,7 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
             const fineTitles = fines
               .filter((f) => f !== null)
               .map((f) => f!.title);
-            return { payment: p, userName: user?.name, fineTitles };
+            return { payment: p, userName: user?.name, fineTitles, isStale: isPaymentStale(p) };
           }),
         );
         setItems(detailed);
@@ -143,52 +156,113 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
         </div>
       )}
 
-      <ul className="admin-approval-list" aria-label="Ventende betalinger">
-        {items.map((it) => (
-          <li key={it.payment.id} className="app-card admin-approval-item">
-            <div className="admin-approval-main">
-              <div className="admin-approval-info">
-                <p className="admin-approval-name">{it.userName ?? it.payment.userId}</p>
-                {it.fineTitles.length === 1 && (
-                  <p className="admin-approval-fine">{it.fineTitles[0]}</p>
-                )}
-                {it.fineTitles.length > 1 && (
-                  <p className="admin-approval-fine">
-                    {it.fineTitles.length} bøder samlet
-                  </p>
-                )}
-                {it.fineTitles.length === 0 && (
-                  <p className="admin-approval-fine">Bøde</p>
-                )}
-              </div>
-              <div className="admin-approval-meta">
-                <span className="admin-approval-amount">{formatAmount(it.payment.amount)}</span>
-                {it.payment.initiatedAt && (
-                  <span className="admin-approval-time">{formatRelativeTime(it.payment.initiatedAt)}</span>
-                )}
-              </div>
-            </div>
-            <div className="admin-approval-actions">
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => void handleApprove(it.payment.id)}
-                disabled={processingId === it.payment.id}
-              >
-                {processingId === it.payment.id ? "Behandler…" : "Godkend"}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => void handleDispute(it.payment.id)}
-                disabled={processingId === it.payment.id}
-              >
-                Afvis
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {/* Stale payments section */}
+      {items.some(it => it.isStale) && (
+        <section className="admin-approval-section">
+          <h2 className="admin-approval-section__title">Forældet betalinger</h2>
+          <p className="admin-approval-section__subtitle">Betalinger, der har ventet over 24 timer</p>
+          <ul className="admin-approval-list" aria-label="Forældet ventende betalinger">
+            {items.filter(it => it.isStale).map((it) => (
+              <li key={it.payment.id} className="app-card admin-approval-item admin-approval-item--stale">
+                <div className="admin-approval-badge">⏰ Forældet</div>
+                <div className="admin-approval-main">
+                  <div className="admin-approval-info">
+                    <p className="admin-approval-name">{it.userName ?? it.payment.userId}</p>
+                    {it.fineTitles.length === 1 && (
+                      <p className="admin-approval-fine">{it.fineTitles[0]}</p>
+                    )}
+                    {it.fineTitles.length > 1 && (
+                      <p className="admin-approval-fine">
+                        {it.fineTitles.length} bøder samlet
+                      </p>
+                    )}
+                    {it.fineTitles.length === 0 && (
+                      <p className="admin-approval-fine">Bøde</p>
+                    )}
+                  </div>
+                  <div className="admin-approval-meta">
+                    <span className="admin-approval-amount">{formatAmount(it.payment.amount)}</span>
+                    {it.payment.initiatedAt && (
+                      <span className="admin-approval-time">{formatRelativeTime(it.payment.initiatedAt)}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="admin-approval-actions">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => void handleApprove(it.payment.id)}
+                    disabled={processingId === it.payment.id}
+                  >
+                    {processingId === it.payment.id ? "Behandler…" : "Godkend"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => void handleDispute(it.payment.id)}
+                    disabled={processingId === it.payment.id}
+                  >
+                    Afvis
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Fresh pending payments section */}
+      {items.some(it => !it.isStale) && (
+        <section className="admin-approval-section">
+          <h2 className="admin-approval-section__title">Nye betalinger</h2>
+          <ul className="admin-approval-list" aria-label="Nye ventende betalinger">
+            {items.filter(it => !it.isStale).map((it) => (
+              <li key={it.payment.id} className="app-card admin-approval-item">
+                <div className="admin-approval-main">
+                  <div className="admin-approval-info">
+                    <p className="admin-approval-name">{it.userName ?? it.payment.userId}</p>
+                    {it.fineTitles.length === 1 && (
+                      <p className="admin-approval-fine">{it.fineTitles[0]}</p>
+                    )}
+                    {it.fineTitles.length > 1 && (
+                      <p className="admin-approval-fine">
+                        {it.fineTitles.length} bøder samlet
+                      </p>
+                    )}
+                    {it.fineTitles.length === 0 && (
+                      <p className="admin-approval-fine">Bøde</p>
+                    )}
+                  </div>
+                  <div className="admin-approval-meta">
+                    <span className="admin-approval-amount">{formatAmount(it.payment.amount)}</span>
+                    {it.payment.initiatedAt && (
+                      <span className="admin-approval-time">{formatRelativeTime(it.payment.initiatedAt)}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="admin-approval-actions">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => void handleApprove(it.payment.id)}
+                    disabled={processingId === it.payment.id}
+                  >
+                    {processingId === it.payment.id ? "Behandler…" : "Godkend"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => void handleDispute(it.payment.id)}
+                    disabled={processingId === it.payment.id}
+                  >
+                    Afvis
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

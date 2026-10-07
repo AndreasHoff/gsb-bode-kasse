@@ -104,6 +104,7 @@ docs/
 | F027 | Cancel Fine from Member Profile | Spec complete |
 | F028 | Searchable Fine Rule Selection | Spec complete |
 | F029 | Daily Interest on Outstanding Fines | Spec complete |
+| F030 | Admin Pending Payment Recovery | Spec complete |
 
 ---
 
