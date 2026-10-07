@@ -4,6 +4,15 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.6.1 — 7. oktober 2026
+
+**Bugfix: Rentegebyr vises nu korrekt i Hold-oversigt**
+
+- Rentegebyr tælles nu med i det samlede skyldige beløb, der vises for hvert medlem i "Hold"-tabellen
+- Holdoversigten viser nu matematisk korrekt sum: Samlet udstedt = Skyldigt + Betalt ✓
+
+---
+
 ## v1.6.0 — 1. oktober 2026
 
 **Feature: Brugervenlig rentegebyr-integrazione**

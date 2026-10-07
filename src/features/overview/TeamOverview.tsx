@@ -5,6 +5,7 @@ import {
   getUsers,
   getSeasonBalances,
   getPaymentsForReconciliation,
+  getInterestChargesForSeason,
 } from "../../lib/firestore";
 import { formatAmount } from "../../lib/utils";
 import type { Membership, User, Role, UserSeasonBalance } from "../../types/domain";
@@ -69,16 +70,25 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       setNoSeason(false);
       setSeasonName(season.name);
 
-      // Fetch season balances (authoritative source of truth) and check for pending/disputed statuses
-      const [seasonBalanceData, paymentsForReconciliation] = await Promise.all([
+      // Fetch season balances (authoritative source of truth), payments for reconciliation, and interest charges
+      const [seasonBalanceData, paymentsForReconciliation, interestCharges] = await Promise.all([
         getSeasonBalances(teamId, season.id),
         getPaymentsForReconciliation(teamId),
+        getInterestChargesForSeason(teamId, season.id),
       ]);
 
       // Build lookup for user balances
       const balanceByUserId = new Map<string, UserSeasonBalance>();
       for (const balance of seasonBalanceData) {
         balanceByUserId.set(balance.userId, balance);
+      }
+
+      // Build lookup for user interest charges (excluding deleted ones)
+      const interestByUserId = new Map<string, number>();
+      for (const charge of interestCharges) {
+        if (charge.deletedAt) continue;
+        const current = interestByUserId.get(charge.userId) ?? 0;
+        interestByUserId.set(charge.userId, current + charge.amount);
       }
 
       // Build lookup for pending/disputed statuses
@@ -93,17 +103,23 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
         }
       }
 
-      // Use season totals from database for team aggregates
-      // Note: These already include interest charges because when payments are created
-      // with interest charges, the totalAmount (fines + interest) is used to update
-      // the UserSeasonBalance
-      const aggOwed = (season.totalOutstanding ?? 0) + (season.totalPendingBalance ?? 0);
-      const aggPaid = season.totalApprovedBalance ?? 0;
-      
-      // Calculate totalIssued from season balances: it's the sum of all balances
+      // Calculate team aggregates from member balances + interest charges
+      // This ensures consistency: totalIssued = totalOwed + totalPaid
       let aggIssued = 0;
+      let aggOwed = 0;
+      let aggPaid = 0;
+      
+      // Sum all member balances
       for (const balance of seasonBalanceData) {
         aggIssued += balance.outstandingBalance + balance.pendingBalance + balance.approvedBalance;
+        aggOwed += balance.outstandingBalance + balance.pendingBalance;
+        aggPaid += balance.approvedBalance;
+      }
+      
+      // Add unpaid interest charges to both issued and owed
+      for (const interestAmount of interestByUserId.values()) {
+        aggIssued += interestAmount;
+        aggOwed += interestAmount;
       }
 
       setTotalIssued(aggIssued);
@@ -115,10 +131,10 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
         const membership = membershipByUserId.get(user.id);
         const role: MemberRole = membership?.role === "admin" ? "admin" : "member";
 
-        // totalDebt = outstanding + pending (both are unpaid)
-        // Note: These already include interest charges because when payments are created
-        // with interest, the totalAmount (fines + interest) updates these balances
-        const totalDebt = (balance?.outstandingBalance ?? 0) + (balance?.pendingBalance ?? 0);
+        // totalDebt = outstanding + pending (both are unpaid) + unpaid interest charges
+        const baseDebt = (balance?.outstandingBalance ?? 0) + (balance?.pendingBalance ?? 0);
+        const interestDebt = interestByUserId.get(user.id) ?? 0;
+        const totalDebt = baseDebt + interestDebt;
         const paidAmount = balance?.approvedBalance ?? 0;
 
         return {
