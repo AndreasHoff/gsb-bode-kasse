@@ -311,8 +311,9 @@ function FineRulesList({
 
       {!loading && rules.length > 0 && (
         <>
-          <div className="mb-4">
+          <div className="mb-4 search-for-fine-types">
             <input
+              name="search"
               type="text"
               placeholder="Søg efter bødetype..."
               value={searchQuery}
@@ -328,9 +329,9 @@ function FineRulesList({
               <p className="empty-state__text">Ingen bøder fundet.</p>
             </div>
           ) : (
-            <div className="item-list">
+            <div className="space-y-2">
               {filteredRules.map((rule) => (
-                <FineRuleCard
+                <FineRuleListItem
                   key={rule.id}
                   rule={rule}
                   canManageRules={canManageRules}
@@ -345,50 +346,49 @@ function FineRulesList({
   );
 }
 
-interface CardProps {
+interface ListItemProps {
   rule: FineRule;
   canManageRules: boolean;
   onEdit?: () => void;
 }
 
-function FineRuleCard({
+function FineRuleListItem({
   rule,
   canManageRules,
   onEdit,
-}: CardProps) {
+}: ListItemProps) {
   return (
-    <div className="app-card p-4">
+    <div style={{
+      padding: "0.5rem",
+      border: "1px solid var(--color-border)",
+      margin: "0.25rem 0",
+      borderRadius: "0.75rem",
+      backgroundColor: "color-mix(in srgb, var(--color-surface-muted) 60%, transparent)",
+    }}>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          {rule.emoji && (
-            <span className="text-2xl shrink-0" aria-hidden="true">
-              {rule.emoji}
-            </span>
-          )}
-          <div className="min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">{rule.title}</p>
             {rule.description && (
-              <p className="text-xs text-[var(--color-text-muted)] mt-0.5 line-clamp-2">
+              <p className="text-xs text-[var(--color-text-muted)] line-clamp-1">
                 {rule.description}
               </p>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-sm font-bold text-[var(--color-primary-contrast)] bg-[var(--color-primary)] px-2.5 py-1 rounded-xl">
+          <span className="text-sm font-bold text-[var(--color-primary-contrast)] bg-[var(--color-primary)] px-2 py-0.5 rounded-lg whitespace-nowrap">
             {formatAmount(rule.amount)}
           </span>
           {canManageRules && onEdit && (
-            <div className="flex gap-1">
-              <button
-                type="button"
-                className="btn-secondary px-2.5 py-1 text-xs rounded-xl"
-                onClick={onEdit}
-                aria-label={`Rediger ${rule.title}`}
-              >
-                ✏️
-              </button>
-            </div>
+            <button
+              type="button"
+              className="btn-secondary px-2 py-0.5 text-xs rounded-lg"
+              onClick={onEdit}
+              aria-label={`Rediger ${rule.title}`}
+            >
+              ✏️
+            </button>
           )}
         </div>
       </div>
