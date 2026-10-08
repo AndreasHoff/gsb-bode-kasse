@@ -4,6 +4,18 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.7.2 — 8. oktober 2026
+
+**Feature: Rentegebyr-visning forbedringer**
+
+- Når et medlem har flere rentegebyr, vises de nu i en udvidelig accordion for bedre overblik
+- Antal rentegebyr vises nu som et lille badge ved siden af "Renter"-overskriften i medlemsprofil
+- Hvert rentegebyr viser nu betalingsstatus: Ubetalt, Afventer, Godkendt, eller Afvist
+- Medlemmer får nu en advarsel i deres egen profil når de har ubetalte rentegebyr: "Du har ubetalte bøder fra sidste måned! Dine renter er nu [beløb]"
+- Administratorer kan se medlemmernes rentegebyr når de klikker på dem, men ser ikke deres personlige advarsler
+
+---
+
 ## v1.7.1 — 8. oktober 2026
 
 **Bugfix: Hold-oversigt UX forbedringer**

@@ -26,6 +26,10 @@ type FineWithPayment = Fine & {
   paymentStatus: "unpaid" | "pending" | "approved" | "disputed";
 };
 
+type InterestChargeWithPayment = InterestCharge & {
+  paymentStatus: "unpaid" | "pending" | "approved" | "disputed";
+};
+
 type DeleteConfirmationType = "fine" | "interest";
 
 interface DeleteConfirmation {
@@ -33,6 +37,12 @@ interface DeleteConfirmation {
   id: string;
   title: string;
   amount: number;
+}
+
+/** Formats an ISO date (YYYY-MM-DD) to dd-mm-yyyy format */
+function formatChargedDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}-${month}-${year}`;
 }
 
 export default function MemberProfile({
@@ -47,10 +57,11 @@ export default function MemberProfile({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [balance, setBalance] = useState<UserSeasonBalance | null>(null);
   const [fines, setFines] = useState<FineWithPayment[]>([]);
-  const [interestCharges, setInterestCharges] = useState<InterestCharge[]>([]);
+  const [interestCharges, setInterestCharges] = useState<InterestChargeWithPayment[]>([]);
   const [seasonName, setSeasonName] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isInterestsExpanded, setIsInterestsExpanded] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -84,8 +95,9 @@ export default function MemberProfile({
         (f) => f.seasonId === season.id && !f.deletedAt,
       );
 
-      // Build payment lookup
+      // Build payment lookup for fines
       const paymentByFineId = new Map<string, Payment>();
+      const paymentByInterestId = new Map<string, Payment>();
       for (const payment of allPayments) {
         if (payment.fineIds) {
           for (const fid of payment.fineIds) {
@@ -94,6 +106,11 @@ export default function MemberProfile({
         }
         if (payment.fineId) {
           paymentByFineId.set(payment.fineId, payment);
+        }
+        if (payment.interestChargeIds) {
+          for (const chargeId of payment.interestChargeIds) {
+            paymentByInterestId.set(chargeId, payment);
+          }
         }
       }
 
@@ -114,15 +131,28 @@ export default function MemberProfile({
 
       setFines(finesWithPayment);
       
-      // Filter interest charges to current season and sort by date
+      // Filter interest charges to current season
       const seasonInterestCharges = userInterestCharges.filter(
         (charge) => charge.seasonId === season.id,
       );
-      seasonInterestCharges.sort(
+
+      // Add payment status to interest charges
+      const interestChargesWithPayment: InterestChargeWithPayment[] = seasonInterestCharges.map(
+        (charge) => {
+          const payment = paymentByInterestId.get(charge.id);
+          return {
+            ...charge,
+            paymentStatus: payment?.status || "unpaid",
+          };
+        },
+      );
+
+      // Sort by creation date (newest first)
+      interestChargesWithPayment.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-      setInterestCharges(seasonInterestCharges);
+      setInterestCharges(interestChargesWithPayment);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Ukendt fejl";
       setErrorMessage(`Kunne ikke hente medlemsprofil (${message}).`);
@@ -166,7 +196,7 @@ export default function MemberProfile({
   const pending = balance?.pendingBalance ?? 0;
   const approved = balance?.approvedBalance ?? 0;
 
-  // Calculate unpaid interest charges (not included in payment)
+  // Calculate unpaid interest charges (include all interest charges in calculation)
   const unpaidInterestTotal = interestCharges.reduce((sum, charge) => sum + charge.amount, 0);
 
   // Total outstanding includes both fines balance and unpaid interest
@@ -182,13 +212,15 @@ export default function MemberProfile({
   return (
     <div className="app-page">
       {/* Back button */}
-      <button
-        onClick={onBack}
-        className="back-button"
-        aria-label="Tilbage til holdoversigt"
-      >
-        ← Tilbage
-      </button>
+      <div className="profile-header-top">
+        <button
+          onClick={onBack}
+          className="back-button"
+          aria-label="Tilbage til holdoversigt"
+        >
+          ← Tilbage
+        </button>
+      </div>
 
       <div className="profile-header">
         <div className="profile-avatar">{initials}</div>
@@ -251,9 +283,7 @@ export default function MemberProfile({
                       </span>
                     </div>
                     <div className="fine-item__meta">
-                      <span className="fine-item__date">
-                        {formatRelativeTime(fine.createdAt)}
-                      </span>
+                      
                       <span
                         className={`fine-item__status fine-item__status--${fine.paymentStatus}`}
                       >
@@ -262,15 +292,14 @@ export default function MemberProfile({
                         {fine.paymentStatus === "approved" && "Godkendt"}
                         {fine.paymentStatus === "disputed" && "Afvist"}
                       </span>
-                    </div>
-                    {fine.note && (
-                      <div className="fine-item__note">{fine.note}</div>
-                    )}
-                    {canDeleteFines(actorRole) && (
-                      <div className="fine-item__actions mt-2">
+                      <span className="fine-item__date">
+                        {formatRelativeTime(fine.createdAt)}
+                      </span>
+                       {canDeleteFines(actorRole) && (
+                      <div className="fine-item__actions">
                         <button
                           type="button"
-                          className="btn-danger btn-sm w-full"
+                          className="btn-danger btn-delete-fine"
                           disabled={isDeleting}
                           onClick={() =>
                             handleDeleteClick(fine.id, fine.title, fine.amount, "fine")
@@ -279,6 +308,10 @@ export default function MemberProfile({
                           {isDeleting ? "Sletter…" : "Slet bøde"}
                         </button>
                       </div>
+                    )}
+                    </div>
+                    {fine.note && (
+                      <div className="fine-item__note">{fine.note}</div>
                     )}
                   </div>
                 ))}
@@ -329,50 +362,127 @@ export default function MemberProfile({
 
           {/* Interest Charges */}
           <section className="profile-section">
-            <h2 className="profile-section-title">Rentegebyrer</h2>
+            <div className="profile-section-header">
+              <h2 className="profile-section-title">Renter</h2>
+              {interestCharges.length > 0 && (
+                <span className="profile-section-count">{interestCharges.length}</span>
+              )}
+            </div>
             {interestCharges.length === 0 && (
               <div className="empty-state py-6">
                 <p className="text-4xl mb-3">✅</p>
                 <p className="text-sm">Ingen rentegebyrer i denne sæson.</p>
               </div>
             )}
-            {interestCharges.length > 0 && (
+            {interestCharges.length === 1 && (
               <div className="fine-list">
                 {interestCharges.map((charge) => (
                   <div key={charge.id} className="fine-item">
                     <div className="fine-item__header">
-                      <span className="fine-item__title">Rente fra {charge.month}</span>
+                      <span className="fine-item__title">
+                        Opkrævet {formatChargedDate(charge.chargedOn)}
+                      </span>
                       <span className="fine-item__amount">
                         {formatAmount(charge.amount)}
                       </span>
                     </div>
                     <div className="fine-item__meta">
-                      <span className="fine-item__date">
-                        Opkrævet {formatRelativeTime(charge.createdAt)}
+                      <span
+                        className={`fine-item__status fine-item__status--${charge.paymentStatus}`}
+                      >
+                        {charge.paymentStatus === "unpaid" && "Ubetalt"}
+                        {charge.paymentStatus === "pending" && "Afventer"}
+                        {charge.paymentStatus === "approved" && "Godkendt"}
+                        {charge.paymentStatus === "disputed" && "Afvist"}
                       </span>
                     </div>
                     {canDeleteInterestCharges(actorRole) && (
                       <div className="fine-item__actions mt-2">
                         <button
                           type="button"
-                          className="btn-danger btn-sm w-full"
+                          className="btn-danger btn-delete-fine btn-delete-interest"
                           disabled={isDeleting}
                           onClick={() =>
                             handleDeleteClick(
                               charge.id,
-                              `Rente fra ${charge.month}`,
+                              `Rentegebyr ${formatChargedDate(charge.chargedOn)}`,
                               charge.amount,
                               "interest",
                             )
                           }
                         >
-                          {isDeleting ? "Sletter…" : "Slet rentegebyr"}
+                          {isDeleting ? "Sletter…" : "Slet rente"}
                         </button>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
+            )}
+            {interestCharges.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsInterestsExpanded(!isInterestsExpanded)}
+                  className="interests-accordion"
+                  aria-expanded={isInterestsExpanded}
+                >
+                  <span>
+                    {isInterestsExpanded
+                      ? "Skjul alle rentegebyrer"
+                      : `Vis alle ${interestCharges.length} rentegebyrer`}
+                  </span>
+                  <span className="interests-accordion-icon">
+                    {isInterestsExpanded ? "−" : "+"}
+                  </span>
+                </button>
+
+                {isInterestsExpanded && (
+                  <div className="fine-list interests-list">
+                    {interestCharges.map((charge) => (
+                      <div key={charge.id} className="fine-item">
+                        <div className="fine-item__header">
+                          <span className="fine-item__title">
+                            Opkrævet {formatChargedDate(charge.chargedOn)}
+                          </span>
+                          <span className="fine-item__amount">
+                            {formatAmount(charge.amount)}
+                          </span>
+                        </div>
+                        <div className="fine-item__meta">
+                          <span
+                            className={`fine-item__status fine-item__status--${charge.paymentStatus}`}
+                          >
+                            {charge.paymentStatus === "unpaid" && "Ubetalt"}
+                            {charge.paymentStatus === "pending" && "Afventer"}
+                            {charge.paymentStatus === "approved" && "Godkendt"}
+                            {charge.paymentStatus === "disputed" && "Afvist"}
+                          </span>
+                        </div>
+                        {canDeleteInterestCharges(actorRole) && (
+                          <div className="fine-item__actions mt-2">
+                            <button
+                              type="button"
+                              className="btn-danger btn-delete-fine btn-delete-interest"
+                              disabled={isDeleting}
+                              onClick={() =>
+                                handleDeleteClick(
+                                  charge.id,
+                                  `Rentegebyr ${formatChargedDate(charge.chargedOn)}`,
+                                  charge.amount,
+                                  "interest",
+                                )
+                              }
+                            >
+                              {isDeleting ? "Sletter…" : "Slet rente"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </section>
         </>
