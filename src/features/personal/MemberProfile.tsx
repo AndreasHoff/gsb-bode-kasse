@@ -188,7 +188,7 @@ export default function MemberProfile({
 
   return (
     <div className="app-page">
-      {/* Back button and warning */}
+      {/* Back button, avatar, and warning */}
       <div className="profile-header-top">
         <button
           onClick={onBack}
@@ -197,17 +197,17 @@ export default function MemberProfile({
         >
           ← Tilbage
         </button>
+        <div className="profile-avatar">{initials}</div>
         {unpaidInterestTotal > 0 && (
           <div className="profile-warning">
             <p className="profile-warning__text">
-              Du har ubetalte bøder fra sidste måned! Dine renter er nu {formatAmount(unpaidInterestTotal)}
+              Dine renter er nu {formatAmount(unpaidInterestTotal)}
             </p>
           </div>
         )}
       </div>
 
       <div className="profile-header">
-        <div className="profile-avatar">{initials}</div>
         <h1 className="app-title">{userName}</h1>
         {canAssignFines(actorRole) && (
           <p className="text-[var(--color-text-muted)] mt-1" style={{ fontSize: 'x-small' }}>ID: {userId}</p>
