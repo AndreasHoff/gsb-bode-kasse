@@ -35,6 +35,12 @@ interface DeleteConfirmation {
   amount: number;
 }
 
+/** Formats an ISO date (YYYY-MM-DD) to dd-mm-yyyy format */
+function formatChargedDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}-${month}-${year}`;
+}
+
 export default function MemberProfile({
   userId,
   userName,
@@ -51,6 +57,7 @@ export default function MemberProfile({
   const [seasonName, setSeasonName] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isInterestsExpanded, setIsInterestsExpanded] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -181,14 +188,23 @@ export default function MemberProfile({
 
   return (
     <div className="app-page">
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        className="back-button"
-        aria-label="Tilbage til holdoversigt"
-      >
-        ← Tilbage
-      </button>
+      {/* Back button and warning */}
+      <div className="profile-header-top">
+        <button
+          onClick={onBack}
+          className="back-button"
+          aria-label="Tilbage til holdoversigt"
+        >
+          ← Tilbage
+        </button>
+        {unpaidInterestTotal > 0 && (
+          <div className="profile-warning">
+            <p className="profile-warning__text">
+              Du har ubetalte bøder fra sidste måned! Dine renter er nu {formatAmount(unpaidInterestTotal)}
+            </p>
+          </div>
+        )}
+      </div>
 
       <div className="profile-header">
         <div className="profile-avatar">{initials}</div>
@@ -251,9 +267,7 @@ export default function MemberProfile({
                       </span>
                     </div>
                     <div className="fine-item__meta">
-                      <span className="fine-item__date">
-                        {formatRelativeTime(fine.createdAt)}
-                      </span>
+                      
                       <span
                         className={`fine-item__status fine-item__status--${fine.paymentStatus}`}
                       >
@@ -262,15 +276,14 @@ export default function MemberProfile({
                         {fine.paymentStatus === "approved" && "Godkendt"}
                         {fine.paymentStatus === "disputed" && "Afvist"}
                       </span>
-                    </div>
-                    {fine.note && (
-                      <div className="fine-item__note">{fine.note}</div>
-                    )}
-                    {canDeleteFines(actorRole) && (
-                      <div className="fine-item__actions mt-2">
+                      <span className="fine-item__date">
+                        {formatRelativeTime(fine.createdAt)}
+                      </span>
+                       {canDeleteFines(actorRole) && (
+                      <div className="fine-item__actions">
                         <button
                           type="button"
-                          className="btn-danger btn-sm w-full"
+                          className="btn-danger btn-delete-fine"
                           disabled={isDeleting}
                           onClick={() =>
                             handleDeleteClick(fine.id, fine.title, fine.amount, "fine")
@@ -279,6 +292,10 @@ export default function MemberProfile({
                           {isDeleting ? "Sletter…" : "Slet bøde"}
                         </button>
                       </div>
+                    )}
+                    </div>
+                    {fine.note && (
+                      <div className="fine-item__note">{fine.note}</div>
                     )}
                   </div>
                 ))}
@@ -329,50 +346,107 @@ export default function MemberProfile({
 
           {/* Interest Charges */}
           <section className="profile-section">
-            <h2 className="profile-section-title">Rentegebyrer</h2>
+            <div className="profile-section-header">
+              <h2 className="profile-section-title">Renter</h2>
+              {interestCharges.length > 0 && (
+                <span className="profile-section-count">{interestCharges.length}</span>
+              )}
+            </div>
             {interestCharges.length === 0 && (
               <div className="empty-state py-6">
                 <p className="text-4xl mb-3">✅</p>
                 <p className="text-sm">Ingen rentegebyrer i denne sæson.</p>
               </div>
             )}
-            {interestCharges.length > 0 && (
+            {interestCharges.length === 1 && (
               <div className="fine-list">
                 {interestCharges.map((charge) => (
                   <div key={charge.id} className="fine-item">
                     <div className="fine-item__header">
-                      <span className="fine-item__title">Rente fra {charge.month}</span>
+                      <span className="fine-item__title">
+                        Opkrævet {formatChargedDate(charge.chargedOn)}
+                      </span>
                       <span className="fine-item__amount">
                         {formatAmount(charge.amount)}
-                      </span>
-                    </div>
-                    <div className="fine-item__meta">
-                      <span className="fine-item__date">
-                        Opkrævet {formatRelativeTime(charge.createdAt)}
                       </span>
                     </div>
                     {canDeleteInterestCharges(actorRole) && (
                       <div className="fine-item__actions mt-2">
                         <button
                           type="button"
-                          className="btn-danger btn-sm w-full"
+                          className="btn-danger btn-delete-fine btn-delete-interest"
                           disabled={isDeleting}
                           onClick={() =>
                             handleDeleteClick(
                               charge.id,
-                              `Rente fra ${charge.month}`,
+                              `Rentegebyr ${formatChargedDate(charge.chargedOn)}`,
                               charge.amount,
                               "interest",
                             )
                           }
                         >
-                          {isDeleting ? "Sletter…" : "Slet rentegebyr"}
+                          {isDeleting ? "Sletter…" : "Slet rente"}
                         </button>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
+            )}
+            {interestCharges.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsInterestsExpanded(!isInterestsExpanded)}
+                  className="interests-accordion"
+                  aria-expanded={isInterestsExpanded}
+                >
+                  <span>
+                    {isInterestsExpanded
+                      ? "Skjul alle rentegebyrer"
+                      : `Vis alle ${interestCharges.length} rentegebyrer`}
+                  </span>
+                  <span className="interests-accordion-icon">
+                    {isInterestsExpanded ? "−" : "+"}
+                  </span>
+                </button>
+
+                {isInterestsExpanded && (
+                  <div className="fine-list interests-list">
+                    {interestCharges.map((charge) => (
+                      <div key={charge.id} className="fine-item">
+                        <div className="fine-item__header">
+                          <span className="fine-item__title">
+                            Opkrævet {formatChargedDate(charge.chargedOn)}
+                          </span>
+                          <span className="fine-item__amount">
+                            {formatAmount(charge.amount)}
+                          </span>
+                        </div>
+                        {canDeleteInterestCharges(actorRole) && (
+                          <div className="fine-item__actions mt-2">
+                            <button
+                              type="button"
+                              className="btn-danger btn-delete-fine btn-delete-interest"
+                              disabled={isDeleting}
+                              onClick={() =>
+                                handleDeleteClick(
+                                  charge.id,
+                                  `Rentegebyr ${formatChargedDate(charge.chargedOn)}`,
+                                  charge.amount,
+                                  "interest",
+                                )
+                              }
+                            >
+                              {isDeleting ? "Sletter…" : "Slet rente"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </section>
         </>
