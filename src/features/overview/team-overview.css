@@ -106,14 +106,12 @@
 	border-radius: 1rem;
 	border: 1px solid var(--color-border);
 	background: color-mix(in srgb, var(--color-surface-muted) 72%, transparent);
-	cursor: pointer;
-	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s;
 	font-family: inherit;
 }
 
 .team-member-row:active {
-	opacity: 0.75;
-	transform: translateX(1px);
+	opacity: 1;
+	transform: none;
 }
 
 .team-member-row__left {
@@ -215,22 +213,21 @@
 	border-radius: 0.9rem;
 	background: color-mix(in srgb, var(--color-surface-muted) 52%, transparent);
 	text-align: center;
-	transition: transform 0.2s ease, box-shadow 0.2s ease;
-	cursor: pointer;
 }
 
 .podium-slot--rank-1 {
-	border: 2px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
-	background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-muted) 52%);
+	border: 2px solid #FFD700;
+	background: color-mix(in srgb, #FFD700 8%, var(--color-surface-muted) 52%);
 }
 
 .podium-slot--rank-2 {
-	border: 1.5px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
-	background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface-muted) 52%);
+	border: 1.5px solid #C0C0C0;
+	background: color-mix(in srgb, #C0C0C0 8%, var(--color-surface-muted) 52%);
 }
 
 .podium-slot--rank-3 {
-	border: 1px solid var(--color-border);
+	border: 1.5px solid #CD7F32;
+	background: color-mix(in srgb, #CD7F32 8%, var(--color-surface-muted) 52%);
 }
 
 .podium-rank {

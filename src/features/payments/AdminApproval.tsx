@@ -138,7 +138,7 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
   return (
     <div className="admin-approval">
       <h1 className="app-title">Godkend betalinger</h1>
-      <p className="app-subtitle mb-4">Gennemgå og godkend indkomne betalinger</p>
+      <p className="app-subtitle">Gennemgå og godkend indkomne betalinger</p>
 
       <div className="admin-approval-count">
         <span className="admin-approval-count__label">Ventende:</span>

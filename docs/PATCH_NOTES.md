@@ -4,6 +4,16 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.7.1 — 8. oktober 2026
+
+**Bugfix: Hold-oversigt UX forbedringer**
+
+- Podium-medaljer for top 3 spillere vises nu med medalje-farver: guld 🥇, sølv 🥈 og bronze 🥉
+- Fjernet unødvendige hover-effekter på podium-kort og medlemmers liste for stilnere visuelt design
+- Fixet bug hvor Hold-oversigten genopfriskede når man åbnede browserens udviklerværktøjer
+
+---
+
 ## v1.7.0 — 7. oktober 2026
 
 **Feature: Administratorer kan genvinde forældede ventende betalinger (F030)**

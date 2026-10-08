@@ -8,7 +8,7 @@ import {
   getInterestChargesForUser,
   softDeleteInterestCharge,
 } from "../../lib/firestore";
-import { canDeleteFines, canDeleteInterestCharges } from "../../lib/permissions";
+import { canDeleteFines, canDeleteInterestCharges, canAssignFines } from "../../lib/permissions";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
 import type { UserSeasonBalance, Fine, Payment, Role, InterestCharge } from "../../types/domain";
 import "../profile/profile.css";
@@ -193,6 +193,9 @@ export default function MemberProfile({
       <div className="profile-header">
         <div className="profile-avatar">{initials}</div>
         <h1 className="app-title">{userName}</h1>
+        {canAssignFines(actorRole) && (
+          <p className="text-[var(--color-text-muted)] mt-1" style={{ fontSize: 'x-small' }}>ID: {userId}</p>
+        )}
         <p className="app-subtitle">{seasonName || "Medlemsprofil"}</p>
       </div>
 

@@ -9,6 +9,7 @@ import {
   refundPayment,
   reconcilePayment,
   getFine,
+  getInterestCharge,
 } from "../../lib/firestore";
 import { getUserProfile } from "../../lib/firestore";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
@@ -36,11 +37,39 @@ export default function RefundReconcile({ teamId, actorId }: Props) {
   async function enrich(payments: Payment[]): Promise<EnrichedPayment[]> {
     return Promise.all(
       payments.map(async (p) => {
-        const [user, fine] = await Promise.all([
+        const [user, fines, interestCharges] = await Promise.all([
           getUserProfile(p.userId),
-          getFine(teamId, p.fineId),
+          // Handle both legacy fineId and new fineIds[]
+          Promise.all(
+            (p.fineIds || (p.fineId ? [p.fineId] : [])).map((fid) =>
+              getFine(teamId, fid),
+            ),
+          ),
+          // Fetch interest charges if present
+          p.interestChargeIds && p.interestChargeIds.length > 0
+            ? Promise.all(
+                p.interestChargeIds.map((icId) =>
+                  getInterestCharge(teamId, icId),
+                ),
+              )
+            : Promise.resolve([]),
         ]);
-        return { payment: p, userName: user?.name, fineTitle: fine?.title };
+
+        // Combine fine titles and interest charge descriptions
+        const fineTitles = fines
+          .filter((f) => f !== null)
+          .map((f) => f!.title);
+        const chargeTitles = interestCharges
+          .filter((ic) => ic !== null)
+          .map((ic) => `Rentegebyr (${formatAmount((ic as any).amount)})`);
+
+        const allTitles = [...fineTitles, ...chargeTitles];
+
+        return {
+          payment: p,
+          userName: user?.name,
+          fineTitle: allTitles.length > 0 ? allTitles.join(", ") : "Ukendt betalingsmål",
+        };
       }),
     );
   }

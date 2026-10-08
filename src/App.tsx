@@ -487,6 +487,7 @@ function App() {
                 type="button"
                 onClick={() => {
                   setActiveTab(item.tab);
+                  setViewingMember(null);
                   setIsSideMenuOpen(false);
                 }}
                 className={`app-side-menu__button ${

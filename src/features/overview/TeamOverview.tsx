@@ -172,16 +172,10 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
       }
     }
 
-    function refreshOnFocus(): void {
-      void loadData();
-    }
-
     document.addEventListener("visibilitychange", refreshOnVisible);
-    window.addEventListener("focus", refreshOnFocus);
 
     return () => {
       document.removeEventListener("visibilitychange", refreshOnVisible);
-      window.removeEventListener("focus", refreshOnFocus);
     };
   }, [loadData]);
 

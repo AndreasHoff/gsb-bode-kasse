@@ -5,15 +5,12 @@ import { useState } from "react";
 import type { Role } from "../../types/domain";
 import { canApprovePayments, canManageSeasons, canManageMembers } from "../../lib/permissions";
 import AdminApproval from "../payments/AdminApproval";
-import SeasonManagement from "./SeasonManagement";
 import MemberManagement from "./MemberManagement";
 import RefundReconcile from "./RefundReconcile";
-import ImportFineRules from "./ImportFineRules";
 import TeamConfiguration from "./TeamConfiguration";
-import AdminInterestCharges from "../interest-charges/AdminInterestCharges";
 import "./admin-settings.css";
 
-type AdminTab = "payments" | "refunds" | "fines" | "season" | "members" | "config" | "interest-charges";
+type AdminTab = "payments" | "refunds" | "fines" | "members" | "config";
 
 interface Props {
   teamId: string;
@@ -58,15 +55,6 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
             Bøder
           </button>
         )} */}
-        {showSeason && (
-          <button
-            type="button"
-            className={`admin-settings__tab${activeTab === "season" ? " admin-settings__tab--active" : ""}`}
-            onClick={() => setActiveTab("season")}
-          >
-            Sæson
-          </button>
-        )}
         {showMembers && (
           <button
             type="button"
@@ -85,15 +73,6 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
             Indstillinger
           </button>
         )}
-        {showPayments && (
-          <button
-            type="button"
-            className={`admin-settings__tab${activeTab === "interest-charges" ? " admin-settings__tab--active" : ""}`}
-            onClick={() => setActiveTab("interest-charges")}
-          >
-            Rentegebyr
-          </button>
-        )}
       </nav>
 
       <div className="admin-settings__content">
@@ -110,17 +89,11 @@ export default function AdminSettings({ teamId, actorId, userRole }: Props) {
         {/* {activeTab === "fines" && showSeason && (
           <ImportFineRules teamId={teamId} actorId={actorId} />
         )} */}
-        {activeTab === "season" && showSeason && (
-          <SeasonManagement teamId={teamId} actorId={actorId} />
-        )}
         {activeTab === "members" && showMembers && (
           <MemberManagement teamId={teamId} actorId={actorId} />
         )}
         {activeTab === "config" && showSeason && (
-          <TeamConfiguration teamId={teamId} />
-        )}
-        {activeTab === "interest-charges" && showPayments && (
-          <AdminInterestCharges teamId={teamId} userRole={userRole} userId={actorId} />
+          <TeamConfiguration teamId={teamId} actorId={actorId} />
         )}
       </div>
     </div>

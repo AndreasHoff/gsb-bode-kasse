@@ -1,20 +1,26 @@
 import { useEffect, useState } from "react";
 import { getTeam } from "../../lib/firestore/teams";
+import { getActiveSeason, closeSeason } from "../../lib/firestore";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import type { Team } from "../../types/domain";
+import type { Team, Season } from "../../types/domain";
+import { formatRelativeTime } from "../../lib/utils";
 
 interface Props {
   teamId: string;
+  actorId: string;
 }
 
-export default function TeamConfiguration({ teamId }: Props) {
+export default function TeamConfiguration({ teamId, actorId }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [team, setTeam] = useState<Team | null>(null);
   const [mobilePayBoxUrl, setMobilePayBoxUrl] = useState("");
+  const [season, setSeason] = useState<Season | null>(null);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [closingSubmitting, setClosingSubmitting] = useState(false);
 
   useEffect(() => {
     void load();
@@ -25,11 +31,15 @@ export default function TeamConfiguration({ teamId }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const t = await getTeam(teamId);
+        const [t, activeSeason] = await Promise.all([
+          getTeam(teamId),
+          getActiveSeason(teamId),
+        ]);
         if (t) {
           setTeam(t);
           setMobilePayBoxUrl(t.mobilePayBoxUrl ?? "");
         }
+        setSeason(activeSeason);
       } catch (err) {
         console.error("[team-config] load failed", err);
         setError("Kunne ikke hente holdindstillinger.");
@@ -65,6 +75,21 @@ export default function TeamConfiguration({ teamId }: Props) {
     }
   }
 
+  async function handleCloseSeason() {
+    if (!season || closingSubmitting) return;
+    setClosingSubmitting(true);
+    setError(null);
+    try {
+      await closeSeason(teamId, season.id, actorId);
+      setSeason(null);
+      setShowConfirmClose(false);
+    } catch {
+      setError("Afslutning af sæson mislykkedes.");
+    } finally {
+      setClosingSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="team-config">
@@ -87,6 +112,55 @@ export default function TeamConfiguration({ teamId }: Props) {
     <div className="team-config">
       <h1 className="app-title">Holdindstillinger</h1>
       <p className="app-subtitle mb-4">Konfigurer holdets indstillinger</p>
+
+      {/* End Season Section */}
+      {season && (
+        <section className="team-config-section mb-6">
+          <h2 className="team-config-section__title">Afslut sæson</h2>
+          <div className="season-management__card">
+            <p className="season-management__label">Aktiv sæson</p>
+            <p className="season-management__name">{season.name}</p>
+            <p className="season-management__meta">
+              Startet {formatRelativeTime(season.startDate)}
+            </p>
+
+            {!showConfirmClose ? (
+              <button
+                type="button"
+                className="btn-secondary mt-4 w-full"
+                onClick={() => setShowConfirmClose(true)}
+                disabled={saving}
+              >
+                Afslut sæson
+              </button>
+            ) : (
+              <div className="season-management__confirm-box">
+                <p className="season-management__confirm-text">
+                  Er du sikker? Sæsonen kan ikke genåbnes bagefter.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="btn-danger flex-1"
+                    disabled={closingSubmitting}
+                    onClick={() => void handleCloseSeason()}
+                  >
+                    {closingSubmitting ? "Afslutter…" : "Ja, afslut sæson"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary flex-1"
+                    disabled={closingSubmitting}
+                    onClick={() => setShowConfirmClose(false)}
+                  >
+                    Annuller
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="team-config-section">
         <h2 className="team-config-section__title">MobilePay Box</h2>

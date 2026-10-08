@@ -1,10 +1,9 @@
 // Feature: Season Management (F021)
-// Admin can create a season and end it when the year is done.
+// Admin can create a new season.
 
 import { useEffect, useState } from "react";
 import type { Season } from "../../types/domain";
-import { getActiveSeason, createSeason, closeSeason } from "../../lib/firestore";
-import { formatRelativeTime } from "../../lib/utils";
+import { getActiveSeason, createSeason } from "../../lib/firestore";
 
 interface Props {
   teamId: string;
@@ -17,7 +16,6 @@ export default function SeasonManagement({ teamId, actorId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [newSeasonName, setNewSeasonName] = useState("");
-  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     void load();
@@ -60,21 +58,6 @@ export default function SeasonManagement({ teamId, actorId }: Props) {
     }
   }
 
-  async function handleClose(): Promise<void> {
-    if (!season || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await closeSeason(teamId, season.id, actorId);
-      setSeason(null);
-      setShowConfirm(false);
-    } catch {
-      setError("Afslutning af sæson mislykkedes.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   if (loading) {
     return <p className="p-4 text-sm text-[var(--color-text-muted)]">Henter sæson…</p>;
   }
@@ -91,43 +74,9 @@ export default function SeasonManagement({ teamId, actorId }: Props) {
         <div className="season-management__card">
           <p className="season-management__label">Sæson</p>
           <p className="season-management__name">{season.name}</p>
-          <p className="season-management__meta">
-            Startet {formatRelativeTime(season.startDate)}
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
+            For at afslutte sæsonen, gå til fanen "Indstillinger".
           </p>
-
-          {!showConfirm ? (
-            <button
-              type="button"
-              className="btn-secondary mt-4 w-full"
-              onClick={() => setShowConfirm(true)}
-            >
-              Afslut sæson
-            </button>
-          ) : (
-            <div className="season-management__confirm-box">
-              <p className="season-management__confirm-text">
-                Er du sikker? Sæsonen kan ikke genåbnes bagefter.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn-danger flex-1"
-                  disabled={submitting}
-                  onClick={() => void handleClose()}
-                >
-                  {submitting ? "Afslutter…" : "Ja, afslut sæson"}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary flex-1"
-                  disabled={submitting}
-                  onClick={() => setShowConfirm(false)}
-                >
-                  Annuller
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         <div>
