@@ -64,7 +64,7 @@
 	background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 	border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
 	border-radius: 0.75rem;
-	margin-bottom: 0;
+	margin-bottom: 1rem;
 	display: flex;
 	align-items: center;
 	min-height: 3.5rem;
