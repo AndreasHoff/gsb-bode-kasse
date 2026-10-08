@@ -26,6 +26,10 @@ type FineWithPayment = Fine & {
   paymentStatus: "unpaid" | "pending" | "approved" | "disputed";
 };
 
+type InterestChargeWithPayment = InterestCharge & {
+  paymentStatus: "unpaid" | "pending" | "approved" | "disputed";
+};
+
 type DeleteConfirmationType = "fine" | "interest";
 
 interface DeleteConfirmation {
@@ -53,7 +57,7 @@ export default function MemberProfile({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [balance, setBalance] = useState<UserSeasonBalance | null>(null);
   const [fines, setFines] = useState<FineWithPayment[]>([]);
-  const [interestCharges, setInterestCharges] = useState<InterestCharge[]>([]);
+  const [interestCharges, setInterestCharges] = useState<InterestChargeWithPayment[]>([]);
   const [seasonName, setSeasonName] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -91,8 +95,9 @@ export default function MemberProfile({
         (f) => f.seasonId === season.id && !f.deletedAt,
       );
 
-      // Build payment lookup
+      // Build payment lookup for fines
       const paymentByFineId = new Map<string, Payment>();
+      const paymentByInterestId = new Map<string, Payment>();
       for (const payment of allPayments) {
         if (payment.fineIds) {
           for (const fid of payment.fineIds) {
@@ -101,6 +106,11 @@ export default function MemberProfile({
         }
         if (payment.fineId) {
           paymentByFineId.set(payment.fineId, payment);
+        }
+        if (payment.interestChargeIds) {
+          for (const chargeId of payment.interestChargeIds) {
+            paymentByInterestId.set(chargeId, payment);
+          }
         }
       }
 
@@ -121,15 +131,28 @@ export default function MemberProfile({
 
       setFines(finesWithPayment);
       
-      // Filter interest charges to current season and sort by date
+      // Filter interest charges to current season
       const seasonInterestCharges = userInterestCharges.filter(
         (charge) => charge.seasonId === season.id,
       );
-      seasonInterestCharges.sort(
+
+      // Add payment status to interest charges
+      const interestChargesWithPayment: InterestChargeWithPayment[] = seasonInterestCharges.map(
+        (charge) => {
+          const payment = paymentByInterestId.get(charge.id);
+          return {
+            ...charge,
+            paymentStatus: payment?.status || "unpaid",
+          };
+        },
+      );
+
+      // Sort by creation date (newest first)
+      interestChargesWithPayment.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-      setInterestCharges(seasonInterestCharges);
+      setInterestCharges(interestChargesWithPayment);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Ukendt fejl";
       setErrorMessage(`Kunne ikke hente medlemsprofil (${message}).`);
@@ -173,7 +196,7 @@ export default function MemberProfile({
   const pending = balance?.pendingBalance ?? 0;
   const approved = balance?.approvedBalance ?? 0;
 
-  // Calculate unpaid interest charges (not included in payment)
+  // Calculate unpaid interest charges (include all interest charges in calculation)
   const unpaidInterestTotal = interestCharges.reduce((sum, charge) => sum + charge.amount, 0);
 
   // Total outstanding includes both fines balance and unpaid interest
@@ -188,7 +211,7 @@ export default function MemberProfile({
 
   return (
     <div className="app-page">
-      {/* Back button, avatar, and warning */}
+      {/* Back button */}
       <div className="profile-header-top">
         <button
           onClick={onBack}
@@ -197,17 +220,10 @@ export default function MemberProfile({
         >
           ← Tilbage
         </button>
-        <div className="profile-avatar">{initials}</div>
-        {unpaidInterestTotal > 0 && (
-          <div className="profile-warning">
-            <p className="profile-warning__text">
-              Dine renter er nu {formatAmount(unpaidInterestTotal)}
-            </p>
-          </div>
-        )}
       </div>
 
       <div className="profile-header">
+        <div className="profile-avatar">{initials}</div>
         <h1 className="app-title">{userName}</h1>
         {canAssignFines(actorRole) && (
           <p className="text-[var(--color-text-muted)] mt-1" style={{ fontSize: 'x-small' }}>ID: {userId}</p>
@@ -370,6 +386,16 @@ export default function MemberProfile({
                         {formatAmount(charge.amount)}
                       </span>
                     </div>
+                    <div className="fine-item__meta">
+                      <span
+                        className={`fine-item__status fine-item__status--${charge.paymentStatus}`}
+                      >
+                        {charge.paymentStatus === "unpaid" && "Ubetalt"}
+                        {charge.paymentStatus === "pending" && "Afventer"}
+                        {charge.paymentStatus === "approved" && "Godkendt"}
+                        {charge.paymentStatus === "disputed" && "Afvist"}
+                      </span>
+                    </div>
                     {canDeleteInterestCharges(actorRole) && (
                       <div className="fine-item__actions mt-2">
                         <button
@@ -421,6 +447,16 @@ export default function MemberProfile({
                           </span>
                           <span className="fine-item__amount">
                             {formatAmount(charge.amount)}
+                          </span>
+                        </div>
+                        <div className="fine-item__meta">
+                          <span
+                            className={`fine-item__status fine-item__status--${charge.paymentStatus}`}
+                          >
+                            {charge.paymentStatus === "unpaid" && "Ubetalt"}
+                            {charge.paymentStatus === "pending" && "Afventer"}
+                            {charge.paymentStatus === "approved" && "Godkendt"}
+                            {charge.paymentStatus === "disputed" && "Afvist"}
                           </span>
                         </div>
                         {canDeleteInterestCharges(actorRole) && (

@@ -35,15 +35,16 @@
 	transform: scale(0.98);
 }
 
-/* Header top with back button, avatar, and warning */
+/* Header top with back button */
 .profile-header-top {
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
+	justify-content: flex-start;
+	align-items: flex-start;
 	gap: 0.75rem;
-	margin-bottom: 1rem;
+	margin-bottom: 0.5rem;
 }
 
+/* Profile avatar for member view */
 .profile-avatar {
 	width: 4.5rem;
 	height: 4.5rem;
@@ -54,19 +55,19 @@
 	align-items: center;
 	justify-content: center;
 	font-size: 2rem;
-	flex-shrink: 0;
+	margin-bottom: 0.75rem;
 }
 
 /* Profile warning for unpaid interests */
 .profile-warning {
-	padding: 0.5rem 0.5rem 0.5rem 0;
-	background: var(--color-error);
-	border: 1px solid var(--color-error);
+	padding: 0.85rem 0.75rem;
+	background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
 	border-radius: 0.75rem;
 	margin-bottom: 0;
 	display: flex;
 	align-items: center;
-	min-height: 2rem;
+	min-height: 3.5rem;
 }
 
 .profile-warning__text {
@@ -83,7 +84,7 @@
 	flex-direction: column;
 	align-items: center;
 	text-align: center;
-	margin-bottom: 1rem;
+	margin-bottom: 0.5rem;
 }
 
 /* Balance grid for member profile */

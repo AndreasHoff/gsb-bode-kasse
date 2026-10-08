@@ -8,7 +8,6 @@ import {
   updateUserProfile,
   getInterestChargesForUser,
 } from "../../lib/firestore";
-import type { InterestCharge } from "../../types/domain";
 import { formatAmount } from "../../lib/utils";
 // import InstallAppOption from "../pwa-install/InstallAppOption";
 import "./profile.css";
@@ -415,6 +414,13 @@ export default function UserProfile({
         <div className="profile-avatar">{initials || "👤"}</div>
         <p className="profile-hero__name">{displayName}</p>
         <p className="profile-hero__email">{email}</p>
+        {(unpaidInterestCharges.length > 0) && (
+          <div className="profile-warning mt-3">
+            <p className="profile-warning__text">
+              Du har ubetalte bøder fra sidste måned! Dine renter er nu {formatAmount(unpaidInterestCharges.reduce((sum, charge) => sum + charge.amount, 0))}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Financial summary */}
