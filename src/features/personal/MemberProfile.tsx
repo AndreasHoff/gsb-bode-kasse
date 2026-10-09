@@ -429,8 +429,8 @@ export default function MemberProfile({
                 >
                   <span>
                     {isInterestsExpanded
-                      ? "Skjul alle rentegebyrer"
-                      : `Vis alle ${interestCharges.length} rentegebyrer`}
+                      ? "Skjul alle renter"
+                      : `Vis alle ${interestCharges.length} renter`}
                   </span>
                   <span className="interests-accordion-icon">
                     {isInterestsExpanded ? "−" : "+"}
