@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   getTeamMock: vi.fn(),
   getUsersMock: vi.fn(),
   createCombinedPaymentMock: vi.fn(),
+  getInterestChargesForUserMock: vi.fn(),
 }));
 
 vi.mock("../../lib/firestore", () => ({
@@ -21,10 +22,12 @@ vi.mock("../../lib/firestore", () => ({
   getTeam: mocks.getTeamMock,
   getUsers: mocks.getUsersMock,
   createCombinedPayment: mocks.createCombinedPaymentMock,
+  getInterestChargesForUser: mocks.getInterestChargesForUserMock,
 }));
 
 // Suppress MobilePay deep-link navigation in tests
 vi.stubGlobal("location", { assign: vi.fn() });
+vi.stubGlobal("open", vi.fn());
 
 const activeSeason = {
   id: "season-1",
@@ -73,6 +76,7 @@ function setupDefaultMocks(withMobilePay = false) {
     mobilePayBoxUrl: withMobilePay ? "https://qr.mobilepay.dk/box/test" : null,
   });
   mocks.getUsersMock.mockResolvedValue([adminUser]);
+  mocks.getInterestChargesForUserMock.mockResolvedValue([]);
 }
 
 describe("PersonalOverview", () => {
@@ -164,7 +168,8 @@ describe("PersonalOverview", () => {
         ["fine-1"], 
         "user-1", 
         50, 
-        "user-1"
+        "user-1",
+        []
       );
     });
 
@@ -243,4 +248,93 @@ describe("PersonalOverview", () => {
     // In viewer mode there should be no pay button
     expect(screen.queryByRole("button", { name: /Betal/ })).not.toBeInTheDocument();
   });
+
+  it("recovers post-payment dialog from sessionStorage when user returns from MobilePay", async () => {
+    setupDefaultMocks(true);
+
+    // Simulate the case where payment data was stored before opening MobilePay
+    const paymentDraft = {
+      fineIds: ["fine-1"],
+      interestChargeIds: [],
+      amount: 50,
+      titles: ["For sent til træning"],
+    };
+    window.sessionStorage.setItem(
+      "gsb:pending-payment:team-1:user-1",
+      JSON.stringify(paymentDraft),
+    );
+
+    render(<PersonalOverview teamId="team-1" userId="user-1" />);
+
+    // The post-payment confirmation dialog should be shown automatically
+    expect(await screen.findByText("Har du gennemført betalingen?")).toBeInTheDocument();
+
+    // Dialog should have the correct fine title
+    expect(screen.getByText("For sent til træning")).toBeInTheDocument();
+
+    // sessionStorage should still have the data at this point
+    const stored = window.sessionStorage.getItem("gsb:pending-payment:team-1:user-1");
+    expect(stored).toBe(JSON.stringify(paymentDraft));
+
+    // Cleanup
+    window.sessionStorage.removeItem("gsb:pending-payment:team-1:user-1");
+  });
+
+  it("clears sessionStorage after payment is confirmed", async () => {
+    setupDefaultMocks(true);
+    const user = userEvent.setup();
+
+    const pendingPayment: Payment = { 
+      ...unpaidPayment, 
+      fineIds: ["fine-1"],
+      status: "pending", 
+      initiatedAt: "2026-06-01T11:00:00.000Z" 
+    };
+    mocks.createCombinedPaymentMock.mockResolvedValue(pendingPayment);
+    mocks.getPaymentsForUserMock
+      .mockResolvedValueOnce([unpaidPayment])
+      .mockResolvedValue([pendingPayment]);
+
+    render(<PersonalOverview teamId="team-1" userId="user-1" />);
+
+    const payButton = await screen.findByRole("button", { name: "Betal bøde" });
+    await user.click(payButton);
+
+    const openMobilePayButton = screen.getByRole("button", { name: "Åbn MobilePay" });
+    await user.click(openMobilePayButton);
+
+    // At this point, sessionStorage should have the payment data
+    expect(window.sessionStorage.getItem("gsb:pending-payment:team-1:user-1")).toBeTruthy();
+
+    const yesButton = screen.getByRole("button", { name: "Ja" });
+    await user.click(yesButton);
+
+    // After confirming, sessionStorage should be cleared
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem("gsb:pending-payment:team-1:user-1")).toBeNull();
+    });
+  });
+
+  it("clears sessionStorage when user cancels post-payment dialog", async () => {
+    setupDefaultMocks(true);
+    const user = userEvent.setup();
+
+    render(<PersonalOverview teamId="team-1" userId="user-1" />);
+
+    const payButton = await screen.findByRole("button", { name: "Betal bøde" });
+    await user.click(payButton);
+
+    const openMobilePayButton = screen.getByRole("button", { name: "Åbn MobilePay" });
+    await user.click(openMobilePayButton);
+
+    // At this point, sessionStorage should have the payment data
+    expect(window.sessionStorage.getItem("gsb:pending-payment:team-1:user-1")).toBeTruthy();
+
+    const noButton = screen.getByRole("button", { name: "Nej" });
+    await user.click(noButton);
+
+    // After canceling, sessionStorage should be cleared
+    expect(window.sessionStorage.getItem("gsb:pending-payment:team-1:user-1")).toBeNull();
+  });
 });
+

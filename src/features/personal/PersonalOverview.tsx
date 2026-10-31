@@ -54,6 +54,9 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
   const [fineRows, setFineRows] = useState<FineWithPayment[]>([]);
   const [interestCharges, setInterestCharges] = useState<InterestChargeRow[]>([]);
 
+  // Storage key for persisting payment data across component lifecycle
+  const paymentDataStorageKey = `gsb:pending-payment:${teamId}:${userId}`;
+
   /**
    * Helper to get fine IDs from a payment, handling backward compatibility.
    */
@@ -177,19 +180,57 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
     }
   }, [teamId, userId, isViewerMode]);
 
+  /**
+   * Restores pending payment dialog from sessionStorage if available.
+   * Called on component mount and when focus/visibility changes.
+   * This handles the case where the user returned from MobilePay but
+   * the dialog state was lost due to component unmount or state refresh.
+   */
+  const settlePendingPaymentFromStorage = useCallback(async () => {
+    const stored = window.sessionStorage.getItem(paymentDataStorageKey);
+    if (!stored) return;
+
+    type StoredPaymentData = {
+      fineIds: string[];
+      interestChargeIds: string[];
+      amount: number;
+      titles: string[];
+    };
+
+    let parsed: StoredPaymentData | null = null;
+    try {
+      parsed = JSON.parse(stored) as StoredPaymentData;
+    } catch {
+      window.sessionStorage.removeItem(paymentDataStorageKey);
+      return;
+    }
+
+    if (!parsed || (parsed.fineIds.length === 0 && parsed.interestChargeIds.length === 0) || parsed.amount <= 0) {
+      window.sessionStorage.removeItem(paymentDataStorageKey);
+      return;
+    }
+
+    // Restore the pending payment data and show the post-payment dialog
+    setPendingPaymentData(parsed);
+    setShowPostPayDialog(true);
+  }, [paymentDataStorageKey]);
+
   useEffect(() => {
     void loadData();
-  }, [loadData]);
+    void settlePendingPaymentFromStorage();
+  }, [loadData, settlePendingPaymentFromStorage]);
 
   useEffect(() => {
     function refreshOnVisible(): void {
       if (document.visibilityState === "visible") {
         void loadData();
+        void settlePendingPaymentFromStorage();
       }
     }
 
     function refreshOnFocus(): void {
       void loadData();
+      void settlePendingPaymentFromStorage();
     }
 
     document.addEventListener("visibilitychange", refreshOnVisible);
@@ -199,7 +240,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       document.removeEventListener("visibilitychange", refreshOnVisible);
       window.removeEventListener("focus", refreshOnFocus);
     };
-  }, [loadData]);
+  }, [loadData, settlePendingPaymentFromStorage]);
 
   const unpaidRows = useMemo(
     () => fineRows.filter((row) => row.effectiveStatus === "unpaid"),
@@ -269,6 +310,8 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
   function handleCancelPrePay(): void {
     setShowPrePayDialog(false);
     setPendingPaymentData(null);
+    // Clear stored payment data if any
+    window.sessionStorage.removeItem(paymentDataStorageKey);
   }
 
   function handleOpenMobilePay(): void {
@@ -278,6 +321,16 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       setError("MobilePay Box URL mangler.");
       return;
     }
+
+    if (!pendingPaymentData) {
+      setError("Betalingsdata mangler.");
+      return;
+    }
+
+    // Store the payment data in sessionStorage so it persists if the component 
+    // unmounts or the page refreshes while the user is in MobilePay.
+    // The settlement callback will restore this when the user returns.
+    window.sessionStorage.setItem(paymentDataStorageKey, JSON.stringify(pendingPaymentData));
 
     // Open MobilePay Box in a new tab without navigating away
     window.open(mobilePayBoxUrl, "_blank", "noopener,noreferrer");
@@ -325,6 +378,8 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       setPayingFineId(null);
       setIsPayingAll(false);
       setPendingPaymentData(null);
+      // Clear stored payment data as payment has been settled
+      window.sessionStorage.removeItem(paymentDataStorageKey);
       // Re-enable payment button after 2 seconds
       setTimeout(() => setPaymentInProgress(false), 2000);
     }
@@ -335,6 +390,8 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
     setPendingPaymentData(null);
     setPayingFineId(null);
     setIsPayingAll(false);
+    // Clear stored payment data as user cancelled
+    window.sessionStorage.removeItem(paymentDataStorageKey);
   }
 
   return (
