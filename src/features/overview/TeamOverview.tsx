@@ -8,6 +8,7 @@ import {
   getInterestChargesForSeason,
 } from "../../lib/firestore";
 import { formatAmount } from "../../lib/utils";
+import { canManageMembers } from "../../lib/permissions";
 import type { Membership, User, Role, UserSeasonBalance } from "../../types/domain";
 import "./team-overview.css";
 
@@ -30,7 +31,7 @@ type MemberStat = {
   hasDisputed?: boolean;
 };
 
-export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewProps) {
+export default function TeamOverview({ teamId, onMemberSelect, userRole }: TeamOverviewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [noSeason, setNoSeason] = useState(false);
@@ -191,7 +192,27 @@ export default function TeamOverview({ teamId, onMemberSelect }: TeamOverviewPro
 
   return (
     <div className="app-page">
-      <h1 className="app-title">Hold</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+        <h1 className="app-title">Hold</h1>
+        {canManageMembers(userRole ?? null) && (
+          <button
+            type="button"
+            onClick={() => void loadData()}
+            disabled={isLoading}
+            title="Genindlæs holdoversigt"
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: "1.5rem",
+              cursor: "pointer",
+              opacity: isLoading ? 0.5 : 1,
+              transition: "opacity 0.2s",
+            }}
+          >
+            🔄
+          </button>
+        )}
+      </div>
       <p className="app-subtitle mb-6">{seasonName || "Holdets oversigt"}</p>
 
       {isLoading && <p className="status-note">Henter data...</p>}

@@ -1,9 +1,10 @@
 import { getDocs, getDoc, doc, writeBatch, query, where } from "firebase/firestore";
 import { db } from "../firebase";
-import { finesCol, fineDoc, activityLogCol, paymentsCol } from "./refs";
+import { finesCol, fineDoc, activityLogCol, paymentsCol, userSeasonBalanceDoc } from "./refs";
 import type { Fine, ActivityLog, Payment } from "../../types/domain";
 import { getActiveSeason } from "./seasons";
-import { updateUserSeasonBalance, applySeasonDeltas, type SeasonDeltaAccumulator } from "./balances";
+import { updateUserSeasonBalance, applySeasonDeltas, type SeasonDeltaAccumulator, type BalanceDelta, getOrCreateUserSeasonBalance } from "./balances";
+import { calculatePendingCreditApplication } from "./credits";
 
 export async function getFines(
   teamId: string,
@@ -81,6 +82,7 @@ export async function assignFine(
  * Assigns a fine, creates its unpaid payment, and writes the fine.assigned log in one batch.
  * This keeps F001 resilient so we never persist a fine without a matching payment.
  * Updates UserSeasonBalance for each assigned user (F024).
+ * Applies pending tournament credit (F031) if available.
  */
 export async function assignFineWithPayment(
   data: Omit<Fine, "id" | "createdAt" | "deletedAt">,
@@ -99,7 +101,7 @@ export async function assignFineWithPayment(
 
   const total = targetUserIds.length;
   const MAX_OPS_PER_BATCH = 450;
-  const OPS_PER_FINE = 8; // fine + payment + payment log + fine log + balance + season + balance log + season delta application
+  const OPS_PER_FINE = 10; // fine + payment + payment log + fine log + balance + season + balance log + season delta application + balance update + credit log
   const maxFinesPerBatch = Math.floor(MAX_OPS_PER_BATCH / OPS_PER_FINE);
 
   const allFines: Fine[] = [];
@@ -113,6 +115,7 @@ export async function assignFineWithPayment(
 
     const fines: Fine[] = [];
     const payments: Payment[] = [];
+    const userBalanceByUserId = new Map<string, Awaited<ReturnType<typeof getOrCreateUserSeasonBalance>>>();
     
     // Use accumulator to avoid stale reads when updating multiple users' balances
     const seasonDeltaAccumulator: SeasonDeltaAccumulator = {};
@@ -120,27 +123,51 @@ export async function assignFineWithPayment(
     for (const targetUserId of batchUserIds) {
       const createdAt = new Date().toISOString();
 
+      // Fetch balance once per user per batch to avoid stale reads when the same
+      // user is assigned multiple fines in a single operation.
+      let userBalance = userBalanceByUserId.get(targetUserId);
+      if (!userBalance) {
+        userBalance = await getOrCreateUserSeasonBalance(
+          targetUserId,
+          data.teamId,
+          data.seasonId,
+          batch,
+        );
+        userBalanceByUserId.set(targetUserId, userBalance);
+      }
+      const pendingCredit = userBalance.pendingCredit ?? 0;
+
+      // Calculate credit application
+      const creditApplication = calculatePendingCreditApplication(
+        pendingCredit,
+        data.amount,
+      );
+
+      // Create fine with potentially reduced amount
       const fineRef = doc(finesCol(data.teamId));
       const fine: Fine = {
         id: fineRef.id,
         ...data,
+        amount: creditApplication.newFineAmount,
         assignedTo: [targetUserId],
         createdAt,
       };
       batch.set(fineRef, fine);
       fines.push(fine);
 
+      // Create payment with potentially reduced amount
       const paymentRef = doc(paymentsCol(data.teamId));
       const payment: Payment = {
         id: paymentRef.id,
         fineIds: [fine.id],
         userId: targetUserId,
-        amount: data.amount,
+        amount: creditApplication.newFineAmount,
         status: "unpaid",
       };
       batch.set(paymentRef, payment);
       payments.push(payment);
 
+      // Log payment creation
       const paymentLogRef = doc(activityLogCol(data.teamId));
       const paymentLogEntry: ActivityLog = {
         id: paymentLogRef.id,
@@ -158,6 +185,7 @@ export async function assignFineWithPayment(
       };
       batch.set(paymentLogRef, paymentLogEntry);
 
+      // Log fine assignment
       const logRef = doc(activityLogCol(data.teamId));
       const logEntry: ActivityLog = {
         id: logRef.id,
@@ -168,7 +196,7 @@ export async function assignFineWithPayment(
         entityId: fine.id,
         metadata: {
           title: data.title,
-          amount: data.amount,
+          amount: creditApplication.newFineAmount,
           assignedTo: [targetUserId],
           seasonId: data.seasonId,
           paymentId: payment.id,
@@ -177,17 +205,92 @@ export async function assignFineWithPayment(
       };
       batch.set(logRef, logEntry);
 
-      // Update balance for the assigned user (F024)
-      await updateUserSeasonBalance(
-        targetUserId,
-        data.teamId,
-        data.seasonId,
-        { outstandingBalance: data.amount },
-        "fine.assigned",
-        actorId,
-        batch,
-        seasonDeltaAccumulator,
-      );
+      // Log credit application if any credit was applied (F031)
+      if (creditApplication.appliedCredit > 0) {
+        // FIX: Consolidate balance update to prevent double batch.set() bug.
+        // When credit is applied, we MUST NOT call updateUserSeasonBalance() because:
+        // 1. It fetches STALE balance from Firestore (doesn't see uncommitted batch changes)
+        // 2. Its second batch.set() would overwrite our credit update with stale data
+        // 3. This caused silent data loss: credit was never decremented
+        //
+        // Instead, we consolidate all balance updates here in one atomic batch.set()
+
+        const creditLogRef = doc(activityLogCol(data.teamId));
+        const creditLogEntry: ActivityLog = {
+          id: creditLogRef.id,
+          teamId: data.teamId,
+          actorId,
+          action: "credit.applied",
+          entityType: "userSeasonBalance",
+          entityId: userBalance.id,
+          metadata: {
+            userId: targetUserId,
+            creditApplied: creditApplication.appliedCredit,
+            originalFineAmount: data.amount,
+            newFineAmount: creditApplication.newFineAmount,
+          },
+          createdAt,
+        };
+        batch.set(creditLogRef, creditLogEntry);
+
+        // Consolidate: Update BOTH credit AND outstanding balance in single batch.set()
+        const balanceRef = userSeasonBalanceDoc(data.teamId, userBalance.id);
+        const updatedBalance = {
+          ...userBalance,
+          pendingCredit: creditApplication.remainingCredit,
+          outstandingBalance: userBalance.outstandingBalance + creditApplication.newFineAmount,
+          updatedAt: createdAt,
+        };
+        batch.set(balanceRef, updatedBalance);
+        userBalanceByUserId.set(targetUserId, updatedBalance);
+
+        // Log the balance update
+        const balanceLogRef = doc(activityLogCol(data.teamId));
+        const balanceLogEntry: ActivityLog = {
+          id: balanceLogRef.id,
+          teamId: data.teamId,
+          actorId,
+          action: "balance.updated",
+          entityType: "userSeasonBalance",
+          entityId: userBalance.id,
+          metadata: {
+            userId: targetUserId,
+            seasonId: data.seasonId,
+            delta: { outstandingBalance: creditApplication.newFineAmount } as BalanceDelta,
+            trigger: "fine.assigned",
+          },
+          createdAt,
+        };
+        batch.set(balanceLogRef, balanceLogEntry);
+
+        // Manually accumulate season delta with the adjusted fine amount
+        const current = seasonDeltaAccumulator[data.seasonId] || {};
+        seasonDeltaAccumulator[data.seasonId] = {
+          outstandingBalance: (current.outstandingBalance ?? 0) + creditApplication.newFineAmount,
+          pendingBalance: current.pendingBalance ?? 0,
+          approvedBalance: current.approvedBalance ?? 0,
+        };
+      } else {
+        // No credit applied: use normal balance update path (F024)
+        // Pass the existing balance to avoid creating duplicate documents
+        await updateUserSeasonBalance(
+          targetUserId,
+          data.teamId,
+          data.seasonId,
+          { outstandingBalance: creditApplication.newFineAmount },
+          "fine.assigned",
+          actorId,
+          batch,
+          seasonDeltaAccumulator,
+          userBalance,  // Pass the balance we already fetched
+        );
+
+        userBalanceByUserId.set(targetUserId, {
+          ...userBalance,
+          outstandingBalance: userBalance.outstandingBalance + creditApplication.newFineAmount,
+          updatedAt: createdAt,
+        });
+      }
     }
 
     // Apply accumulated season deltas in a single atomic operation
@@ -252,6 +355,7 @@ export async function softDeleteFine(
 
   // Update balances for each payment based on status
   for (const payment of payments) {
+
     const delta =
       payment.status === "approved"
         ? { approvedBalance: -payment.amount }

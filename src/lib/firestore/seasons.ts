@@ -2,6 +2,7 @@ import { getDocs, getDoc, doc, writeBatch, query, where } from "firebase/firesto
 import { db } from "../firebase";
 import { seasonsCol, seasonDoc, activityLogCol } from "./refs";
 import type { Season, ActivityLog } from "../../types/domain";
+import { expireSeasonCredits } from "./credits";
 
 export async function getSeasons(teamId: string): Promise<Season[]> {
   const snap = await getDocs(seasonsCol(teamId));
@@ -67,6 +68,7 @@ export async function createSeason(
 /**
  * Closes a season by setting isActive=false and endDate=today,
  * and writes an ActivityLog entry atomically.
+ * Resets all pending tournament credits and logs expiration (F031).
  */
 export async function closeSeason(
   teamId: string,
@@ -101,4 +103,7 @@ export async function closeSeason(
   batch.set(logRef, logEntry);
 
   await batch.commit();
+
+  // Expire tournament credits (F031) in a separate operation
+  await expireSeasonCredits(teamId, seasonId, actorId);
 }

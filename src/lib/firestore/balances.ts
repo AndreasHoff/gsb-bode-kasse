@@ -58,6 +58,7 @@ export async function getOrCreateUserSeasonBalance(
     outstandingBalance: 0,
     pendingBalance: 0,
     approvedBalance: 0,
+    pendingCredit: 0,
     updatedAt: new Date().toISOString(),
   };
 
@@ -98,6 +99,9 @@ export interface SeasonDeltaAccumulator {
  * NOTE: When called multiple times in a loop with the same season,
  * use the accumulator parameter to collect season deltas and apply them once
  * at the end via applySeasonDeltas() to avoid stale reads.
+ * 
+ * If existingBalance is provided, it will be used instead of fetching from Firestore.
+ * This avoids creating duplicate balance documents when called multiple times with the same batch.
  */
 export async function updateUserSeasonBalance(
   userId: string,
@@ -108,9 +112,10 @@ export async function updateUserSeasonBalance(
   actorId: string,
   batch: WriteBatch,
   seasonDeltaAccumulator?: SeasonDeltaAccumulator,
+  existingBalance?: UserSeasonBalance,
 ): Promise<void> {
-  // 1. Get or create user balance record
-  const balance = await getOrCreateUserSeasonBalance(userId, teamId, seasonId, batch);
+  // 1. Get or create user balance record (or use provided one)
+  const balance = existingBalance || await getOrCreateUserSeasonBalance(userId, teamId, seasonId, batch);
 
   // 2. Apply deltas to user balance
   const updated: UserSeasonBalance = {
@@ -216,7 +221,19 @@ export async function getSeasonBalances(
     where("seasonId", "==", seasonId),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data());
+
+  // Historical bug fixes may leave duplicate UserSeasonBalance docs for the same
+  // (userId, seasonId). Keep the first doc encountered per user, which matches
+  // getUserSeasonBalance() behavior (it also returns the first query match).
+  const uniqueByUserId = new Map<string, UserSeasonBalance>();
+  for (const d of snap.docs) {
+    const balance = d.data();
+    if (!uniqueByUserId.has(balance.userId)) {
+      uniqueByUserId.set(balance.userId, balance);
+    }
+  }
+
+  return Array.from(uniqueByUserId.values());
 }
 
 /**

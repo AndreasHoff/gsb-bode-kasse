@@ -9,10 +9,10 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { membersCol, memberDoc, activityLogCol, finesCol, teamsCol, userDoc } from "./refs";
+import { membersCol, memberDoc, activityLogCol, finesCol, teamsCol, userDoc, userSeasonBalancesCol, userSeasonBalanceDoc } from "./refs";
 import { membershipConverter } from "./converters";
 import { getUsers } from "./users";
-import type { Membership, ActivityLog, Fine } from "../../types/domain";
+import type { Membership, ActivityLog, Fine, UserSeasonBalance } from "../../types/domain";
 
 type MembershipWriteData = Pick<
   Membership,
@@ -154,8 +154,9 @@ export async function backfillTeamMembershipsForAllUsers(
 
 /**
  * Deactivates a membership and soft-deletes all fines assigned to that user.
+ * Resets all pending tournament credits to 0 (F031).
  * Writes a member.removed ActivityLog entry and individual fine.deleted entries.
- * Processes fines in batches to stay within Firestore's 500-op limit.
+ * Processes fines and credits in batches to stay within Firestore's 500-op limit.
  */
 export async function removeMember(
   teamId: string,
@@ -192,8 +193,7 @@ export async function removeMember(
     query(finesCol(teamId), where("assignedTo", "array-contains", userId)),
   );
   const activeFines = finesSnap.docs.filter((d) => !d.data().deletedAt);
-  if (activeFines.length === 0) return;
-
+  
   const MAX_OPS = 450;
   const now = new Date().toISOString();
   let fineBatch = writeBatch(db);
@@ -226,6 +226,65 @@ export async function removeMember(
 
   if (opsCount > 0) {
     await fineBatch.commit();
+  }
+
+  // Reset pending credits for all seasons (F031)
+  const balancesSnap = await getDocs(
+    query(
+      userSeasonBalancesCol(teamId),
+      where("userId", "==", userId),
+    ),
+  );
+  
+  const balancesWithCredit = balancesSnap.docs.filter((d) => {
+    const balance = d.data() as UserSeasonBalance;
+    return (balance.pendingCredit ?? 0) > 0;
+  });
+
+  if (balancesWithCredit.length > 0) {
+    let creditBatch = writeBatch(db);
+    let creditOpsCount = 0;
+
+    for (const balanceDocSnap of balancesWithCredit) {
+      const balance = balanceDocSnap.data() as UserSeasonBalance;
+      const creditLost = balance.pendingCredit ?? 0;
+
+      // Reset pending credit
+      const updated: UserSeasonBalance = {
+        ...balance,
+        pendingCredit: 0,
+        updatedAt: now,
+      };
+      creditBatch.set(balanceDocSnap.ref, updated);
+
+      // Log credit expiration
+      const creditLogRef = doc(logColRef);
+      const creditLog: ActivityLog = {
+        id: creditLogRef.id,
+        teamId,
+        actorId,
+        action: "credit.expired",
+        entityType: "userSeasonBalance",
+        entityId: balance.id,
+        metadata: {
+          userId,
+          creditLost,
+        },
+        createdAt: now,
+      };
+      creditBatch.set(creditLogRef, creditLog);
+
+      creditOpsCount += 2;
+      if (creditOpsCount >= MAX_OPS) {
+        await creditBatch.commit();
+        creditBatch = writeBatch(db);
+        creditOpsCount = 0;
+      }
+    }
+
+    if (creditOpsCount > 0) {
+      await creditBatch.commit();
+    }
   }
 
   // Delete the user document from the users collection

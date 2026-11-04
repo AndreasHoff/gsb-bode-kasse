@@ -134,6 +134,7 @@ export interface UserSeasonBalance {
   outstandingBalance: number;
   pendingBalance: number;
   approvedBalance: number;
+  pendingCredit?: number; // Tournament credit to apply to next fine (DKK)
   updatedAt: string;
 }
 

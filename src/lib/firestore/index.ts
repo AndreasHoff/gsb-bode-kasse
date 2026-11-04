@@ -97,3 +97,10 @@ export {
 
 export type { ReconciliationResult } from "./reconciliation";
 export { reconcileSeasonTotals, reconcileAllSeasons } from "./reconciliation";
+
+export {
+  awardTournamentCredit,
+  expireSeasonCredits,
+  calculatePendingCreditApplication,
+  TOURNAMENT_CREDIT_AMOUNT,
+} from "./credits";

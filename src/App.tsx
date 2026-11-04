@@ -5,6 +5,7 @@ import { VersionBadge } from "patch-notes";
 import TeamOverview from "./features/overview/TeamOverview";
 import FineRulesCatalog from "./features/fine-rules/FineRulesCatalog";
 import AssignFine from "./features/fines/AssignFine";
+import AwardTournamentCredit from "./features/credits/AwardTournamentCredit";
 import Evangeliet from "./features/evangeliet/Evangeliet";
 import ActivityLog from "./features/activity/ActivityLog";
 import { changeMemberRole } from "./services/membershipService";
@@ -76,6 +77,7 @@ function App() {
   const [colorTheme, setColorTheme] = useState<ColorTheme>(() => getInitialTheme());
   const [isVersionUpdating, setIsVersionUpdating] = useState(false);
   const [activeSeasonId, setActiveSeasonId] = useState("");
+  const [assignFineMode, setAssignFineMode] = useState<"assign" | "award-credit">("assign");
   // Holds the name entered during registration so syncUserSession can use it
   // before Firebase Auth's onAuthStateChanged fires (before updateProfile runs).
   const pendingNameRef = useRef<string | null>(null);
@@ -583,18 +585,79 @@ function App() {
           />
         )}
         {!viewingMember && activeTab === "assign-fine" && (
-          <AssignFine
-            teamId={teamId}
-            actorId={userId}
-            actorRole={userRole}
-            onAssigned={({ fineIds, memberNames }) => {
-              setLastAssignedFines({
-                teamId,
-                fineIds,
-                memberNames,
-              });
-            }}
-          />
+          <div>
+            {/* Mode toggle */}
+            <div className="assign-fine-mode-toggle" style={{ marginBottom: "1.5rem", display: "flex", gap: "0.5rem" }}>
+              <button
+                type="button"
+                onClick={() => setAssignFineMode("assign")}
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderRadius: "0.375rem",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: assignFineMode === "assign" ? "var(--color-primary)" : "transparent",
+                  color: assignFineMode === "assign" ? "white" : "var(--color-text)",
+                  cursor: "pointer",
+                  fontWeight: assignFineMode === "assign" ? "600" : "400",
+                  transition: "all 0.2s",
+                  flex: 1,
+                  textAlign: "center",
+                }}
+              >
+                🎯 Giv bøde
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignFineMode("award-credit")}
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderRadius: "0.375rem",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: assignFineMode === "award-credit" ? "var(--color-primary)" : "transparent",
+                  color: assignFineMode === "award-credit" ? "white" : "var(--color-text)",
+                  cursor: "pointer",
+                  fontWeight: assignFineMode === "award-credit" ? "600" : "400",
+                  transition: "all 0.2s",
+                  flex: 1,
+                  textAlign: "center",
+                }}
+              >
+                🏆 Turneringspris
+              </button>
+            </div>
+
+            {/* Assign Fine mode */}
+            {assignFineMode === "assign" && (
+              <AssignFine
+                teamId={teamId}
+                actorId={userId}
+                actorRole={userRole}
+                onAssigned={({ fineIds, memberNames }) => {
+                  setLastAssignedFines({
+                    teamId,
+                    fineIds,
+                    memberNames,
+                  });
+                }}
+              />
+            )}
+
+            {/* Award Credit mode */}
+            {assignFineMode === "award-credit" && (
+              <AwardTournamentCredit
+                teamId={teamId}
+                actorId={userId}
+                actorRole={userRole}
+                onAwarded={({ memberName }) => {
+                  setLastAssignedFines({
+                    teamId,
+                    fineIds: [],
+                    memberNames: [memberName],
+                  });
+                }}
+              />
+            )}
+          </div>
         )}
         {!viewingMember && activeTab === "personal" && (
           <UserProfile
@@ -729,8 +792,5 @@ function getErrorCode(error: unknown): string | null {
 
   const maybeCode = (error as { code?: unknown }).code;
   return typeof maybeCode === "string" ? maybeCode : null;
-}
-function setChangeRole(arg0: (userRole: any) => "member" | "admin") {
-  throw new Error("Function not implemented.");
 }
 

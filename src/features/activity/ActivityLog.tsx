@@ -212,6 +212,9 @@ function getActionIcon(action: string): string {
   if (action === "rule.proposal_created") return "📝";
   if (action === "rule.proposal_approved") return "✅";
   if (action === "rule.proposal_denied") return "❌";
+  if (action === "credit.tournament_awarded") return "🏆";
+  if (action === "credit.applied") return "💰";
+  if (action === "credit.expired") return "⏰";
   return "📌";
 }
 
@@ -308,6 +311,37 @@ function getActionText(
     const reason = toStringValue(metadata.denialReason);
     const reasonText = reason ? ` (${reason})` : "";
     return `${actorName} afviste forslaget for bødetypen ${title}${reasonText}.`;
+  }
+
+  if (entry.action === "credit.tournament_awarded") {
+    const creditAmount = toNumberValue(metadata.amount);
+    const appliedImmediately = metadata.appliedImmediately === true;
+    const targetUser = resolveUserId(metadata.userId);
+    const targetText = targetUser ? ` til ${targetUser}` : "";
+    const typeText = appliedImmediately
+      ? "brugt på eksisterende gæld"
+      : "gemt til næste bøde";
+    const creditText = creditAmount ? ` på ${formatAmount(creditAmount)}` : "";
+    return `${actorName} tildelte turnering kredit${creditText}${targetText} (${typeText}).`;
+  }
+
+  if (entry.action === "credit.applied") {
+    const creditApplied = toNumberValue(metadata.creditApplied);
+    const originalFine = toNumberValue(metadata.originalFineAmount);
+    const newFine = toNumberValue(metadata.newFineAmount);
+    const targetUser = resolveUserId(metadata.userId);
+    const targetText = targetUser ? ` til ${targetUser}` : "";
+    const creditText = creditApplied ? ` på ${formatAmount(creditApplied)}` : "";
+    const reduceText = newFine === 0 ? " – bøde helt dækket af kredit" : "";
+    return `${actorName} brugte turnering kredit${creditText}${targetText}${reduceText}.`;
+  }
+
+  if (entry.action === "credit.expired") {
+    const creditLost = toNumberValue(metadata.creditLost);
+    const targetUser = resolveUserId(metadata.userId);
+    const targetText = targetUser ? ` for ${targetUser}` : "";
+    const creditText = creditLost ? ` på ${formatAmount(creditLost)}` : "";
+    return `${actorName} forløb turnering kredit${creditText}${targetText} ved sæsonlukning.`;
   }
 
   return `${actorName} udførte handlingen ${entry.action}.`;

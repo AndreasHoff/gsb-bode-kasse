@@ -580,6 +580,53 @@ describe("getSeasonBalances", () => {
     expect(result).toEqual(balances);
     expect(mocks.mockWhere).toHaveBeenCalledWith("seasonId", "==", "season-1");
   });
+
+  it("deduplicates duplicate balance documents per user", async () => {
+    const duplicateBalances: UserSeasonBalance[] = [
+      {
+        id: "balance-a",
+        userId: "user-1",
+        teamId: "team-1",
+        seasonId: "season-1",
+        outstandingBalance: 125,
+        pendingBalance: 0,
+        approvedBalance: 0,
+        updatedAt: "2026-11-01T10:00:00.000Z",
+      },
+      {
+        id: "balance-z",
+        userId: "user-1",
+        teamId: "team-1",
+        seasonId: "season-1",
+        outstandingBalance: 0,
+        pendingBalance: 0,
+        approvedBalance: 0,
+        updatedAt: "2026-11-01T10:05:00.000Z",
+      },
+      {
+        id: "balance-2",
+        userId: "user-2",
+        teamId: "team-1",
+        seasonId: "season-1",
+        outstandingBalance: 50,
+        pendingBalance: 0,
+        approvedBalance: 0,
+        updatedAt: "2026-11-01T10:10:00.000Z",
+      },
+    ];
+
+    mocks.mockGetDocs.mockResolvedValueOnce({
+      docs: duplicateBalances.map((b) => ({ data: () => b })),
+    });
+
+    const result = await getSeasonBalances("team-1", "season-1");
+
+    expect(result).toHaveLength(2);
+    expect(result).toEqual([
+      duplicateBalances[0],
+      duplicateBalances[2],
+    ]);
+  });
 });
 
 describe("getUserBalances", () => {

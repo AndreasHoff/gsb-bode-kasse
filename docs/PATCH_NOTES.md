@@ -4,6 +4,25 @@ Udviklerfokuseret ændringslog. Opdater denne fil og bump versionen i `package.j
 
 ---
 
+## v1.7.4 — 4. november 2026
+
+**Bugfix: Opdateringsknap i Hold vises nu kun for admins**
+
+- Opdateringsknappen i "Hold"-fanen (🔄) vises nu kun for admins
+- Medlemmer ser ikke længere admin-værktøjet i holdoversigten
+
+---
+
+## v1.7.3 — 4. november 2026
+
+**Bugfix: Hold-oversigt viser nu saldo korrekt efter bødetildeling og turneringskredit**
+
+- Medlemmers saldo i "Hold" opdateres nu stabilt efter nye bøder, også når samme medlem tildeles flere bøder i samme handling
+- Turneringskredit og bødetildeling bliver nu beregnet konsekvent i samme flow, så saldoen forbliver korrekt
+- Hold-oversigten bruger nu en entydig balancesource pr. medlem i sæsonen, så visningen ikke hopper mellem gamle og nye saldoer
+
+---
+
 ## v1.7.2 — 8. oktober 2026
 
 **Feature: Rentegebyr-visning forbedringer**

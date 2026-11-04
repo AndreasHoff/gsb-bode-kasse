@@ -105,6 +105,7 @@ docs/
 | F028 | Searchable Fine Rule Selection | Spec complete |
 | F029 | Daily Interest on Outstanding Fines | Spec complete |
 | F030 | Admin Pending Payment Recovery | Spec complete |
+| F031 | Tournament Credit System | Spec complete |
 
 ---
 
