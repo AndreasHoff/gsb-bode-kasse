@@ -10,6 +10,7 @@ import {
   getInterestChargesForUser,
 } from "../../lib/firestore";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
+import ClaimPaymentButton from "../profile/ClaimPaymentButton";
 import "./personal-overview.css";
 
 interface PersonalOverviewProps {
@@ -34,8 +35,6 @@ type InterestChargeRow = {
 export default function PersonalOverview({ teamId, userId, viewerName }: PersonalOverviewProps) {
   const isViewerMode = !!viewerName;
   const [loading, setLoading] = useState(true);
-  const [payingFineId, setPayingFineId] = useState<string | null>(null);
-  const [isPayingAll, setIsPayingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mobilePayBoxUrl, setMobilePayBoxUrl] = useState<string | null>(null);
   const [paidOpen, setPaidOpen] = useState(false);
@@ -43,7 +42,6 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
 
   // Dialog state for MobilePay Box flow
   const [showPrePayDialog, setShowPrePayDialog] = useState(false);
-  const [showPostPayDialog, setShowPostPayDialog] = useState(false);
   const [pendingPaymentData, setPendingPaymentData] = useState<{
     fineIds: string[];
     interestChargeIds: string[];
@@ -110,10 +108,20 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         }
       }
 
-      // Build a map of fineId -> pending Payment (if any)
+      // Build a map of interest charge ID -> pending or claimed Payment (if any)
+      const pendingPaymentByInterestChargeId = new Map<string, Payment>();
+      for (const payment of payments) {
+        if ((payment.status === "pending" || payment.status === "claimed") && payment.interestChargeIds) {
+          for (const chargeId of payment.interestChargeIds) {
+            pendingPaymentByInterestChargeId.set(chargeId, payment);
+          }
+        }
+      }
+
+      // Build a map of fineId -> pending or claimed Payment (if any)
       const pendingPaymentByFineId = new Map<string, Payment>();
       for (const payment of payments) {
-        if (payment.status === "pending") {
+        if (payment.status === "pending" || payment.status === "claimed") {
           const fineIds = getFineIdsFromPayment(payment);
           for (const fid of fineIds) {
             pendingPaymentByFineId.set(fid, payment);
@@ -145,8 +153,10 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
           const assignedByName = userById.get(fine.assignedBy)?.name ?? "Ukendt";
 
           let effectiveStatus: PaymentStatus = "unpaid";
-          if (pendingPayment) {
-            effectiveStatus = "pending";
+          if (pendingPayment?.status === "pending") {
+            effectiveStatus = "pending";  // Payment created, awaiting member claim
+          } else if (pendingPayment?.status === "claimed") {
+            effectiveStatus = "claimed";   // Payment claimed, awaiting admin approval
           } else if (approvedPayment) {
             effectiveStatus = "approved";
           }
@@ -160,13 +170,21 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         })
         .sort((a, b) => b.fine.createdAt.localeCompare(a.fine.createdAt));
 
-      // Build interest charge rows (only unpaid interest charges)
+      // Build interest charge rows with status tracking (pending, claimed, unpaid, or approved)
       const chargeRows: InterestChargeRow[] = activeSeasonCharges
-        .filter((charge) => !approvedInterestChargeIds.has(charge.id))
-        .map((charge) => ({
-          charge,
-          effectiveStatus: "unpaid" as PaymentStatus,
-        }))
+        .map((charge) => {
+          if (approvedInterestChargeIds.has(charge.id)) {
+            return { charge, effectiveStatus: "approved" as PaymentStatus };
+          }
+          const pendingPayment = pendingPaymentByInterestChargeId.get(charge.id);
+          if (pendingPayment?.status === "pending") {
+            return { charge, effectiveStatus: "pending" as PaymentStatus };
+          }
+          if (pendingPayment?.status === "claimed") {
+            return { charge, effectiveStatus: "claimed" as PaymentStatus };
+          }
+          return { charge, effectiveStatus: "unpaid" as PaymentStatus };
+        })
         .sort((a, b) => b.charge.chargedOn.localeCompare(a.charge.chargedOn));
 
       setFineRows(rows);
@@ -180,57 +198,21 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
     }
   }, [teamId, userId, isViewerMode]);
 
-  /**
-   * Restores pending payment dialog from sessionStorage if available.
-   * Called on component mount and when focus/visibility changes.
-   * This handles the case where the user returned from MobilePay but
-   * the dialog state was lost due to component unmount or state refresh.
-   */
-  const settlePendingPaymentFromStorage = useCallback(async () => {
-    const stored = window.sessionStorage.getItem(paymentDataStorageKey);
-    if (!stored) return;
 
-    type StoredPaymentData = {
-      fineIds: string[];
-      interestChargeIds: string[];
-      amount: number;
-      titles: string[];
-    };
-
-    let parsed: StoredPaymentData | null = null;
-    try {
-      parsed = JSON.parse(stored) as StoredPaymentData;
-    } catch {
-      window.sessionStorage.removeItem(paymentDataStorageKey);
-      return;
-    }
-
-    if (!parsed || (parsed.fineIds.length === 0 && parsed.interestChargeIds.length === 0) || parsed.amount <= 0) {
-      window.sessionStorage.removeItem(paymentDataStorageKey);
-      return;
-    }
-
-    // Restore the pending payment data and show the post-payment dialog
-    setPendingPaymentData(parsed);
-    setShowPostPayDialog(true);
-  }, [paymentDataStorageKey]);
 
   useEffect(() => {
     void loadData();
-    void settlePendingPaymentFromStorage();
-  }, [loadData, settlePendingPaymentFromStorage]);
+  }, [loadData]);
 
   useEffect(() => {
     function refreshOnVisible(): void {
       if (document.visibilityState === "visible") {
         void loadData();
-        void settlePendingPaymentFromStorage();
       }
     }
 
     function refreshOnFocus(): void {
       void loadData();
-      void settlePendingPaymentFromStorage();
     }
 
     document.addEventListener("visibilitychange", refreshOnVisible);
@@ -240,14 +222,18 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       document.removeEventListener("visibilitychange", refreshOnVisible);
       window.removeEventListener("focus", refreshOnFocus);
     };
-  }, [loadData, settlePendingPaymentFromStorage]);
+  }, [loadData]);
 
   const unpaidRows = useMemo(
     () => fineRows.filter((row) => row.effectiveStatus === "unpaid"),
     [fineRows],
   );
-  const pendingRows = useMemo(
+  const unclaimedPendingRows = useMemo(
     () => fineRows.filter((row) => row.effectiveStatus === "pending"),
+    [fineRows],
+  );
+  const claimedRows = useMemo(
+    () => fineRows.filter((row) => row.effectiveStatus === "claimed"),
     [fineRows],
   );
   const paidRows = useMemo(
@@ -255,11 +241,28 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
     [fineRows],
   );
 
+  const unpaidInterestCharges = useMemo(
+    () => interestCharges.filter((row) => row.effectiveStatus === "unpaid"),
+    [interestCharges],
+  );
+  const unclaimedPendingInterestCharges = useMemo(
+    () => interestCharges.filter((row) => row.effectiveStatus === "pending"),
+    [interestCharges],
+  );
+  const claimedInterestCharges = useMemo(
+    () => interestCharges.filter((row) => row.effectiveStatus === "claimed"),
+    [interestCharges],
+  );
+  const approvedInterestCharges = useMemo(
+    () => interestCharges.filter((row) => row.effectiveStatus === "approved"),
+    [interestCharges],
+  );
+
   const unpaidTotal = useMemo(() => {
     const finesTotal = unpaidRows.reduce((sum, row) => sum + row.fine.amount, 0);
-    const interestTotal = interestCharges.reduce((sum, row) => sum + row.charge.amount, 0);
+    const interestTotal = unpaidInterestCharges.reduce((sum, row) => sum + row.charge.amount, 0);
     return finesTotal + interestTotal;
-  }, [unpaidRows, interestCharges]);
+  }, [unpaidRows, unpaidInterestCharges]);
 
   const paidTotal = useMemo(
     () => paidRows.reduce((sum, row) => sum + row.fine.amount, 0),
@@ -269,7 +272,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
   const totalFinesCount = fineRows.length;
 
   const canPay = unpaidTotal > 0 && (unpaidRows.length > 0 || interestCharges.length > 0);
-  const hasMultipleFines = unpaidRows.length + interestCharges.length > 1;
+  const hasMultipleFines = unpaidRows.length + unpaidInterestCharges.length > 1;
   const mobilePayConfigured = !!mobilePayBoxUrl;
 
   function handlePaySingleClick(row: FineWithPayment): void {
@@ -292,10 +295,10 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
     }
 
     const fineIds = unpaidRows.map((r) => r.fine.id);
-    const interestChargeIds = interestCharges.map((r) => r.charge.id);
+    const interestChargeIds = unpaidInterestCharges.map((r) => r.charge.id);
     const titles = [
       ...unpaidRows.map((r) => r.fine.title),
-      ...interestCharges.map(() => "Rentegebyr (5 kr)"),
+      ...unpaidInterestCharges.map(() => "Rentegebyr (5 kr)"),
     ];
 
     setPendingPaymentData({
@@ -310,11 +313,9 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
   function handleCancelPrePay(): void {
     setShowPrePayDialog(false);
     setPendingPaymentData(null);
-    // Clear stored payment data if any
-    window.sessionStorage.removeItem(paymentDataStorageKey);
   }
 
-  function handleOpenMobilePay(): void {
+  async function handleOpenMobilePay(): Promise<void> {
     setShowPrePayDialog(false);
 
     if (!mobilePayBoxUrl) {
@@ -327,41 +328,16 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
       return;
     }
 
-    // Store the payment data in sessionStorage so it persists if the component 
-    // unmounts or the page refreshes while the user is in MobilePay.
-    // The settlement callback will restore this when the user returns.
-    window.sessionStorage.setItem(paymentDataStorageKey, JSON.stringify(pendingPaymentData));
-
-    // Open MobilePay Box in a new tab without navigating away
-    window.open(mobilePayBoxUrl, "_blank", "noopener,noreferrer");
-
-    // Show post-payment confirmation dialog
-    setShowPostPayDialog(true);
-  }
-
-  async function handleConfirmPayment(): Promise<void> {
-    setShowPostPayDialog(false);
-
-    if (!pendingPaymentData) {
-      setError("Betalingsdata mangler.");
-      return;
-    }
-
-    // Prevent duplicate submissions with 2-second debounce
+    // Prevent duplicate submissions
     if (paymentInProgress) {
       return;
     }
     setPaymentInProgress(true);
-
-    const isSingle = pendingPaymentData.fineIds.length === 1;
-    if (isSingle) {
-      setPayingFineId(pendingPaymentData.fineIds[0]);
-    } else {
-      setIsPayingAll(true);
-    }
     setError(null);
 
     try {
+      // F032: Create the Payment record (status: "pending") immediately
+      // before opening MobilePay, so it exists as proof of intent.
       await createCombinedPayment(
         teamId,
         pendingPaymentData.fineIds,
@@ -370,29 +346,24 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         userId,
         pendingPaymentData.interestChargeIds,
       );
+
+      // Reload fines to show the newly created pending payment
       await loadData();
-    } catch (payError) {
-      const message = payError instanceof Error ? payError.message : "Ukendt fejl";
-      setError(`Kunne ikke registrere betaling (${message}).`);
-    } finally {
-      setPayingFineId(null);
-      setIsPayingAll(false);
+
+      // Open MobilePay Box in a new tab without navigating away
+      window.open(mobilePayBoxUrl, "_blank", "noopener,noreferrer");
+
+      // Clear the pre-payment dialog data
       setPendingPaymentData(null);
-      // Clear stored payment data as payment has been settled
-      window.sessionStorage.removeItem(paymentDataStorageKey);
-      // Re-enable payment button after 2 seconds
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Ukendt fejl";
+      setError(`Kunne ikke oprette betaling (${message}).`);
+    } finally {
       setTimeout(() => setPaymentInProgress(false), 2000);
     }
   }
 
-  function handleCancelPayment(): void {
-    setShowPostPayDialog(false);
-    setPendingPaymentData(null);
-    setPayingFineId(null);
-    setIsPayingAll(false);
-    // Clear stored payment data as user cancelled
-    window.sessionStorage.removeItem(paymentDataStorageKey);
-  }
+
 
   return (
     <div className="personal-overview">
@@ -428,9 +399,9 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
           type="button"
           className="btn-primary personal-pay-btn"
           onClick={handlePayAllClick}
-          disabled={!canPay || isPayingAll || loading || !mobilePayConfigured || paymentInProgress}
+          disabled={!canPay || loading || !mobilePayConfigured || paymentInProgress}
         >
-          {isPayingAll ? "Registrerer..." : "Betal alle"}
+          {paymentInProgress ? "Registrerer..." : "Betal alle"}
         </button>
       )}
 
@@ -455,7 +426,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         </div>
       )}
 
-      {!loading && fineRows.length > 0 && unpaidRows.length === 0 && pendingRows.length === 0 && (
+      {!loading && fineRows.length > 0 && unpaidRows.length === 0 && unclaimedPendingRows.length === 0 && claimedRows.length === 0 && (
         <div className="empty-state mb-4">
           <span className="empty-state__emoji">🎉</span>
           <p className="empty-state__text">Alt er betalt. Stærkt!</p>
@@ -470,11 +441,9 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
               <FineRowCard
                 key={row.fine.id}
                 row={row}
-                actionLabel={payingFineId === row.fine.id ? "Registrerer..." : "Betal bøde"}
+                actionLabel={paymentInProgress ? "Registrerer..." : "Betal bøde"}
                 actionDisabled={
                   isViewerMode ||
-                  payingFineId === row.fine.id ||
-                  isPayingAll ||
                   !mobilePayConfigured ||
                   paymentInProgress
                 }
@@ -489,11 +458,11 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         </section>
       )}
 
-      {!loading && interestCharges.length > 0 && (
+      {!loading && unpaidInterestCharges.length > 0 && (
         <section className="personal-section" aria-label="Rentegebyr">
           <h2 className="personal-section__title">Rentegebyr</h2>
           <div className="item-list">
-            {interestCharges.map((row) => (
+            {unpaidInterestCharges.map((row) => (
               <InterestChargeRowCard
                 key={row.charge.id}
                 charge={row.charge}
@@ -503,16 +472,45 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         </section>
       )}
 
-      {!loading && pendingRows.length > 0 && (
+      {!loading && unclaimedPendingRows.length > 0 && (
+        <section className="personal-section" aria-label="Venter på din bekræftelse">
+          <h2 className="personal-section__title">Venter på din bekræftelse</h2>
+          <p className="section-subtitle">Du har åbnet MobilePay. Bekræft når du har betalt:</p>
+          <div className="item-list">
+            {unclaimedPendingRows.map((row) => (
+              <div key={row.fine.id} className="fine-with-claim-button">
+                <FineRowCard row={row} />
+                {row.payment && (
+                  <ClaimPaymentButton
+                    teamId={teamId}
+                    payment={row.payment}
+                    userId={userId}
+                    onClaimed={() => void loadData()}
+                  />
+                )}
+              </div>
+            ))}
+            {unclaimedPendingInterestCharges.map((row) => (
+              <InterestChargeRowCard key={row.charge.id} charge={row.charge} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!loading && claimedRows.length > 0 && (
         <section className="personal-section" aria-label="Afventer godkendelse">
           <h2 className="personal-section__title">Afventer godkendelse</h2>
+          <p className="section-subtitle">En admin godkender snart…</p>
           <div className="item-list">
-            {pendingRows.map((row) => (
+            {claimedRows.map((row) => (
               <FineRowCard
                 key={row.fine.id}
                 row={row}
                 badge="⏳ Afventer godkendelse"
               />
+            ))}
+            {claimedInterestCharges.map((row) => (
+              <InterestChargeRowCard key={row.charge.id} charge={row.charge} />
             ))}
           </div>
         </section>
@@ -537,6 +535,9 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
             <div className="personal-paid-list">
               {paidRows.map((row) => (
                 <FineRowCard key={row.fine.id} row={row} badge="✅ Betalt" />
+              ))}
+              {approvedInterestCharges.map((row) => (
+                <InterestChargeRowCard key={row.charge.id} charge={row.charge} />
               ))}
             </div>
           )}
@@ -579,32 +580,7 @@ export default function PersonalOverview({ teamId, userId, viewerName }: Persona
         </div>
       )}
 
-      {/* Post-payment confirmation dialog */}
-      {showPostPayDialog && (
-        <div className="dialog-overlay" onClick={handleCancelPayment}>
-          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="dialog-title">Har du gennemført betalingen?</h3>
-            <div className="dialog-actions">
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => {
-                  void handleConfirmPayment();
-                }}
-              >
-                Ja
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={handleCancelPayment}
-              >
-                Nej
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

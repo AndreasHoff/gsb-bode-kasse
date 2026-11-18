@@ -1,4 +1,4 @@
-// Feature: Admin Settings (F021, F022, F015, F023, F029)
+// Feature: Admin Settings (F021, F022, F015, F023, F029, F032)
 // Tabbed admin panel: payment approval, refunds/reconciliation, season management, member management, team configuration, interest charges.
 
 import { useState } from "react";

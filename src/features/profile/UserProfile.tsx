@@ -1,4 +1,4 @@
-// Feature: User Profile (F012)
+// Feature: User Profile (F012, F032)
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createCombinedPayment,
@@ -9,6 +9,7 @@ import {
   getInterestChargesForUser,
 } from "../../lib/firestore";
 import { formatAmount } from "../../lib/utils";
+import ClaimPaymentButton from "./ClaimPaymentButton";
 // import InstallAppOption from "../pwa-install/InstallAppOption";
 import "./profile.css";
 
@@ -54,7 +55,10 @@ export default function UserProfile({
   const [unpaidInterestCharges, setUnpaidInterestCharges] = useState<UnpaidInterestSummary[]>([]);
   const [selectedFineIds, setSelectedFineIds] = useState<string[]>([]);
   const [selectedInterestChargeIds, setSelectedInterestChargeIds] = useState<string[]>([]);
+  const [claimedFineIds, setClaimedFineIds] = useState<Set<string>>(new Set());
+  const [claimedInterestChargeIds, setClaimedInterestChargeIds] = useState<Set<string>>(new Set());
   const [isRegisteringPayment, setIsRegisteringPayment] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<any | null>(null);
   const [paymentFeedback, setPaymentFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -104,16 +108,29 @@ export default function UserProfile({
         if (!isActive) return;
 
         const pendingFineIds = new Set<string>();
+        const claimedFineIds = new Set<string>();
         const approvedFineIds = new Set<string>();
         const pendingInterestChargeIds = new Set<string>();
+        const claimedInterestChargeIds = new Set<string>();
         const approvedInterestChargeIds = new Set<string>();
+
+        let firstPendingPayment: any = null;
 
         for (const p of payments) {
           const fineIds = getFineIdsFromPayment(p);
           if (p.status === "pending") {
+            if (!firstPendingPayment) {
+              firstPendingPayment = p;
+            }
             fineIds.forEach((id) => pendingFineIds.add(id));
             if (p.interestChargeIds) {
               p.interestChargeIds.forEach((id) => pendingInterestChargeIds.add(id));
+            }
+          }
+          if (p.status === "claimed") {
+            fineIds.forEach((id) => claimedFineIds.add(id));
+            if (p.interestChargeIds) {
+              p.interestChargeIds.forEach((id) => claimedInterestChargeIds.add(id));
             }
           }
           if (p.status === "approved") {
@@ -137,7 +154,7 @@ export default function UserProfile({
         for (const fine of fines) {
           if (approvedFineIds.has(fine.id)) {
             paid += fine.amount;
-          } else if (pendingFineIds.has(fine.id)) {
+          } else if (pendingFineIds.has(fine.id) || claimedFineIds.has(fine.id)) {
             pending += fine.amount;
           } else {
             outstanding += fine.amount;
@@ -154,7 +171,7 @@ export default function UserProfile({
         for (const charge of interestCharges) {
           if (approvedInterestChargeIds.has(charge.id)) {
             paid += charge.amount;
-          } else if (pendingInterestChargeIds.has(charge.id)) {
+          } else if (pendingInterestChargeIds.has(charge.id) || claimedInterestChargeIds.has(charge.id)) {
             pending += charge.amount;
           } else {
             outstanding += charge.amount;
@@ -170,8 +187,11 @@ export default function UserProfile({
         setPaidTotal(paid);
         setOutstandingTotal(outstanding);
         setPendingTotal(pending);
+        setPendingPayment(firstPendingPayment);
         setUnpaidFines(nextUnpaidFines);
         setUnpaidInterestCharges(nextUnpaidInterestCharges);
+        setClaimedFineIds(claimedFineIds);
+        setClaimedInterestChargeIds(claimedInterestChargeIds);
         setSelectedFineIds((previous) => {
           const unpaidSet = new Set(unpaidIds);
           const stillUnpaid = previous.filter((id) => unpaidSet.has(id));
@@ -463,26 +483,34 @@ export default function UserProfile({
         <section className="profile-payment-section">
           <p className="profile-section__title">Vælg bøder til betaling</p>
           <div className="profile-fine-selection-list">
-            {unpaidFines.map((fine) => (
-              <label key={fine.id} className="profile-fine-selection-item">
-                <input
-                  type="checkbox"
-                  checked={selectedFineIds.includes(fine.id)}
-                  onChange={(event) => {
-                    setSelectedFineIds((previous) => {
-                      if (event.target.checked) {
-                        return previous.includes(fine.id)
-                          ? previous
-                          : [...previous, fine.id];
-                      }
-                      return previous.filter((id) => id !== fine.id);
-                    });
-                  }}
-                />
-                <span>{fine.title}</span>
-                <strong>{formatAmount(fine.amount)}</strong>
-              </label>
-            ))}
+            {unpaidFines.map((fine) => {
+              const isClaimed = claimedFineIds.has(fine.id);
+              return (
+                <label
+                  key={fine.id}
+                  className={`profile-fine-selection-item${isClaimed ? " profile-fine-selection-item--claimed" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedFineIds.includes(fine.id)}
+                    disabled={isClaimed}
+                    onChange={(event) => {
+                      setSelectedFineIds((previous) => {
+                        if (event.target.checked) {
+                          return previous.includes(fine.id)
+                            ? previous
+                            : [...previous, fine.id];
+                        }
+                        return previous.filter((id) => id !== fine.id);
+                      });
+                    }}
+                  />
+                  <span>{fine.title}</span>
+                  {isClaimed && <span className="profile-fine-status">⏳ Afventer godkendelse</span>}
+                  <strong>{formatAmount(fine.amount)}</strong>
+                </label>
+              );
+            })}
           </div>
         </section>
       )}
@@ -492,26 +520,34 @@ export default function UserProfile({
         <section className="profile-payment-section">
           <p className="profile-section__title">Rentegebyrer</p>
           <div className="profile-fine-selection-list">
-            {unpaidInterestCharges.map((charge) => (
-              <label key={charge.id} className="profile-fine-selection-item">
-                <input
-                  type="checkbox"
-                  checked={selectedInterestChargeIds.includes(charge.id)}
-                  onChange={(event) => {
-                    setSelectedInterestChargeIds((previous) => {
-                      if (event.target.checked) {
-                        return previous.includes(charge.id)
-                          ? previous
-                          : [...previous, charge.id];
-                      }
-                      return previous.filter((id) => id !== charge.id);
-                    });
-                  }}
-                />
-                <span>Rente fra {charge.month}</span>
-                <strong>{formatAmount(charge.amount)}</strong>
-              </label>
-            ))}
+            {unpaidInterestCharges.map((charge) => {
+              const isClaimed = claimedInterestChargeIds.has(charge.id);
+              return (
+                <label
+                  key={charge.id}
+                  className={`profile-fine-selection-item${isClaimed ? " profile-fine-selection-item--claimed" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedInterestChargeIds.includes(charge.id)}
+                    disabled={isClaimed}
+                    onChange={(event) => {
+                      setSelectedInterestChargeIds((previous) => {
+                        if (event.target.checked) {
+                          return previous.includes(charge.id)
+                            ? previous
+                            : [...previous, charge.id];
+                        }
+                        return previous.filter((id) => id !== charge.id);
+                      });
+                    }}
+                  />
+                  <span>Rente fra {charge.month}</span>
+                  {isClaimed && <span className="profile-fine-status">⏳ Afventer godkendelse</span>}
+                  <strong>{formatAmount(charge.amount)}</strong>
+                </label>
+              );
+            })}
           </div>
         </section>
       )}
@@ -541,6 +577,22 @@ export default function UserProfile({
           {canPayAll ? ` – ${formatAmount(outstandingTotal ?? 0)}` : ""}
         </span>
       </button>
+
+      {pendingPayment && (
+        <ClaimPaymentButton
+          teamId={teamId}
+          payment={pendingPayment}
+          userId={userId}
+          onClaimed={() => {
+            setStatsReloadKey((prev) => prev + 1);
+            setPaymentFeedback({
+              type: "success",
+              message: "Din betaling venter på godkendelse. Du får besked når den er behandlet.",
+            });
+          }}
+        />
+      )}
+
       {!isLoadingStats &&
         (outstandingTotal ?? 0) > 0 &&
         !hasMobilePayBoxUrl && (

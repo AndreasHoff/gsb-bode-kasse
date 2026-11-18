@@ -7,8 +7,9 @@ import {
   getPaymentsForReconciliation,
   getInterestChargesForSeason,
 } from "../../lib/firestore";
+import { getClaimedPayments } from "../../lib/firestore/payments";
 import { formatAmount } from "../../lib/utils";
-import { canManageMembers } from "../../lib/permissions";
+import { canManageMembers, canApprovePayments } from "../../lib/permissions";
 import type { Membership, User, Role, UserSeasonBalance } from "../../types/domain";
 import "./team-overview.css";
 
@@ -31,7 +32,7 @@ type MemberStat = {
   hasDisputed?: boolean;
 };
 
-export default function TeamOverview({ teamId, onMemberSelect, userRole }: TeamOverviewProps) {
+export default function TeamOverview({ teamId, onMemberSelect, userRole, onOpenAdminApprovals }: TeamOverviewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [noSeason, setNoSeason] = useState(false);
@@ -40,6 +41,7 @@ export default function TeamOverview({ teamId, onMemberSelect, userRole }: TeamO
   const [totalIssued, setTotalIssued] = useState(0);
   const [totalOwed, setTotalOwed] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
+  const [claimedPaymentsCount, setClaimedPaymentsCount] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!teamId) {
@@ -72,12 +74,16 @@ export default function TeamOverview({ teamId, onMemberSelect, userRole }: TeamO
       setNoSeason(false);
       setSeasonName(season.name);
 
-      // Fetch season balances (authoritative source of truth), payments for reconciliation, and interest charges
-      const [seasonBalanceData, paymentsForReconciliation, interestCharges] = await Promise.all([
+      // Fetch season balances (authoritative source of truth), payments for reconciliation, interest charges, and claimed payments
+      const [seasonBalanceData, paymentsForReconciliation, interestCharges, claimedPayments] = await Promise.all([
         getSeasonBalances(teamId, season.id),
         getPaymentsForReconciliation(teamId),
         getInterestChargesForSeason(teamId, season.id),
+        getClaimedPayments(teamId),
       ]);
+
+      // Count claimed payments for notification badge
+      setClaimedPaymentsCount(claimedPayments.length);
 
       // Build lookup for user balances
       const balanceByUserId = new Map<string, UserSeasonBalance>();
@@ -214,6 +220,29 @@ export default function TeamOverview({ teamId, onMemberSelect, userRole }: TeamO
         )}
       </div>
       <p className="app-subtitle mb-6">{seasonName || "Holdets oversigt"}</p>
+
+      {/* Payment claim notification badge for admins */}
+      {!isLoading && canApprovePayments(userRole ?? null) && claimedPaymentsCount > 0 && (
+        <div className="payment-claim-notification">
+          <div className="payment-claim-notification__content">
+            <span className="payment-claim-notification__badge">{claimedPaymentsCount}</span>
+            <span className="payment-claim-notification__text">
+              {claimedPaymentsCount === 1
+                ? "1 betaling afventer godkendelse"
+                : `${claimedPaymentsCount} betalinger afventer godkendelse`}
+            </span>
+          </div>
+          {onOpenAdminApprovals && (
+            <button
+              type="button"
+              onClick={onOpenAdminApprovals}
+              className="payment-claim-notification__button"
+            >
+              Gennemgå nu →
+            </button>
+          )}
+        </div>
+      )}
 
       {isLoading && <p className="status-note">Henter data...</p>}
 

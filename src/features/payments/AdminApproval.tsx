@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import type { Payment, Role } from "../../types/domain";
-import { getPendingPayments, approvePayment, disputePayment } from "../../lib/firestore/payments";
+import {
+  getClaimedPayments,
+  approveClaimedPayment,
+  denyPayment,
+} from "../../lib/firestore/payments";
+import {
+  createApprovedNotification,
+  createDeniedNotification,
+} from "../../lib/firestore/notifications";
 import { getUserProfile } from "../../lib/firestore/users";
 import { getFine } from "../../lib/firestore/fines";
 import { formatAmount, formatRelativeTime } from "../../lib/utils";
@@ -17,7 +25,6 @@ type PaymentWithDetails = {
   payment: Payment;
   userName?: string;
   fineTitles: string[];
-  isStale: boolean;
 };
 
 /**
@@ -31,18 +38,6 @@ function getFineIdsFromPayment(payment: Payment): string[] {
     return [payment.fineId];
   }
   return [];
-}
-
-/**
- * Helper to check if a payment is stale (pending for more than 24 hours).
- */
-function isPaymentStale(payment: Payment): boolean {
-  if (!payment.initiatedAt) return false;
-  const initiatedTime = new Date(payment.initiatedAt);
-  const now = new Date();
-  const diffMs = now.getTime() - initiatedTime.getTime();
-  const diffHours = diffMs / 3_600_000;
-  return diffHours > 24;
 }
 
 export default function AdminApproval({ teamId, actorId, userRole }: Props) {
@@ -59,9 +54,16 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const payments = await getPendingPayments(teamId);
+        const payments = await getClaimedPayments(teamId);
+        // Sort by most recent first
+        const sorted = payments.sort(
+          (a, b) =>
+            new Date(b.initiatedAt || b.id).getTime() -
+            new Date(a.initiatedAt || a.id).getTime(),
+        );
+
         const detailed = await Promise.all(
-          payments.map(async (p) => {
+          sorted.map(async (p) => {
             const user = await getUserProfile(p.userId);
             const fineIds = getFineIdsFromPayment(p);
             const fines = await Promise.all(
@@ -70,7 +72,7 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
             const fineTitles = fines
               .filter((f) => f !== null)
               .map((f) => f!.title);
-            return { payment: p, userName: user?.name, fineTitles, isStale: isPaymentStale(p) };
+            return { payment: p, userName: user?.name, fineTitles };
           }),
         );
         setItems(detailed);
@@ -86,7 +88,7 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
   if (!teamId) {
     return (
       <div className="admin-approval">
-        <h1 className="app-title">Godkend betalinger</h1>
+        <h1 className="app-title">Betalinger</h1>
         <div className="empty-state mt-4">
           <span className="empty-state__emoji">🏢</span>
           <p className="empty-state__text">Vælg et hold for at se betalinger.</p>
@@ -98,21 +100,23 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
   if (!canApprovePayments(userRole ?? null)) {
     return (
       <div className="admin-approval">
-        <h1 className="app-title">Godkend betalinger</h1>
+        <h1 className="app-title">Betalinger</h1>
         <div className="empty-state mt-4">
           <span className="empty-state__emoji">🔒</span>
-          <p className="empty-state__text">Du har ikke adgang til at godkende betalinger.</p>
+          <p className="empty-state__text">Du har ikke adgang til at behandle betalinger.</p>
         </div>
       </div>
     );
   }
 
-  async function handleApprove(paymentId: string) {
-    setProcessingId(paymentId);
+  async function handleApprove(payment: Payment) {
+    setProcessingId(payment.id);
     setError(null);
     try {
-      await approvePayment(teamId, paymentId, actorId);
-      setItems((s) => s.filter((it) => it.payment.id !== paymentId));
+      await approveClaimedPayment(teamId, payment.id, actorId);
+      // Send notification to member
+      await createApprovedNotification(teamId, payment.userId, payment.id);
+      setItems((s) => s.filter((it) => it.payment.id !== payment.id));
     } catch (err) {
       console.error("[admin-approval] approve failed", err);
       setError("Godkendelse mislykkedes. Prøv igen.");
@@ -121,15 +125,17 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
     }
   }
 
-  async function handleDispute(paymentId: string) {
-    setProcessingId(paymentId);
+  async function handleDeny(payment: Payment) {
+    setProcessingId(payment.id);
     setError(null);
     try {
-      await disputePayment(teamId, paymentId, actorId);
-      setItems((s) => s.filter((it) => it.payment.id !== paymentId));
+      await denyPayment(teamId, payment.id, actorId);
+      // Send notification to member
+      await createDeniedNotification(teamId, payment.userId, payment.id);
+      setItems((s) => s.filter((it) => it.payment.id !== payment.id));
     } catch (err) {
-      console.error("[admin-approval] dispute failed", err);
-      setError("Underkendelse mislykkedes. Prøv igen.");
+      console.error("[admin-approval] deny failed", err);
+      setError("Afvisning mislykkedes. Prøv igen.");
     } finally {
       setProcessingId(null);
     }
@@ -137,131 +143,78 @@ export default function AdminApproval({ teamId, actorId, userRole }: Props) {
 
   return (
     <div className="admin-approval">
-      <h1 className="app-title">Godkend betalinger</h1>
-      <p className="app-subtitle">Gennemgå og godkend indkomne betalinger</p>
+      <h1 className="app-title">Betalinger</h1>
+      <p className="app-subtitle">Gennemgå og godkend betalingskrav</p>
 
       <div className="admin-approval-count">
-        <span className="admin-approval-count__label">Ventende:</span>
+        <span className="admin-approval-count__label">Afventer godkendelse:</span>
         <span className="admin-approval-count__value">{items.length}</span>
       </div>
 
       {loading && <p className="status-note">Indlæser betalinger…</p>}
-      
+
       {error && <p className="status-error mb-3">{error}</p>}
 
       {items.length === 0 && !loading && (
         <div className="empty-state">
           <span className="empty-state__emoji">✅</span>
-          <p className="empty-state__text">Der er ingen betalinger, der venter på godkendelse.</p>
+          <p className="empty-state__text">Ingen betalinger afventer godkendelse</p>
         </div>
       )}
 
-      {/* Stale payments section */}
-      {items.some(it => it.isStale) && (
-        <section className="admin-approval-section">
-          <h2 className="admin-approval-section__title">Forældet betalinger</h2>
-          <p className="admin-approval-section__subtitle">Betalinger, der har ventet over 24 timer</p>
-          <ul className="admin-approval-list" aria-label="Forældet ventende betalinger">
-            {items.filter(it => it.isStale).map((it) => (
-              <li key={it.payment.id} className="app-card admin-approval-item admin-approval-item--stale">
-                <div className="admin-approval-badge">⏰ Forældet</div>
-                <div className="admin-approval-main">
-                  <div className="admin-approval-info">
-                    <p className="admin-approval-name">{it.userName ?? it.payment.userId}</p>
-                    {it.fineTitles.length === 1 && (
-                      <p className="admin-approval-fine">{it.fineTitles[0]}</p>
-                    )}
-                    {it.fineTitles.length > 1 && (
-                      <p className="admin-approval-fine">
-                        {it.fineTitles.length} bøder samlet
-                      </p>
-                    )}
-                    {it.fineTitles.length === 0 && (
-                      <p className="admin-approval-fine">Bøde</p>
-                    )}
-                  </div>
-                  <div className="admin-approval-meta">
-                    <span className="admin-approval-amount">{formatAmount(it.payment.amount)}</span>
-                    {it.payment.initiatedAt && (
-                      <span className="admin-approval-time">{formatRelativeTime(it.payment.initiatedAt)}</span>
-                    )}
-                  </div>
+      {items.length > 0 && (
+        <ul className="admin-approval-list" aria-label="Betalingskrav der afventer godkendelse">
+          {items.map((it) => (
+            <li key={it.payment.id} className="app-card admin-approval-item">
+              <div className="admin-approval-main">
+                <div className="admin-approval-info">
+                  <p className="admin-approval-name">
+                    {it.userName ?? it.payment.userId}
+                  </p>
+                  {it.fineTitles.length === 1 && (
+                    <p className="admin-approval-fine">{it.fineTitles[0]}</p>
+                  )}
+                  {it.fineTitles.length > 1 && (
+                    <p className="admin-approval-fine">
+                      {it.fineTitles.length} bøder samlet
+                    </p>
+                  )}
+                  {it.fineTitles.length === 0 && (
+                    <p className="admin-approval-fine">Bøde</p>
+                  )}
                 </div>
-                <div className="admin-approval-actions">
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => void handleApprove(it.payment.id)}
-                    disabled={processingId === it.payment.id}
-                  >
-                    {processingId === it.payment.id ? "Behandler…" : "Godkend"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => void handleDispute(it.payment.id)}
-                    disabled={processingId === it.payment.id}
-                  >
-                    Afvis
-                  </button>
+                <div className="admin-approval-meta">
+                  <span className="admin-approval-amount">
+                    {formatAmount(it.payment.amount)}
+                  </span>
+                  {it.payment.initiatedAt && (
+                    <span className="admin-approval-time">
+                      {formatRelativeTime(it.payment.initiatedAt)}
+                    </span>
+                  )}
                 </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Fresh pending payments section */}
-      {items.some(it => !it.isStale) && (
-        <section className="admin-approval-section">
-          <h2 className="admin-approval-section__title">Nye betalinger</h2>
-          <ul className="admin-approval-list" aria-label="Nye ventende betalinger">
-            {items.filter(it => !it.isStale).map((it) => (
-              <li key={it.payment.id} className="app-card admin-approval-item">
-                <div className="admin-approval-main">
-                  <div className="admin-approval-info">
-                    <p className="admin-approval-name">{it.userName ?? it.payment.userId}</p>
-                    {it.fineTitles.length === 1 && (
-                      <p className="admin-approval-fine">{it.fineTitles[0]}</p>
-                    )}
-                    {it.fineTitles.length > 1 && (
-                      <p className="admin-approval-fine">
-                        {it.fineTitles.length} bøder samlet
-                      </p>
-                    )}
-                    {it.fineTitles.length === 0 && (
-                      <p className="admin-approval-fine">Bøde</p>
-                    )}
-                  </div>
-                  <div className="admin-approval-meta">
-                    <span className="admin-approval-amount">{formatAmount(it.payment.amount)}</span>
-                    {it.payment.initiatedAt && (
-                      <span className="admin-approval-time">{formatRelativeTime(it.payment.initiatedAt)}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="admin-approval-actions">
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => void handleApprove(it.payment.id)}
-                    disabled={processingId === it.payment.id}
-                  >
-                    {processingId === it.payment.id ? "Behandler…" : "Godkend"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => void handleDispute(it.payment.id)}
-                    disabled={processingId === it.payment.id}
-                  >
-                    Afvis
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+              </div>
+              <div className="admin-approval-actions">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => void handleApprove(it.payment)}
+                  disabled={processingId === it.payment.id}
+                >
+                  {processingId === it.payment.id ? "Behandler…" : "Godkend"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => void handleDeny(it.payment)}
+                  disabled={processingId === it.payment.id}
+                >
+                  Afvis
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

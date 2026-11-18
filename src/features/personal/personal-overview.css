@@ -103,6 +103,19 @@
 	margin-bottom: 0.75rem;
 }
 
+.section-subtitle {
+	font-size: 0.76rem;
+	color: var(--color-text-muted);
+	margin: -0.5rem 0 0.75rem 0;
+	line-height: 1.4;
+}
+
+.fine-with-claim-button {
+	display: flex;
+	flex-direction: column;
+	gap: 0.65rem;
+}
+
 .personal-fine-card {
 	padding: 0.9rem;
 	border-radius: 1rem;

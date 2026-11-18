@@ -2,7 +2,7 @@
 
 export type Role = "member" | "admin";
 
-export type PaymentStatus = "unpaid" | "pending" | "approved" | "disputed";
+export type PaymentStatus = "unpaid" | "pending" | "claimed" | "approved" | "disputed";
 
 export interface User {
   id: string;
@@ -165,4 +165,15 @@ export interface FeatureProposal {
   approvedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  teamId: string;
+  type: "payment.approved" | "payment.denied";
+  paymentId: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
 }

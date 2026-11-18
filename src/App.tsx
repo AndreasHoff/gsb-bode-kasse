@@ -13,6 +13,7 @@ import WelcomeAuth from "./features/auth/WelcomeAuth";
 import Proposals from "./features/proposals/Proposals";
 import UserProfile from "./features/profile/UserProfile";
 import MemberProfile from "./features/personal/MemberProfile";
+import NotificationCenter from "./features/personal/NotificationCenter";
 import PatchNotesPage from "./features/patch-notes/PatchNotes";
 import BottomNavbar from "./components/BottomNavbar";
 import UndoToast from "./components/UndoToast";
@@ -564,6 +565,9 @@ function App() {
 
       {/* Page content */}
       <main className="app-main">
+        {teamId && userId && (
+          <NotificationCenter teamId={teamId} userId={userId} />
+        )}
         {viewingMember && (
           <MemberProfile
             userId={viewingMember.userId}

@@ -570,3 +570,208 @@ export async function reconcilePayment(
   await batch.commit();
   return updated;
 }
+
+/**
+ * Returns all payments with status "claimed".
+ * Used by admins to verify and approve pending payment claims.
+ */
+export async function getClaimedPayments(teamId: string): Promise<Payment[]> {
+  const q = query(paymentsCol(teamId), where("status", "==", "claimed"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data());
+}
+
+/**
+ * Transitions payment status from "pending" → "claimed".
+ * Called when a member clicks "Jeg har betalt" button.
+ * Writes an ActivityLog entry atomically.
+ * Does NOT update balance (stays in pending).
+ */
+export async function claimPayment(
+  teamId: string,
+  paymentId: string,
+  actorId: string,
+): Promise<Payment> {
+  const existing = await getPayment(teamId, paymentId);
+  if (!existing) throw new Error("Betaling blev ikke fundet");
+
+  // Validate payment is in pending state
+  if (existing.status !== "pending") {
+    throw new Error("Kan kun gøre krav på betalinger med status 'pending'");
+  }
+
+  const batch = writeBatch(db);
+
+  const pRef = paymentDoc(teamId, paymentId);
+  const now = new Date().toISOString();
+  const updated: Payment = {
+    ...existing,
+    status: "claimed",
+    initiatedAt: existing.initiatedAt, // Keep original initiation time
+  };
+  batch.set(pRef, updated);
+
+  const logColRef = activityLogCol(teamId);
+  const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
+  const logEntry: ActivityLog = {
+    id: logRef.id,
+    teamId,
+    actorId,
+    action: "payment.claimed",
+    entityType: "payment",
+    entityId: paymentId,
+    metadata: { 
+      fineIds, 
+      ...(existing.interestChargeIds && existing.interestChargeIds.length > 0 && { interestChargeIds: existing.interestChargeIds }),
+      amount: existing.amount, 
+      userId: existing.userId,
+      claimedAt: now,
+    },
+    createdAt: now,
+  };
+  batch.set(logRef, logEntry);
+
+  await batch.commit();
+  return updated;
+}
+
+/**
+ * Transitions payment status from "claimed" → "unpaid".
+ * Called when an admin denies a claimed payment.
+ * Writes an ActivityLog entry atomically.
+ * Updates UserSeasonBalance to move from pending back to outstanding.
+ */
+export async function denyPayment(
+  teamId: string,
+  paymentId: string,
+  actorId: string,
+): Promise<Payment> {
+  const existing = await getPayment(teamId, paymentId);
+  if (!existing) throw new Error("Betaling blev ikke fundet");
+
+  // Validate payment is in claimed state
+  if (existing.status !== "claimed") {
+    throw new Error("Kan kun afvise betalinger med status 'claimed'");
+  }
+
+  // Get season ID from either fines or interest charges
+  const seasonId = await getSeasonIdFromPayment(teamId, existing);
+
+  const batch = writeBatch(db);
+
+  const pRef = paymentDoc(teamId, paymentId);
+  const { approvedAt: _approvedAt, approvedBy: _approvedBy, ...rest } = existing;
+  void _approvedAt;
+  void _approvedBy;
+  const updated: Payment = { ...rest, status: "unpaid" };
+  batch.set(pRef, updated);
+
+  const logColRef = activityLogCol(teamId);
+  const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
+  const logEntry: ActivityLog = {
+    id: logRef.id,
+    teamId,
+    actorId,
+    action: "payment.denied",
+    entityType: "payment",
+    entityId: paymentId,
+    metadata: { 
+      fineIds, 
+      ...(existing.interestChargeIds && existing.interestChargeIds.length > 0 && { interestChargeIds: existing.interestChargeIds }),
+      amount: existing.amount, 
+      userId: existing.userId 
+    },
+    createdAt: new Date().toISOString(),
+  };
+  batch.set(logRef, logEntry);
+
+  // Update balance: move from pending back to outstanding
+  await updateUserSeasonBalance(
+    existing.userId,
+    teamId,
+    seasonId,
+    {
+      pendingBalance: -existing.amount,
+      outstandingBalance: existing.amount,
+    },
+    "payment.denied",
+    actorId,
+    batch,
+  );
+
+  await batch.commit();
+  return updated;
+}
+
+/**
+ * Transitions payment status from "claimed" → "approved".
+ * Only admins may call this.
+ * Writes an ActivityLog entry atomically.
+ * Updates UserSeasonBalance to move from pending to approved.
+ */
+export async function approveClaimedPayment(
+  teamId: string,
+  paymentId: string,
+  actorId: string,
+): Promise<Payment> {
+  const existing = await getPayment(teamId, paymentId);
+  if (!existing) throw new Error("Betaling blev ikke fundet");
+
+  // Validate payment is in claimed state
+  if (existing.status !== "claimed") {
+    throw new Error("Kan kun godkende betalinger med status 'claimed'");
+  }
+
+  // Get season ID from either fines or interest charges
+  const seasonId = await getSeasonIdFromPayment(teamId, existing);
+
+  const batch = writeBatch(db);
+
+  const pRef = paymentDoc(teamId, paymentId);
+  const updated: Payment = {
+    ...existing,
+    status: "approved",
+    approvedAt: new Date().toISOString(),
+    approvedBy: actorId,
+  };
+  batch.set(pRef, updated);
+
+  const logColRef = activityLogCol(teamId);
+  const logRef = doc(logColRef);
+  const fineIds = getFineIdsFromPayment(existing);
+  const logEntry: ActivityLog = {
+    id: logRef.id,
+    teamId,
+    actorId,
+    action: "payment.approved",
+    entityType: "payment",
+    entityId: paymentId,
+    metadata: { 
+      fineIds, 
+      ...(existing.interestChargeIds && existing.interestChargeIds.length > 0 && { interestChargeIds: existing.interestChargeIds }),
+      amount: existing.amount, 
+      userId: existing.userId 
+    },
+    createdAt: new Date().toISOString(),
+  };
+  batch.set(logRef, logEntry);
+
+  // Update balance: move from pending to approved
+  await updateUserSeasonBalance(
+    existing.userId,
+    teamId,
+    seasonId,
+    {
+      pendingBalance: -existing.amount,
+      approvedBalance: existing.amount,
+    },
+    "payment.approved",
+    actorId,
+    batch,
+  );
+
+  await batch.commit();
+  return updated;
+}

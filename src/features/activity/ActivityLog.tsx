@@ -200,7 +200,9 @@ function getActionIcon(action: string): string {
   if (action === "fine.restored") return "↩️";
   if (action === "payment.created") return "🧾";
   if (action === "payment.initiated") return "💸";
+  if (action === "payment.claimed") return "🙋";
   if (action === "payment.approved") return "✅";
+  if (action === "payment.denied") return "❌";
   if (action === "payment.disputed") return "⚠️";
   if (action === "season.created") return "📅";
   if (action === "season.closed") return "🏁";
@@ -259,10 +261,22 @@ function getActionText(
     return `${actorName} har sendt en betaling${amount !== null ? ` på ${formatAmount(amount)}` : ""}.`;
   }
 
+  if (entry.action === "payment.claimed") {
+    const payerName = resolveUserId(metadata.userId);
+    const payerText = payerName ? payerName : "en bruger";
+    return `${payerText} gjorde krav på betaling${amount !== null ? ` – ${formatAmount(amount)}` : ""}.`;
+  }
+
   if (entry.action === "payment.approved") {
     const payerName = resolveUserId(metadata.userId);
     const payerText = payerName ? `${payerName}s betaling` : "en betaling";
     return `${actorName} godkendte ${payerText}${amount !== null ? ` – ${formatAmount(amount)}` : ""}.`;
+  }
+
+  if (entry.action === "payment.denied") {
+    const payerName = resolveUserId(metadata.userId);
+    const payerText = payerName ? `${payerName}s betaling` : "en betaling";
+    return `${actorName} afviste ${payerText}${amount !== null ? ` – ${formatAmount(amount)}` : ""}.`;
   }
 
   if (entry.action === "payment.disputed") {
